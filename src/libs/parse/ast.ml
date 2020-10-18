@@ -12,11 +12,8 @@ type identifier = Identifier of string
 type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of string
 [@@deriving sexp]
 
-type atom = string
-[@@deriving sexp]
-
 type exp =
-  | Atom of atom 
+  | Identifier of string
   | ExpList of exp list
   | IntegerLiteral of string
   | BinaryOp of (exp * binaryop * exp)
@@ -32,8 +29,8 @@ type stmt =
   | Newline of string
   | IfElse of (exp * stmt list * stmt list)
   | While of (exp * stmt list)
-  | Assign of (atom list * exp list)
-  | Function of (identifier * atom list * stmt list)
+  | Assign of (identifier list * exp list)
+  | Function of (identifier * identifier list * stmt list)
   | Return of exp
   | Break
   | Continue

@@ -7,7 +7,7 @@
 %token <int> SPACE
 %token DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT
 %token AND OR NOT TRUE FALSE NONE
-%token <string> ATOM STRING 
+%token <string> IDENTIFIER STRING 
 %token <int> INT
 
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
@@ -40,7 +40,7 @@ stmt:
   | s=stmt; NEWLINE { s }
   | s=stmt; SEMICOLON { s }
   | e=exp { Exp e }
-  | DEF; a=ATOM; LPAREN; fl=atoms_lst; RPAREN; COLON; sl=suite { Function (Identifier a, fl, sl) }
+  | DEF; i=id; LPAREN; fl=id_lst; RPAREN; COLON; sl=suite { Function (i , fl, sl) }
   | IF; e=exp; COLON; s1=suite; ELSE; COLON; s2=suite { IfElse (e, s1, s2) }
   | IF; e=exp; COLON; s=suite; { IfElse (e, s, []) }
   | RETURN; e=exp { Return e }
@@ -48,11 +48,18 @@ stmt:
   | CONTINUE { Continue }
   | BREAK { Break }
   | PRINT; LPAREN; e=exp RPAREN { Print e }
-  | a=ATOM; PLUSEQ; e2=exp { Assign ([a], [BinaryOp (Atom a, Plus, e2)]) }
-  | a=ATOM; MINUSEQ; e2=exp { Assign ([a], [BinaryOp (Atom a, Minus, e2)]) }
-  | a=ATOM; TIMESEQ; e2=exp { Assign ([a], [BinaryOp (Atom a, Times, e2)]) }
-  | a=ATOM; DIVIDEEQ; e2=exp { Assign ([a], [BinaryOp (Atom a, Divide, e2)]) }
+  | al=assign_lst; EQ; e=exp; { Assign (al, [e]) }
+  | i=IDENTIFIER; PLUSEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Plus, e2)]) }
+  | i=IDENTIFIER; MINUSEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Minus, e2)]) }
+  | i=IDENTIFIER; TIMESEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Times, e2)]) }
+  | i=IDENTIFIER; DIVIDEEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Divide, e2)]) }
   ;
+
+assign_lst:
+  | i=id { [i] }
+  | al=assign_lst; EQ; i=id { al@[i] }
+  ;
+
 
 exp:
   | e1=exp; PLUS; e2=exp { BinaryOp (e1, Plus, e2) }
@@ -75,7 +82,7 @@ exp:
   | FALSE { Literal (BooleanLiteral false) }
   | i=INT { Literal (IntegerLiteral (i)) }
   | s=STRING { Literal (StringLiteral (s)) }
-  | a=ATOM { Atom a }
+  | i=IDENTIFIER { Identifier i }
   | e=exp; LPAREN; el=exp_lst; RPAREN { Call (e, el) }
   ;
 
@@ -83,14 +90,18 @@ suite:
   | NEWLINE; INDENT; sl=stmts; DEDENT { sl }
   ;
 
-atoms_lst:
+id_lst:
   | { [] }
-  | ar=atoms_rest; { ar }
+  | ir=id_rest; { ir }
   ;
 
-atoms_rest:
-  | a=ATOM { [a] }
-  | ar=atoms_rest; COMMA; a=ATOM { ar@[a] }
+id_rest:
+  | i=id { [i] }
+  | ir=id_rest; COMMA; i=id { ir@[i] }
+  ;
+
+id:
+  | i=IDENTIFIER { Identifier i }
   ;
 
 exp_lst:

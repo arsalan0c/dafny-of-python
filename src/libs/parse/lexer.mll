@@ -68,7 +68,7 @@ rule f = parse
 | "False" { FALSE }
 | "None" { NONE }
 | integer as i { INT (int_of_string i) }
-| identifier as atom { ATOM atom }
+| identifier as i { IDENTIFIER i }
 | stringliteral as s { STRING s }
 | _ as c { illegal c }
 
