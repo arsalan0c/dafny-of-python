@@ -15,7 +15,8 @@ let whitespace = [' ' '\t']
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']
 let integer = (digit | ['1' - '9'] digit*)
-let comment = '#' [^ '\n' '\r']*
+let stringliteral = ('"'[^'"''\\']*('\\'_[^'"''\\']*)*'"')
+let comment = '#'
 let boolean = "True" | "False"
 let e = ""
 
@@ -23,6 +24,7 @@ rule f = parse
 | eof { EOF }
 | indent as s { SPACE (String.length s - 1) }
 | whitespace+ { f lexbuf }
+| comment { comment lexbuf }
 | eof { EOF }
 | '#' { f lexbuf }
 | '(' { LPAREN }
@@ -66,11 +68,11 @@ rule f = parse
 | "True" { TRUE }
 | "False" { FALSE }
 | "None" { NONE }
-| integer as i { INT i }
+| integer as i { INT (int_of_string i) }
 | identifier as atom { ATOM atom }
+| stringliteral as s { STRING s }
 | _ as c { illegal c }
 
 and comment = parse
 | indent { f lexbuf }
-| eof { failwith "[lexer] unterminated comment at EOF" }
 | _ { comment lexbuf }

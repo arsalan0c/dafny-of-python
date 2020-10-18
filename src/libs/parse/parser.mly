@@ -7,8 +7,8 @@
 %token <int> SPACE
 %token DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT
 %token AND OR NOT TRUE FALSE NONE
-%token <string> ATOM INT
-%token <int> DEDENTS
+%token <string> ATOM STRING 
+%token <int> INT
 
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
 %left PLUS MINUS
@@ -73,7 +73,8 @@ exp:
   | NOT; e=exp %prec NOT { UnaryOp (Not, e) }
   | TRUE { Literal (BooleanLiteral true) }
   | FALSE { Literal (BooleanLiteral false) }
-  | i=INT { Literal (IntegerLiteral (int_of_string i))  }
+  | i=INT { Literal (IntegerLiteral (i)) }
+  | s=STRING { Literal (StringLiteral (s)) }
   | a=ATOM { Atom a }
   | e=exp; LPAREN; el=exp_lst; RPAREN { Call (e, el) }
   ;
