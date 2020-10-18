@@ -1,9 +1,9 @@
 open Base
 
-type binaryop = Plus | PlusEq | Minus | MinusEq | Times | TimesEq | Divide | DivideEq | Mod | Eq | EqEq | NEq | Lt | LEq | Gt | GEq | And | Or
+type binaryop = Plus | Minus | Times | Divide | Mod | Eq | EqEq | NEq | Lt | LEq | Gt | GEq | And | Or
 [@@deriving sexp]
 
-type unaryop = Not | Neg
+type unaryop = Not | UMinus
 [@@deriving sexp]
 
 type identifier = Identifier of string
@@ -30,9 +30,9 @@ type arg = Arg of exp
 
 type stmt =
   | Newline of string
-  | If of (exp * stmt list * stmt list)
+  | IfElse of (exp * stmt list * stmt list)
   | While of (exp * stmt list)
-  | Assignment of (atom list * exp list)
+  | Assign of (atom list * exp list)
   | Function of (identifier * atom list * stmt list)
   | Return of exp
   | Break
@@ -45,32 +45,3 @@ type stmt =
 type sexp =
   | Program of stmt list
 [@@deriving sexp]
-
-let binaryop_string = function
-  | Plus -> "+"
-  | PlusEq -> "+="
-  | Minus -> "-"
-  | MinusEq -> "-="
-  | Times -> "*"
-  | TimesEq -> "*="
-  | Divide -> "/"
-  | DivideEq -> "/="
-  | Mod -> "%"
-  | NEq -> "!="
-  | Eq -> "="
-  | EqEq -> "=="
-  | Lt -> "<"
-  | LEq -> "<="
-  | Gt -> ">"
-  | GEq -> ">="
-  | And -> "and"
-  | Or -> "or"
-
-let unaryop_string = function
-  | Not -> "not"
-  | Neg -> "-"
-
-let literal_string = function
-  | BooleanLiteral(b) -> Bool.to_string b
-  | IntegerLiteral(i) -> Int.to_string i 
-  | StringLiteral(s) -> s

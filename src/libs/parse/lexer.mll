@@ -9,7 +9,6 @@ let[@inline] illegal c =
   failwith (Printf.sprintf "[lexer] unexpected character: '%c'" c)
 }
 
-
 let indent = '\n' ' '*
 let whitespace = [' ' '\t']
 
