@@ -1,12 +1,17 @@
 {
-open Parser
+  open Parser
 
-exception LexError of string
+  exception LexError of string
 
-let[@inline] failwith msg = raise (LexError msg)
+  let[@inline] failwith msg = raise (LexError msg)
 
-let[@inline] illegal c =
-  failwith (Printf.sprintf "[lexer] unexpected character: '%c'" c)
+  let[@inline] illegal c =
+    failwith (Printf.sprintf "[lexer] unexpected character: '%c'" c)
+
+  let strip_quotes str =
+    match String.length str with
+    | 0 | 1 | 2 -> ""
+    | len -> String.sub str 1 (len - 2)
 }
 
 let indent = '\n' ' '*
@@ -69,7 +74,7 @@ rule f = parse
 | "None" { NONE }
 | integer as i { INT (int_of_string i) }
 | identifier as i { IDENTIFIER i }
-| stringliteral as s { STRING s }
+| stringliteral as s { STRING (strip_quotes s) }
 | _ as c { illegal c }
 
 and comment = parse

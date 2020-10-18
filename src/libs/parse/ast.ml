@@ -9,13 +9,11 @@ type unaryop = Not | UMinus
 type identifier = Identifier of string
 [@@deriving sexp]
 
-type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of string
+type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of string | NoneLiteral
 [@@deriving sexp]
 
 type exp =
   | Identifier of string
-  | ExpList of exp list
-  | IntegerLiteral of string
   | BinaryOp of (exp * binaryop * exp)
   | UnaryOp of (unaryop * exp)
   | Literal of literal
@@ -36,7 +34,6 @@ type stmt =
   | Continue
   | Print of exp
   | Exp of exp
-  | StmtList of stmt list
 [@@deriving sexp]
 
 type sexp =

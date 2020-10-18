@@ -82,6 +82,7 @@ exp:
   | FALSE { Literal (BooleanLiteral false) }
   | i=INT { Literal (IntegerLiteral (i)) }
   | s=STRING { Literal (StringLiteral (s)) }
+  | NONE { Literal (NoneLiteral) }
   | i=IDENTIFIER { Identifier i }
   | e=exp; LPAREN; el=exp_lst; RPAREN { Call (e, el) }
   ;
