@@ -26,7 +26,6 @@ rule f = parse
 | whitespace+ { f lexbuf }
 | comment { comment lexbuf }
 | eof { EOF }
-| '#' { f lexbuf }
 | '(' { LPAREN }
 | ')' { RPAREN }
 | '{' { LBRACE }
