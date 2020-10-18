@@ -44,6 +44,7 @@ stmt:
   | IF; e=exp; COLON; s1=suite; ELSE; COLON; s2=suite { IfElse (e, s1, s2) }
   | IF; e=exp; COLON; s=suite; { IfElse (e, s, []) }
   | RETURN; e=exp { Return e }
+  | RETURN { Return (Literal (NoneLiteral)) }
   | WHILE; e=exp COLON; s=suite; { While (e, s) }
   | CONTINUE { Continue }
   | BREAK { Break }
