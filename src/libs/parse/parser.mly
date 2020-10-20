@@ -1,5 +1,10 @@
 %{
   open Ast
+  open List
+
+  let rec replicate e n = match n with
+    | 0 -> []
+    | n -> [e]@(replicate e (n - 1))
 %}
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA
@@ -49,7 +54,8 @@ stmt:
   | CONTINUE { Continue }
   | BREAK { Break }
   | PRINT; LPAREN; e=exp RPAREN { Print e }
-  | al=assign_lst; EQ; e=exp; { Assign (al, [e]) }
+  | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (length al)) }
+  /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */
   | i=IDENTIFIER; PLUSEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Plus, e2)]) }
   | i=IDENTIFIER; MINUSEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Minus, e2)]) }
   | i=IDENTIFIER; TIMESEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Times, e2)]) }
@@ -60,7 +66,6 @@ assign_lst:
   | i=id { [i] }
   | al=assign_lst; EQ; i=id { al@[i] }
   ;
-
 
 exp:
   | e1=exp; PLUS; e2=exp { BinaryOp (e1, Plus, e2) }
