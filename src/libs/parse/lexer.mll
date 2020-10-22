@@ -41,6 +41,8 @@ rule f = parse
 | ';' { SEMICOLON }
 | ',' { COMMA }
 | "def" { DEF }
+| "pre" { PRE }
+| "post" { POST }
 | "if" { IF }
 | "else" { ELSE }
 | "for" { FOR }

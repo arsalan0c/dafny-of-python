@@ -14,6 +14,7 @@
 %token AND OR NOT TRUE FALSE NONE
 %token <string> IDENTIFIER STRING 
 %token <int> INT
+%token PRE POST
 
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
 %left PLUS MINUS
@@ -45,7 +46,7 @@ stmt:
   | s=stmt; NEWLINE { s }
   | s=stmt; SEMICOLON { s }
   | e=exp { Exp e }
-  | DEF; i=id; LPAREN; fl=id_lst; RPAREN; COLON; sl=suite { Function (i , fl, sl) }
+  | s=spec; NEWLINE; DEF; i=id; LPAREN; fl=id_lst; RPAREN; COLON; sl=suite { Function (s, i, fl, sl) }
   | IF; e=exp; COLON; s1=suite; ELSE; COLON; s2=suite { IfElse (e, s1, s2) }
   | IF; e=exp; COLON; s=suite; { IfElse (e, s, []) }
   | RETURN; e=exp { Return e }
@@ -93,6 +94,9 @@ exp:
   | i=IDENTIFIER { Identifier i }
   | e=exp; LPAREN; el=exp_lst; RPAREN { Call (e, el) }
   ;
+
+spec:
+  | PRE; pre=exp; NEWLINE; POST; post=exp; { Spec (pre, post) }
 
 suite:
   | NEWLINE; INDENT; sl=stmts; DEDENT { sl }
