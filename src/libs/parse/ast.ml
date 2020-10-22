@@ -3,6 +3,7 @@ open List
 
 exception AstError of string
 
+(* let var_counter = 0 *)
 
 let rec replicate_str s n = match n with
 | 0 -> ""
@@ -43,6 +44,7 @@ type stmt =
   | Assign of (identifier list * exp list)
   | Function of (identifier * identifier list * stmt list)
   | Return of exp
+  | Assert of exp
   | Break
   | Continue
   | Print of exp
@@ -90,17 +92,25 @@ let rec exp_str id = function
   | Call(e, el) -> (indent id) ^ (exp_str 0 e) ^ "(" ^ (String.concat ~sep:", " (map ~f:(exp_str 0) el)) ^ ")"
 
 let rec stmt_str id = function
-  | Exp(e) -> (indent id) ^ exp_str 0 e ^ ";"
+  | Exp(_) -> "" (* (indent id) ^ "var temp" ^ Int.to_string var_counter ^ " := " ^ exp_str 0 e ^ ";" *)
   | Assign(idl, el) -> (indent id) ^ (String.concat ~sep:", " (map ~f:(id_str 0) idl)) ^ " := " ^ (String.concat ~sep:", " (map ~f:(exp_str 0) el)) ^ ";"
   | IfElse(e, sl1, sl2) -> (indent id) ^ "if " ^ (exp_str 0 e) ^ " {\n" ^ 
     (String.concat ~sep:("\n") (map ~f:(stmt_str (id+2)) sl1)) ^ 
     (if length sl2 > 0 then "\n" ^ indent id ^ "} else {\n" ^ (String.concat ~sep:("\n") (map ~f:(stmt_str (id+2)) sl2)) else "") ^ "\n" ^ (indent id) ^ "}"
   | Return(e) -> (indent id) ^ "return " ^ exp_str 0 e ^ ";"
+  | Assert(e) -> (indent id) ^ "assert " ^ exp_str 0 e ^ ";"
   | While(e, sl) -> (indent id) ^ "while " ^ exp_str 0 e ^ " {\n" ^ 
     (String.concat ~sep:("\n") (map ~f:(stmt_str (id+2)) sl)) ^ "\n" ^ (indent id) ^ "}"
   | _ -> failwith "unsupported AST node"
 
-let prog_str = function
-  | Program(sl) -> "method Main() {\n" ^ (String.concat ~sep:"\n" (map ~f:(stmt_str 2) sl)) ^ "\n" ^ "}"
 
+let is_fn = function
+  | Function(_, _, _) -> true
+  | _ -> false
+
+let prog_str = function
+  | Program(sl) -> let non_fn_stmts = filter ~f:(fun x -> not (is_fn x)) sl in
+      let fn_stmts = filter ~f:is_fn sl in
+      "method Main() {\n" ^ (String.concat ~sep:"\n" (map ~f:(stmt_str 2) non_fn_stmts)) ^ "\n}\n\n" ^
+      (String.concat ~sep:"\n" (map ~f:(stmt_str 2) fn_stmts))
 

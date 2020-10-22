@@ -10,7 +10,7 @@
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA
 %token EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUS PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> SPACE
-%token DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT
+%token DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT
 %token AND OR NOT TRUE FALSE NONE
 %token <string> IDENTIFIER STRING 
 %token <int> INT
@@ -54,6 +54,7 @@ stmt:
   | CONTINUE { Continue }
   | BREAK { Break }
   | PRINT; LPAREN; e=exp RPAREN { Print e }
+  | ASSERT; e=exp { Assert e }
   | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (length al)) }
   /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */
   | i=IDENTIFIER; PLUSEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Plus, e2)]) }

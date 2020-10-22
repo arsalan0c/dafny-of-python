@@ -49,6 +49,7 @@ rule f = parse
 | "continue" { CONTINUE }
 | "print" { PRINT }
 | "return" { RETURN }
+| "assert" { ASSERT }
 | "in" { IN }
 | "==" { EQEQ }
 | '=' { EQ }
