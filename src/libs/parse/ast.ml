@@ -99,6 +99,7 @@ let spec_str id = function
 
 let rec stmt_str id = function
   | Exp(e) -> (indent id) ^ "var x := " ^ (exp_str 0 e) ^ ";"
+  | Print(e) -> (indent id) ^ "print " ^ (exp_str 0 e) ^ ";"
   | Assign(il, el) -> (indent id) ^ "var " ^ (String.concat ~sep:", " (map ~f:(id_str 0) il)) ^ " := " ^ (String.concat ~sep:", " (map ~f:(exp_str 0) el)) ^ ";"
   | IfElse(e, sl1, sl2) -> (indent id) ^ "if " ^ (exp_str 0 e) ^ " {\n" ^ 
     (String.concat ~sep:("\n") (map ~f:(stmt_str (id+2)) sl1)) ^ 
