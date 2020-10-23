@@ -3,7 +3,7 @@ open List
 
 exception AstError of string
 
-(* let var_counter = 0 *)
+let var_counter : int ref = ref 0
 
 let rec replicate_str s n = match n with
 | 0 -> ""
@@ -98,7 +98,8 @@ let spec_str id = function
   | Spec(pre, post) -> (indent (id)) ^ "requires " ^ (exp_str 0 pre) ^ "\n" ^ (indent (id)) ^ "ensures " ^ (exp_str 0 post)
 
 let rec stmt_str id = function
-  | Exp(e) -> (indent id) ^ "var x := " ^ (exp_str 0 e) ^ ";"
+  | Exp(Call(ec, el)) -> var_counter := !var_counter + 1; ((indent id) ^ "var temp" ^ (Int.to_string !var_counter) ^ " := " ^ (exp_str 0 (Call(ec, el))) ^ ";") (* Only call expressions are allowed as statements in Dafny *)
+  | Exp(_) -> ""
   | Print(e) -> (indent id) ^ "print " ^ (exp_str 0 e) ^ ";"
   | Assign(il, el) -> (indent id) ^ "var " ^ (String.concat ~sep:", " (map ~f:(id_str 0) il)) ^ " := " ^ (String.concat ~sep:", " (map ~f:(exp_str 0) el)) ^ ";"
   | IfElse(e, sl1, sl2) -> (indent id) ^ "if " ^ (exp_str 0 e) ^ " {\n" ^ 
