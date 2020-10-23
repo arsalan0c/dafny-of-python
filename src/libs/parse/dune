@@ -1,0 +1,13 @@
+(menhir
+  (modules parser)
+  (flags ("--dump" "--explain")))
+(ocamllex lexer)
+(library
+  (name pyparse)
+  (libraries
+    base
+  )
+  (preprocess (pps ppx_jane -allow-unannotated-ignores))
+)
+
+
