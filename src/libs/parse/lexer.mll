@@ -29,6 +29,10 @@ rule f = parse
 | eof { EOF }
 | indent as s { SPACE (String.length s - 1) }
 | whitespace+ { f lexbuf }
+| "# pre" { PRE }
+| "# post" { POST }
+| "#pre" { PRE }
+| "#post" { POST }
 | comment { comment lexbuf }
 | eof { EOF }
 | '(' { LPAREN }
@@ -41,8 +45,6 @@ rule f = parse
 | ';' { SEMICOLON }
 | ',' { COMMA }
 | "def" { DEF }
-| "pre" { PRE }
-| "post" { POST }
 | "if" { IF }
 | "else" { ELSE }
 | "for" { FOR }
