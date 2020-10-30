@@ -46,7 +46,7 @@ let rec exp_z3 = function
   | Literal(l) -> literal_z3 l
   | Call(e, _) -> Arithmetic.mk_unary_minus ctx (exp_z3 e)
 
-let stmt_z3 pre post = function
+let stmt_z3 post = function
   | Assign(il, el) -> begin
     let e = exp_z3 (List.nth el 0) in
     match e with
@@ -55,31 +55,40 @@ let stmt_z3 pre post = function
         let ide = Arithmetic.Integer.mk_const_s ctx id in
         let _ = Hashtbl.add env id ide in
         let sub = Expr.substitute post [ide] [x] in
-        let imp = Boolean.mk_implies ctx pre sub in
-        let neg_imp = Boolean.mk_not ctx imp in
+        sub
+        (* let imp = Boolean.mk_implies ctx pre sub in *)
+        (* let neg_imp = Boolean.mk_not ctx imp in
         let sol = Solver.mk_simple_solver ctx in
         let res = (Solver.string_of_status (Solver.check sol [neg_imp])) in
-        if res = "satisfiable" then 
+        if res = "satisfiable" then  *)
     end 
-  | _ -> None
+  | _ -> post
   (* | IfElse(e, sl1, sl2) ->
   | Return(e) ->
   | Assert(e) ->
   | While(e, sl) -> *)
 
+let rec composition pre post sl = if List.length sl > 1 then composition pre (stmt_z3 post (List.hd sl)) (List.tl sl) else 
+  begin
+    let sub = stmt_z3 post (List.hd sl) in
+    let imp = Boolean.mk_implies ctx pre sub in
+    let neg_imp = Boolean.mk_not ctx imp in
+    let sol = Solver.mk_simple_solver ctx in
+    let res = (Solver.string_of_status (Solver.check sol [neg_imp])) in
+    Some res
+  end
+
+
+
 let func_z3 = function
   | Function(Spec(pre, post), ident, il, sl) -> begin
     let f = (fun id -> let ids = (id_z3 id) in let ide = Arithmetic.Integer.mk_const_s ctx ids in Hashtbl.add env ids ide) in
       let _ = List.iter f il in
-      let g stmt = begin
-        match stmt_z3 (exp_z3 pre) (exp_z3 post) stmt with
+      match composition (exp_z3 pre) (exp_z3 post) (List.rev sl) with
         | Some x -> let name = (id_z3 ident) in 
           let msg = if x = "satisfiable" then "Unable to verify " else "Successfully verified " in
           msg ^ "<" ^ name ^ ">"
         | None -> ""
-      end in
-      g (L)
-
     end 
   | _ -> ""
 
