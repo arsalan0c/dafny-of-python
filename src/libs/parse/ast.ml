@@ -24,7 +24,7 @@ type identifier = Identifier of string
 type unaryop = Not | UMinus
 [@@deriving sexp]
 
-type binaryop = Plus | Minus | Times | Divide | Mod | Eq | EqEq | NEq | Lt | LEq | Gt | GEq | And | Or
+type binaryop = Plus | Minus | Times | Divide | Mod | EqEq | NEq | Lt | LEq | Gt | GEq | And | Or
 [@@deriving sexp]
 
 type exp =
@@ -68,8 +68,8 @@ let literal_str id = function
   | NoneLiteral -> "null"
 
 let unaryop_str = function
-| Not -> "!"
-| UMinus -> "-"
+  | Not -> "!"
+  | UMinus -> "-"
 
 let binaryop_str = function
   | Plus -> "+"
@@ -78,7 +78,6 @@ let binaryop_str = function
   | Divide -> "/"
   | Mod -> "%"
   | NEq -> "!="
-  | Eq -> "="
   | EqEq -> "=="
   | Lt -> "<" 
   | LEq -> "<="
