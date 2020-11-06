@@ -8,7 +8,8 @@ let () = begin
   inp
   |> Lexing.from_string 
   |> Pyparse.Parser.f Pyparse.Indenter.f
-  (* |> Pyparse.Ast.prog_str *)
-  |> Verifier.Hoare.prog_z3
+  |> Pyparse.Ast.prog_str
+  (* |> Verifier.Hoare.prog_z3 *)
   |> printf "->\n%s\n"
 end
+ 
