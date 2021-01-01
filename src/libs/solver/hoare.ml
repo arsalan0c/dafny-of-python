@@ -1,4 +1,4 @@
-
+(* 
 open Pyparse.Ast
 open Z3
 
@@ -82,4 +82,4 @@ let func_z3 = function
   | _ -> ""
 
 let prog_z3 = function
-  | Program(sl) -> String.concat "\n" (List.map func_z3 sl) 
+  | Program(sl) -> String.concat "\n" (List.map func_z3 sl)  *)

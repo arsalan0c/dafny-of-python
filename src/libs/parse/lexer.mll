@@ -12,6 +12,8 @@
     match String.length str with
     | 0 | 1 | 2 -> ""
     | len -> String.sub str 1 (len - 2)
+  
+  let emit_segment lb v = ((Lexing.lexeme_start_p lb), v)
 }
 
 let indent = '\n' ' '*
@@ -44,46 +46,49 @@ rule f = parse
 | ':' { COLON }
 | ';' { SEMICOLON }
 | ',' { COMMA }
-| "def" { DEF }
-| "if" { IF }
-| "else" { ELSE }
-| "for" { FOR }
-| "while" { WHILE }
-| "break" { BREAK }
-| "continue" { CONTINUE }
-| "print" { PRINT }
-| "return" { RETURN }
-| "assert" { ASSERT }
-| "in" { IN }
-| "==" { EQEQ }
-| '=' { EQ }
-| "!=" { NEQ }
-| '+' { PLUS }
-| "+=" { PLUSEQ }
-| '-' { MINUS }
-| "-=" { MINUSEQ }
-| '*' { TIMES }
-| "*=" { TIMESEQ }
-| "/" { DIVIDE }
-| "/=" { DIVIDEEQ }
-| "%" { MOD }
-| "<=" { LEQ }
-| '<' { LT }
-| ">=" { GEQ }
-| '>' { GT }
-| "and" { AND }
-| "or" { OR }
-| "not" { NOT }
+| "def" { DEF (emit_segment lexbuf None) }
+| "if" { IF (emit_segment lexbuf None) }
+| "else" { ELSE (emit_segment lexbuf None) }
+| "for" { FOR (emit_segment lexbuf None) }
+| "while" { WHILE (emit_segment lexbuf None) }
+| "break" { BREAK (emit_segment lexbuf None) }
+| "continue" { CONTINUE (emit_segment lexbuf None) }
+| "print" { PRINT (emit_segment lexbuf None) }
+| "return" { RETURN (emit_segment lexbuf None) }
+| "assert" { ASSERT (emit_segment lexbuf None) }
+| "in" { IN (emit_segment lexbuf None) }
+| "==" { EQEQ (emit_segment lexbuf None) }
+| '=' { EQ (emit_segment lexbuf None) }
+| "!=" { NEQ (emit_segment lexbuf None) }
+| '+' { PLUS (emit_segment lexbuf None) }
+| "+=" { PLUSEQ (emit_segment lexbuf None) }
+| '-' { MINUS (emit_segment lexbuf None) }
+| "-=" { MINUSEQ (emit_segment lexbuf None) }
+| '*' { TIMES (emit_segment lexbuf None) }
+| "*=" { TIMESEQ (emit_segment lexbuf None) }
+| "/" { DIVIDE (emit_segment lexbuf None) }
+| "/=" { DIVIDEEQ (emit_segment lexbuf None) }
+| "%" { MOD (emit_segment lexbuf None) }
+| "<=" { LEQ (emit_segment lexbuf None) }
+| '<' { LT (emit_segment lexbuf None) }
+| ">=" { GEQ (emit_segment lexbuf None) }
+| '>' { GT (emit_segment lexbuf None) }
+| "and" { AND (emit_segment lexbuf None) }
+| "or" { OR (emit_segment lexbuf None) }
+| "not" { NOT (emit_segment lexbuf None) }
 | "True" { TRUE }
 | "False" { FALSE }
 | "None" { NONE }
 | integer as i { INT (int_of_string i) }
-| identifier as i { IDENTIFIER i }
+| identifier as i { IDENTIFIER (emit_segment lexbuf (Some i)) }
 | stringliteral as s { STRING (strip_quotes s) }
 | _ as c { illegal c }
 
 and comment = parse
 | indent { f lexbuf }
 | _ { comment lexbuf }
+
+
+
 
 

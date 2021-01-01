@@ -7,12 +7,13 @@
     | n -> [e]@(replicate e (n - 1))
 %}
 
-%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA
-%token EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUS PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
+%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE
 %token <int> SPACE
-%token DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT
-%token AND OR NOT TRUE FALSE NONE
-%token <string> IDENTIFIER STRING 
+%token <Sourcemap.segment> DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT
+%token <Sourcemap.segment> AND OR NOT 
+%token <Sourcemap.segment> IDENTIFIER 
+%token <string> STRING
+%token <Sourcemap.segment> PLUS EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
 %token PRE POST
 
@@ -58,10 +59,10 @@ stmt:
   | ASSERT; e=exp { Assert e }
   | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (length al)) }
   /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */
-  | i=IDENTIFIER; PLUSEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Plus, e2)]) }
-  | i=IDENTIFIER; MINUSEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Minus, e2)]) }
-  | i=IDENTIFIER; TIMESEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Times, e2)]) }
-  | i=IDENTIFIER; DIVIDEEQ; e2=exp { Assign ([Identifier i], [BinaryOp (Identifier i, Divide, e2)]) }
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
 assign_lst:
@@ -70,28 +71,28 @@ assign_lst:
   ;
 
 exp:
-  | e1=exp; PLUS; e2=exp { BinaryOp (e1, Plus, e2) }
-  | e1=exp; MINUS; e2=exp { BinaryOp (e1, Minus, e2) }
-  | e1=exp; TIMES; e2=exp { BinaryOp (e1, Times, e2) }
-  | e1=exp; DIVIDE; e2=exp { BinaryOp (e1, Divide, e2) }
-  | e1=exp; MOD; e2=exp { BinaryOp (e1, Mod, e2) }
-  | e1=exp; EQEQ; e2=exp { BinaryOp (e1, EqEq, e2) }
-  | e1=exp; NEQ; e2=exp { BinaryOp (e1, NEq, e2) }
-  | e1=exp; LT; e2=exp { BinaryOp (e1, Lt, e2) }
-  | e1=exp; LEQ; e2=exp { BinaryOp (e1, LEq, e2) }
-  | e1=exp; GT; e2=exp { BinaryOp (e1, Gt, e2) }
-  | e1=exp; GEQ; e2=exp { BinaryOp (e1, GEq, e2) }
-  | e1=exp; AND; e2=exp { BinaryOp (e1, And, e2) }
-  | e1=exp; OR; e2=exp { BinaryOp (e1, Or, e2) }
+  | e1=exp; seg=PLUS; e2=exp { BinaryOp (e1, Plus seg, e2) }
+  | e1=exp; seg=MINUS; e2=exp { BinaryOp (e1, Minus seg, e2) }
+  | e1=exp; seg=TIMES; e2=exp { BinaryOp (e1, Times seg, e2) }
+  | e1=exp; seg=DIVIDE; e2=exp { BinaryOp (e1, Divide seg, e2) }
+  | e1=exp; seg=MOD; e2=exp { BinaryOp (e1, Mod seg, e2) }
+  | e1=exp; seg=EQEQ; e2=exp { BinaryOp (e1, EqEq seg, e2) }
+  | e1=exp; seg=NEQ; e2=exp { BinaryOp (e1, NEq seg, e2) }
+  | e1=exp; seg=LT; e2=exp { BinaryOp (e1, Lt seg, e2) }
+  | e1=exp; seg=LEQ; e2=exp { BinaryOp (e1, LEq seg, e2) }
+  | e1=exp; seg=GT; e2=exp { BinaryOp (e1, Gt seg, e2) }
+  | e1=exp; seg=GEQ; e2=exp { BinaryOp (e1, GEq seg, e2) }
+  | e1=exp; seg=AND; e2=exp { BinaryOp (e1, And seg, e2) }
+  | e1=exp; seg=OR; e2=exp { BinaryOp (e1, Or seg, e2) }
   | LPAREN; e=exp; RPAREN; { e }
-  | MINUS; e=exp %prec UMINUS { UnaryOp (UMinus, e) }
-  | NOT; e=exp %prec NOT { UnaryOp (Not, e) }
+  | s=MINUS; e=exp %prec UMINUS { UnaryOp (UMinus s, e) }
+  | s=NOT; e=exp %prec NOT { UnaryOp (Not s, e) }
   | TRUE { Literal (BooleanLiteral true) }
   | FALSE { Literal (BooleanLiteral false) }
   | i=INT { Literal (IntegerLiteral (i)) }
   | s=STRING { Literal (StringLiteral (s)) }
   | NONE { Literal (NoneLiteral) }
-  | i=IDENTIFIER { Identifier i }
+  | s=IDENTIFIER { Identifier s }
   | e=exp; LPAREN; el=exp_lst; RPAREN { Call (e, el) }
   ;
 
