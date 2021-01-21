@@ -16,8 +16,8 @@ let space = " "
 let indent i = replicate_str space i
 let[@inline] failwith msg = raise (AstError msg)
 
-let currLine = 0
-let currColumn = 0
+let curr_line : int ref = ref 0
+let curr_column : int ref = ref 0
 
 type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of string | NoneLiteral
 type identifier = Identifier of Sourcemap.segment
@@ -62,6 +62,9 @@ type stmt =
 type sexp =
   | Program of stmt list
 
+
+let newline = fun () -> (curr_line := !curr_line + 1; "\n")
+
 let id_str id: identifier -> string = function
   | Identifier(s) -> (indent id) ^ (Sourcemap.segment_str s)
 
@@ -72,23 +75,23 @@ let literal_str id = function
   | NoneLiteral -> "null"
 
 let unaryop_str = function
-  | Not s -> let v = "!" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | UMinus s -> let v = "-" in (Hashtbl.set sm ~key:currLine ~data:s); v
+  | Not s -> let v = "!" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | UMinus s -> let v = "-" in (Hashtbl.set sm ~key:curr_line ~data:s); v
 
 let binaryop_str = function
-  | Plus s -> let v = "+" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | Minus s -> let v = "-" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | Times s -> let v = "*" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | Divide s -> let v = "/" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | Mod s -> let v = "%" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | NEq s -> let v = "!=" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | EqEq s -> let v = "==" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | Lt s -> let v = "<" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | LEq s -> let v = "<=" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | Gt s -> let v = ">" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | GEq s -> let v = ">=" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | And s -> let v = "&&" in (Hashtbl.set sm ~key:currLine ~data:s); v
-  | Or s -> let v = "||" in (Hashtbl.set sm ~key:currLine ~data:s); v
+  | Plus s -> let v = "+" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | Minus s -> let v = "-" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | Times s -> let v = "*" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | Divide s -> let v = "/" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | Mod s -> let v = "%" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | NEq s -> let v = "!=" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | EqEq s -> let v = "==" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | Lt s -> let v = "<" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | LEq s -> let v = "<=" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | Gt s -> let v = ">" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | GEq s -> let v = ">=" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | And s -> let v = "&&" in (Hashtbl.set sm ~key:curr_line ~data:s); v
+  | Or s -> let v = "||" in (Hashtbl.set sm ~key:curr_line ~data:s); v
   
 let rec exp_str id = function
   | Identifier(s) -> (indent id) ^ (Sourcemap.segment_str s)
@@ -98,16 +101,16 @@ let rec exp_str id = function
   | Call(e, el) -> (indent id) ^ (exp_str 0 e) ^ "(" ^ (String.concat ~sep:", " (map ~f:(exp_str 0) el)) ^ ")"
 
 let spec_str id = function
-  | Spec(pre, post) -> (indent (id)) ^ "requires " ^ (exp_str 0 pre) ^ "\n" ^ (indent (id)) ^ "ensures " ^ (exp_str 0 post)
+  | Spec(pre, post) -> (indent (id)) ^ "requires " ^ (exp_str 0 pre) ^ (newline ()) ^ (indent (id)) ^ "ensures " ^ (exp_str 0 post)
 
 let rec stmt_str id = function
   | Exp(Call(ec, el)) -> var_counter := !var_counter + 1; ((indent id) ^ "var temp" ^ (Int.to_string !var_counter) ^ " := " ^ (exp_str 0 (Call(ec, el))) ^ ";") (* Only call expressions are allowed as statements in Dafny *)
   | Exp(_) -> ""
   | Print(e) -> (indent id) ^ "print " ^ (exp_str 0 e) ^ ";"
   | Assign(il, el) -> (indent id) ^ "var " ^ (String.concat ~sep:", " (map ~f:(id_str 0) il)) ^ " := " ^ (String.concat ~sep:", " (map ~f:(exp_str 0) el)) ^ ";"
-  | IfElse(e, sl1, sl2) -> (indent id) ^ "if " ^ (exp_str 0 e) ^ " {\n" ^ 
+  | IfElse(e, sl1, sl2) -> (indent id) ^ "if " ^ (exp_str 0 e) ^ " {" ^ (newline ()) ^ 
     (String.concat ~sep:("\n") (map ~f:(stmt_str (id+2)) sl1)) ^ 
-    (if length sl2 > 0 then "\n" ^ indent id ^ "} else {\n" ^ (String.concat ~sep:"\n" (map ~f:(stmt_str (id+2)) sl2)) else "") ^ "\n" ^ (indent id) ^ "}"
+    (if length sl2 > 0 then "\n" ^ indent id ^ "} else {" ^ (newline ()) ^ (String.concat ~sep:"\n" (map ~f:(stmt_str (id+2)) sl2)) else "") ^ (newline ()) ^ (indent id) ^ "}"
   | Return(e) -> (indent id) ^ "return " ^ exp_str 0 e ^ ";"
   | Assert(e) -> (indent id) ^ "assert " ^ exp_str 0 e ^ ";"
   | While(e, sl) -> (indent id) ^   "while " ^ exp_str 0 e ^ " {\n" ^ 
