@@ -3,6 +3,8 @@
 
   exception LexError of string
 
+  let printf = Stdlib.Printf.printf
+
   let[@inline] failwith msg = raise (LexError msg)
 
   let[@inline] illegal c =
@@ -13,11 +15,30 @@
     | 0 | 1 | 2 -> ""
     | len -> String.sub str 1 (len - 2)
   
-  let emit_segment lb v = ((Lexing.lexeme_start_p lb), v)
+  let pring = function
+    | Some s -> s
+    | None -> ""
+
+  let emit_segment lb v = 
+    let s = Lexing.lexeme_start_p lb in
+    (* printf "Seg: %s, %s\n" (Sourcemap.print_pos s) (pring v); *)
+    (s, v)
+
+  let upd (lb: Lexing.lexbuf) cols =
+    let lcp = lb.lex_curr_p in
+    lb.lex_curr_p <- { lcp with
+      pos_lnum = lcp.pos_lnum + 1;
+      pos_cnum = lcp.pos_cnum + cols;
+      pos_bol = lcp.pos_cnum;
+    }   
 }
 
 let indent = '\n' ' '*
 let whitespace = [' ' '\t']
+
+let simple_types = "int" | "float" | "complex" | "bool" | "str" | "(Some Type"
+let data_types = "list" | "dict" | "set" | "tuple"
+let type = simple_types | data_types
 
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']
@@ -29,14 +50,14 @@ let e = ""
 
 rule f = parse
 | eof { EOF }
-| indent as s { SPACE (String.length s - 1) }
+| type as t { TYPE (emit_segment lexbuf (Some t))}
+| indent as s { (upd lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | whitespace+ { f lexbuf }
 | "# pre" { PRE }
 | "# post" { POST }
 | "#pre" { PRE }
 | "#post" { POST }
 | comment { comment lexbuf }
-| eof { EOF }
 | '(' { LPAREN }
 | ')' { RPAREN }
 | '{' { LBRACE }
@@ -46,49 +67,45 @@ rule f = parse
 | ':' { COLON }
 | ';' { SEMICOLON }
 | ',' { COMMA }
-| "def" { DEF (emit_segment lexbuf None) }
-| "if" { IF (emit_segment lexbuf None) }
-| "else" { ELSE (emit_segment lexbuf None) }
-| "for" { FOR (emit_segment lexbuf None) }
-| "while" { WHILE (emit_segment lexbuf None) }
-| "break" { BREAK (emit_segment lexbuf None) }
-| "continue" { CONTINUE (emit_segment lexbuf None) }
-| "print" { PRINT (emit_segment lexbuf None) }
-| "return" { RETURN (emit_segment lexbuf None) }
-| "assert" { ASSERT (emit_segment lexbuf None) }
-| "in" { IN (emit_segment lexbuf None) }
-| "==" { EQEQ (emit_segment lexbuf None) }
-| '=' { EQ (emit_segment lexbuf None) }
-| "!=" { NEQ (emit_segment lexbuf None) }
-| '+' { PLUS (emit_segment lexbuf None) }
-| "+=" { PLUSEQ (emit_segment lexbuf None) }
-| '-' { MINUS (emit_segment lexbuf None) }
-| "-=" { MINUSEQ (emit_segment lexbuf None) }
-| '*' { TIMES (emit_segment lexbuf None) }
-| "*=" { TIMESEQ (emit_segment lexbuf None) }
-| "/" { DIVIDE (emit_segment lexbuf None) }
-| "/=" { DIVIDEEQ (emit_segment lexbuf None) }
-| "%" { MOD (emit_segment lexbuf None) }
-| "<=" { LEQ (emit_segment lexbuf None) }
-| '<' { LT (emit_segment lexbuf None) }
-| ">=" { GEQ (emit_segment lexbuf None) }
-| '>' { GT (emit_segment lexbuf None) }
-| "and" { AND (emit_segment lexbuf None) }
-| "or" { OR (emit_segment lexbuf None) }
-| "not" { NOT (emit_segment lexbuf None) }
+| "->" { ARROW }
+| "def" { DEF (emit_segment lexbuf (Some "def" )) }
+| "if" { IF (emit_segment lexbuf (Some "if" )) }
+| "else" { ELSE (emit_segment lexbuf (Some "else" )) }
+| "for" { FOR (emit_segment lexbuf (Some "for" )) }
+| "while" { WHILE (emit_segment lexbuf (Some "while" )) }
+| "break" { BREAK (emit_segment lexbuf (Some "break" )) }
+| "continue" { CONTINUE (emit_segment lexbuf (Some "continue")) }
+| "print" { PRINT (emit_segment lexbuf (Some "print" )) }
+| "return" { RETURN (emit_segment lexbuf (Some "return")) }
+| "assert" { ASSERT (emit_segment lexbuf (Some "assert")) }
+| "in" { IN (emit_segment lexbuf (Some "in")) }
+| "==" { EQEQ (emit_segment lexbuf (Some "==")) }
+| '=' { EQ (emit_segment lexbuf (Some "=")) }
+| "!=" { NEQ (emit_segment lexbuf (Some "!=")) }
+| '+' { PLUS (emit_segment lexbuf (Some "+")) }
+| "+=" { PLUSEQ (emit_segment lexbuf (Some "+=")) }
+| '-' { MINUS (emit_segment lexbuf (Some "-")) }
+| "-=" { MINUSEQ (emit_segment lexbuf (Some "-=")) }
+| '*' { TIMES (emit_segment lexbuf (Some "*")) }
+| "*=" { TIMESEQ (emit_segment lexbuf (Some "*=")) }
+| "/" { DIVIDE (emit_segment lexbuf (Some "/")) }
+| "/=" { DIVIDEEQ (emit_segment lexbuf (Some "/=")) }
+| "%" { MOD (emit_segment lexbuf (Some "%")) }     
+| "<=" { LEQ (emit_segment lexbuf (Some "<=")) }
+| '<' { LT (emit_segment lexbuf (Some "<")) }
+| ">=" { GEQ (emit_segment lexbuf (Some ">=")) }
+| '>' { GT (emit_segment lexbuf (Some ">")) }
+| "and" { AND (emit_segment lexbuf (Some "and")) }
+| "or" { OR (emit_segment lexbuf (Some "or")) }
+| "not" { NOT (emit_segment lexbuf (Some "not")) }
 | "True" { TRUE }
 | "False" { FALSE }
-| "None" { NONE }
+| "None" { NONE  }
 | integer as i { INT (int_of_string i) }
 | identifier as i { IDENTIFIER (emit_segment lexbuf (Some i)) }
 | stringliteral as s { STRING (strip_quotes s) }
 | _ as c { illegal c }
 
 and comment = parse
-| indent { f lexbuf }
+| indent { (upd lexbuf 0; f lexbuf) }
 | _ { comment lexbuf }
-
-
-
-
-

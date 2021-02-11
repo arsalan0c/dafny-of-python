@@ -5,9 +5,8 @@
 (library
   (name pyparse)
   (libraries
-    base
+    core
+    sexplib
   )
   (preprocess (pps ppx_jane -allow-unannotated-ignores))
 )
-
-

@@ -1,17 +1,21 @@
+/* --explain flag */
+/* %left: reduce
+%right: shift
+%nonassoc: raise a SyntaxError */
+
 %{
-  open Ast
-  open List
+  open Astpy
 
   let rec replicate e n = match n with
     | 0 -> []
     | n -> [e]@(replicate e (n - 1))
 %}
 
-%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE
+%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
 %token <Sourcemap.segment> DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT
 %token <Sourcemap.segment> AND OR NOT 
-%token <Sourcemap.segment> IDENTIFIER 
+%token <Sourcemap.segment> IDENTIFIER TYPE
 %token <string> STRING
 %token <Sourcemap.segment> PLUS EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
@@ -47,17 +51,17 @@ stmt:
   | s=stmt; NEWLINE { s }
   | s=stmt; SEMICOLON { s }
   | e=exp { Exp e }
-  | s=spec; NEWLINE; DEF; i=id; LPAREN; fl=id_lst; RPAREN; COLON; sl=suite { Function (s, i, fl, sl) }
+  | s=spec; NEWLINE; DEF; i=id; LPAREN; fl=param_lst; RPAREN; ARROW; t=TYPE; COLON; sl=suite { Function (s, i, fl, Type t, sl) }
   | IF; e=exp; COLON; s1=suite; ELSE; COLON; s2=suite { IfElse (e, s1, s2) }
   | IF; e=exp; COLON; s=suite; { IfElse (e, s, []) }
   | RETURN; e=exp { Return e }
   | RETURN { Return (Literal (NoneLiteral)) }
-  | WHILE; e=exp COLON; s=suite; { While (e, s) }
+  | WHILE; e=exp; COLON; s=suite; { While (e, s) }
   | CONTINUE { Continue }
   | BREAK { Break }
   | PRINT; LPAREN; e=exp RPAREN { Print e }
   | ASSERT; e=exp { Assert e }
-  | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (length al)) }
+  | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (List.length al)) }
   /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */
   | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
   | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
@@ -103,14 +107,18 @@ suite:
   | NEWLINE; INDENT; sl=stmts; DEDENT { sl }
   ;
 
-id_lst:
+param_lst:
   | { [] }
-  | ir=id_rest; { ir }
+  | pr=param_rest; { pr }
   ;
 
-id_rest:
-  | i=id { [i] }
-  | ir=id_rest; COMMA; i=id { ir@[i] }
+param_rest:
+  | p=param;  { [p] }
+  | pr=param_rest; COMMA; p=param { pr@[p] }
+  ;
+
+param:
+  | i=IDENTIFIER; COLON; t=TYPE { Param (Identifier i, Type t) }
   ;
 
 id:
