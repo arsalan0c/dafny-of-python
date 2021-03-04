@@ -9,6 +9,8 @@ type result = Success of string | Fail of string
 let printf = Stdlib.Printf.printf
 let inp = Stdio.In_channel.input_all Stdio.stdin
 
+let prelude = Stdio.In_channel.read_all "./src/libs/parse/prelude.dfy" 
+
 let run cmd =
   let inp = Unix.open_process_in cmd in
   let r = In_channel.input_lines inp in
@@ -41,7 +43,7 @@ let replace_num p =
     | Some s -> int_of_string s
     | None -> 0
     end in
-  let seg = Pyparse.Translate.nearest_seg (!Pyparse.Translate.sm) line column in
+  let seg = Pyparse.Astdfy.nearest_seg (!Pyparse.Astdfy.sm) line column in
   let seg_str = Pyparse.Sourcemap.print_segment seg in seg_str
   (* (printf "Here:\n%s\n%d %d\n" (Pyparse.Ast.print_sm !Pyparse.Ast.sm) line column; seg_str) *)
 
@@ -62,12 +64,16 @@ let lst_lst_str olst =
   let first = List.map ~f:(fun lst -> String.concat ~sep:", " lst) replaced_nums in
   String.concat ~sep:"\n" first
 
-let parse lexbuf = try Success (Pyparse.Translate.prog_str (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)) with
+(* let parse lexbuf = try Success (Pyparse.Translate.prog_str (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)) with
+  | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"]) *)
+
+let parse_dfyast prelude lexbuf = try Success (prelude ^ "\n" ^ (Pyparse.Astdfy.print_prog (Pyparse.Todafnyast.prog_dfy (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)))) with
   | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"])
 
 let write_to_file s f c = Out_channel.write_all f ~data:s ; String.concat ~sep:"\n" (run c)
 
 let final s =
+  (* printf "%s\n" s; *)
   let line_rgx = Re2.create_exn "\([0-9]*,[0-9]*\).+" in
   let lines = Re2.find_all_exn line_rgx s in 
   let split_rgx = Re2.create_exn ":" in
@@ -78,20 +84,26 @@ let final s =
 let main =
   (* let inf = write_to_file inp py_filename command_mt in
   printf "\nType inferencing:%s\n" inf; inferencing *)
-  let tc = write_to_file inp py_filename command_mypy in
+  (* let tc = write_to_file inp py_filename command_mypy in
   if (contains tc "error") then 
-  printf "\nTypechecking:%s\n" tc else
+  printf "\nTypechecking:%s\n" tc else *)
   (printf "\nParsing\n\"%s\"\n\r" inp;
-  let res = parse (Lexing.from_string inp) in 
-  printf "\n%s\n" (Pyparse.Translate.print_sm !Pyparse.Translate.sm);
+  let res = parse_dfyast "" (Lexing.from_string inp) in 
+  printf "\n%s\n" (Pyparse.Astdfy.print_sm !Pyparse.Astdfy.sm);
   match res with
   | Success(s) ->  printf "%s" s; let f = write_to_file s dfy_filename command_dfy in final f
   | Fail(s) -> printf "%s" s
   )
-
-(* let main2 =
+(* 
+let main2 =
   printf "\nParsing\n\"%s\"\n\r" inp;
   let res = Pyparse.Astpy.sexp_of_sexp (Pyparse.Parser.f Pyparse.Indenter.f (Lexing.from_string inp)) in 
+  let se = Sexp.to_string res in
+  printf "->\n%s\n" se *)
+
+(* let main_dfy_sexp =
+  printf "\nParsing\n\"%s\"\n\r" inp;
+  let res = Pyparse.Astdfy.sexp_of_dProgram (Pyparse.Todafnyast.prog_dfy (Pyparse.Parser.f Pyparse.Indenter.f (Lexing.from_string inp))) in 
   let se = Sexp.to_string res in
   printf "->\n%s\n" se *)
 

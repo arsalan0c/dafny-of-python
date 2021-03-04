@@ -1,12 +1,15 @@
+(* 
+
 open Base
 open Sexplib.Std
 
 open Astpy
 (* open Astdfy *)
 
+let printf = Stdlib.Printf.printf
+
 type pos = Pos of int * int
 [@@deriving sexp]
-
 type sourcemap = (pos * Sourcemap.segment) list ref
 [@@deriving sexp]
 
@@ -16,13 +19,13 @@ let add_sm k v s = sm := ((k, v), s)::!sm
 
 let var_counter : int ref = ref 0
 let rec replicate_str s n = match n with
-| 0 -> ""
-| n -> s ^ replicate_str s (n - 1)
+  | 0 -> ""
+  | n -> s ^ replicate_str s (n - 1)
 
 let space = " "
 let indent i = replicate_str space i
 
-let curr_line : int ref = ref 1
+let curr_line : int ref = ref 0
 let curr_column : int ref = ref 1
 
 let newline = fun () -> (curr_column := 0; curr_line := !curr_line + 1; "\n")
@@ -36,15 +39,14 @@ let rec newline_concat lst =
   | hd::[] -> hd
   | hd::tl -> hd ^ (newline ()) ^ (newline_concat tl)
 
-
 let rec newcolumn_concat sep lst = 
   match lst with
   | [] -> ""
   | hd::[] -> newcolumn hd
   | hd::tl -> (newcolumn (hd ^ sep)) ^ (newcolumn_concat sep tl)
 
-let id_str id: identifier -> string = function
-  | Identifier(s) -> newcolumn ((indent id) ^ (Sourcemap.segment_value s))
+let ident_str id : identifier -> string = function
+  | s -> newcolumn ((indent id) ^ (Sourcemap.segment_value s))
 
 let literal_str id = function
   | BooleanLiteral(b) -> newcolumn ((indent id) ^ Bool.to_string b)
@@ -76,10 +78,11 @@ let rec exp_str id = function
   | BinaryOp(e1, op, e2) -> (newcolumn (indent id)) ^ newcolumn_concat " " [(exp_str 0 e1); (binaryop_str op); (exp_str 0 e2)]
   | UnaryOp(op, e) -> (newcolumn (indent id)) ^ (unaryop_str op) ^ (exp_str 0 e)
   | Literal l -> (newcolumn (indent id)) ^ literal_str 0 l
-  | Call(e, el) -> (newcolumn (indent id)) ^ (exp_str 0 e) ^ (newcolumn "(") ^ (newcolumn_concat ", " (List.map ~f:(exp_str 0) el)) ^ (newcolumn ")")
+  | Call(e, el) -> (newcolumn (indent id)) ^ (ident_str 0 e) ^ (newcolumn "(") ^ (newcolumn_concat ", " (List.map ~f:(exp_str 0) el)) ^ (newcolumn ")")
 
 let spec_str id = function
   | Spec(pre, post) -> (newcolumn ((indent id) ^ "requires ")) ^ (exp_str 0 pre) ^ (newline ()) ^ (newcolumn ((indent id) ^ "ensures ")) ^ (exp_str 0 post)
+  | _ -> "" (* TODO: *)
 
 let pytype_str id = function 
   | Type(t) -> let dtype = begin
@@ -94,25 +97,25 @@ let pytype_str id = function
     newcolumn ((indent id) ^ dtype)
 
 let param_str id = function
-  | Param(i, t) -> (newcolumn (indent id)) ^ (id_str 0 i) ^ (newcolumn ": ") ^ (pytype_str 0 t)
+  | Param(i, t) -> (newcolumn (indent id)) ^ (ident_str 0 i) ^ (newcolumn ": ") ^ (pytype_str 0 t)
 
-let rec stmt_str id = function
-  | Exp(Call(ec, el)) -> var_counter := !var_counter + 1; (newcolumn ((indent id) ^ "var temp" ^ (Int.to_string !var_counter) ^ " := ")) ^ (exp_str 0 (Call(ec, el))) ^ (newcolumn ";") (* Only call expressions are allowed as statements in Dafny *)
+let stmt_str id = function
+  (* | Exp(Call(ec, el)) -> var_counter := !var_counter + 1; (newcolumn ((indent id) ^ "var temp" ^ (Int.to_string !var_counter) ^ " := ")) ^ (exp_str 0 (Call(ec, el))) ^ (newcolumn ";") (* Only call expressions are allowed as statements in Dafny *)
   | Exp(_) -> ""
-  | Print(e) -> (newcolumn ((indent id) ^ "print ")) ^ (exp_str 0 e) ^ (newcolumn ";")
-  | Assign(il, el) -> (newcolumn ((indent id) ^ "var ")) ^ (newcolumn_concat ", " (List.map ~f:(id_str 0) il)) ^ (newcolumn " := ") ^ (newcolumn_concat ", " (List.map ~f:(exp_str 0) el)) ^ (newcolumn ";")
-  | IfElse(e, sl1, sl2) -> (newcolumn ((indent id) ^ "if ")) ^ (exp_str 0 e) ^ (newcolumn " {") ^ (newline ()) ^ 
+  | Print(e) -> (newcolumn ((indent id) ^ "print ")) ^ (exp_str 0 e) ^ (newcolumn ";") *)
+  | Assign(il, el) -> (newcolumn ((indent id) ^ "var ")) ^ (newcolumn_concat ", " (List.map ~f:(ident_str 0) il)) ^ (newcolumn " := ") ^ (newcolumn_concat ", " (List.map ~f:(exp_str 0) el)) ^ (newcolumn ";")
+  (* | IfElse(e, sl1, sl2) -> (newcolumn ((indent id) ^ "if ")) ^ (exp_str 0 e) ^ (newcolumn " {") ^ (newline ()) ^ 
     (String.concat (List.map ~f:(newline_f (stmt_str (id+2))) sl1)) ^ 
     (if List.length sl2 > 0 then (newline ()) ^ (newcolumn (indent id ^  "} else {")) ^ (newline ()) ^ (String.concat (List.map ~f:(newline_f (stmt_str (id+2))) sl2)) else "") ^ (newline ()) ^ (newcolumn ((indent id) ^ "}"))
   | Return(e) -> (newcolumn ((indent id) ^ "return ")) ^ exp_str 0 e ^ (newcolumn ";")
   | Assert(e) -> (newcolumn ((indent id) ^ "assert ")) ^ exp_str 0 e ^ (newcolumn ";")
   | While(e, sl) -> (newcolumn ((indent id) ^   "while ")) ^ exp_str 0 e ^ (newcolumn " {")  ^ (newline ()) ^ 
     (String.concat (List.map ~f:(newline_f (stmt_str (id+2))) sl)) ^ (newline ()) ^ (indent id) ^ (newcolumn "}")
-  | Function(spec, i, pl, t, sl) -> (newcolumn ((indent id) ^ "method" ^ (id_str 1 i) ^ "(")) ^ 
+  | Function(spec, i, pl, t, sl) -> (newcolumn ((indent id) ^ "method" ^ (ident_str 1 i) ^ "(")) ^ 
     (newcolumn_concat ", " (List.map ~f:(fun x -> x) (List.map ~f:(param_str 0) pl))) ^ 
     (newcolumn ") returns (res: " ^ (pytype_str 0 t) ^ ")") ^ (newline ()) ^ (spec_str (id+2) spec) ^ 
     (newline ()) ^ (indent id) ^ (newcolumn "{") ^ (newline ()) ^ (String.concat (List.map ~f:(newline_f (stmt_str (id+2))) sl)) ^ 
-    (newline ()) ^ (newcolumn ((indent id) ^ "}"))
+    (newline ()) ^ (newcolumn ((indent id) ^ "}")) *)
   | _ -> failwith "unsupported AST node"
 
 let is_fn = function
@@ -140,6 +143,7 @@ let rec nearest_seg_helper sm line column nearest =
   | None -> nearest
 
 let nearest_seg sm line column = 
+    printf "%d\n" line;
     let res = nearest_seg_helper sm line column ((Int.max_value, Int.max_value), Sourcemap.default_segment) in
     snd res
 
@@ -150,3 +154,5 @@ let print_sm sm = String.concat ~sep:"\n" (List.map ~f:(fun e -> (print_pos (fst
 (* let err_line_column msg =  *)
 
 (* let printtbl sm = Hashtbl.iteri sm ~f:(fun ~key:x ~data:y -> (Stdlib.Printf.printf "%d -> %s\n" x (Sourcemap.print_segment y))) *)
+
+*)

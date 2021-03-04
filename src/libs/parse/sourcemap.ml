@@ -26,23 +26,23 @@ let pos_of_sexp s = match s with
       | _ -> Lexing.dummy_pos
   | _ -> Lexing.dummy_pos *)
 
-type pos = Lexing.position =
+(* type pos = Lexing.position =
 { 
   pos_fname : string
 ; pos_lnum : int
 ; pos_bol : int
 ; pos_cnum : int
 }
-[@@deriving sexp]
+[@@deriving sexp] *)
 
-(* type pos = Lexing.position =
+type pos = Lexing.position =
 { 
   pos_fname : string [@sexp_drop_if fun _ -> true]
 ; pos_lnum : int [@sexp_drop_if fun _ -> true]
 ; pos_bol : int [@sexp_drop_if fun _ -> true]
 ; pos_cnum : int [@sexp_drop_if fun _ -> true]
 }
-[@@deriving sexp] *)
+[@@deriving sexp]
 type segment = pos * (string option) (* turn this into a record *)
 [@@deriving sexp]
 
@@ -69,3 +69,5 @@ let segment_value (s: segment) =
     match (snd s) with
       | Some v -> v
       | None -> ""
+
+let segment_pos (s: segment) = fst s

@@ -6,9 +6,21 @@ let[@inline] failwith msg = raise (PyAstError msg)
 
 type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of string | NoneLiteral
 [@@deriving sexp]
-type pytype = Type of segment
-[@@deriving sexp]
-type identifier = Identifier of segment
+type pytype =
+  | Int of segment
+  | Float of segment 
+  | Complex of segment 
+  | Bool of segment 
+  | Str of segment  
+  | Non of segment
+  | List of segment * pytype option
+  | Dict of segment * pytype option
+  | Set of segment * pytype option
+  | Tuple of segment * pytype option
+(* | DSeq of segment
+| DArray of segment *)
+  [@@deriving sexp]
+type identifier = segment
 [@@deriving sexp]
 type unaryop = Not of segment | UMinus of segment
 [@@deriving sexp]
@@ -29,6 +41,9 @@ type binaryop =
   | GEq of segment
   | And of segment
   | Or of segment
+  | BiImpl of segment
+  | Implies of segment
+  | Explies of segment
   [@@deriving sexp]
 
 type exp =
@@ -36,19 +51,28 @@ type exp =
   | BinaryOp of (exp * binaryop * exp)
   | UnaryOp of (unaryop * exp)
   | Literal of literal
-  | Call of (exp * exp list)
+  | Call of (identifier * exp list)
+  | List of exp list
+  | Subscript of exp * exp (* value, slice *)
+  | Slice of exp option * exp option (* lower, upper *)
+  | Forall of identifier * exp
+  | Exists of identifier * exp
+  | Len of exp
   [@@deriving sexp]
 
-type arg = Arg of exp
-[@@deriving sexp]
-type spec = Spec of exp * exp (* pre, post *)
-[@@deriving sexp]
+type spec = 
+  | Pre of exp 
+  | Post of exp 
+  | Invariant of exp
+  | Decreases of exp
+  [@@deriving sexp]
+
 type stmt =
   | IfElse of (exp * stmt list * stmt list)
-  | While of (exp * stmt list)
+  | While of (exp * spec list * stmt list)
   | Assign of (identifier list * exp list)
-  | Function of (spec * identifier * param list * pytype * stmt list) (* spec, name, params, return type, body *)
-  | Return of exp
+  | Function of (spec list * identifier * param list * pytype * stmt list) (* spec, name, params, return type, body *)
+  | Return of exp list
   | Assert of exp
   | Break
   | Continue

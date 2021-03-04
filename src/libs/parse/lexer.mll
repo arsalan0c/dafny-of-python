@@ -36,9 +36,21 @@
 let indent = '\n' ' '*
 let whitespace = [' ' '\t']
 
-let simple_types = "int" | "float" | "complex" | "bool" | "str" | "(Some Type"
-let data_types = "list" | "dict" | "set" | "tuple"
-let type = simple_types | data_types
+(* simple types *)
+let int_type = "int"
+let float_type = "float"
+let complex_type = "complex" 
+let bool_type = "bool"
+let string_type = "str"
+let none_type = "None"
+
+(* data types *)
+let list_type = "list"
+let dict_type = "dict"
+let set_type = "set"
+let tuple_type = "tuple"
+
+(* let type = simple_type | data_type | data_type '[' type+ ']'  *)
 
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']
@@ -50,13 +62,32 @@ let e = ""
 
 rule f = parse
 | eof { EOF }
-| type as t { TYPE (emit_segment lexbuf (Some t))}
+| int_type as t { INT_TYPE (emit_segment lexbuf (Some t)) }
+| float_type as t { FLOAT_TYPE (emit_segment lexbuf (Some t)) }
+| bool_type as t { BOOL_TYPE (emit_segment lexbuf (Some t)) }
+| complex_type as t { COMPLEX_TYPE (emit_segment lexbuf (Some t)) }
+| string_type as t { STRING_TYPE (emit_segment lexbuf (Some t)) }
+| none_type as t { NONE_TYPE (emit_segment lexbuf (Some t)) }
+| list_type as t { LIST_TYPE (emit_segment lexbuf (Some t)) }
+| dict_type as t { DICT_TYPE (emit_segment lexbuf (Some t)) }
+| set_type as t { SET_TYPE (emit_segment lexbuf (Some t)) }
+| tuple_type as t { TUPLE_TYPE (emit_segment lexbuf (Some t)) }
 | indent as s { (upd lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | whitespace+ { f lexbuf }
 | "# pre" { PRE }
 | "# post" { POST }
 | "#pre" { PRE }
+| "pre" { PRE }
 | "#post" { POST }
+| "# invariant" { INVARIANT }
+| "#invariant" { INVARIANT }
+| "#decreases" { DECREASES }
+| "# decreases" { DECREASES }
+| "forall" { FORALL }
+| "exists" { EXISTS }
+| "<==>" { BIIMPL (emit_segment lexbuf (Some "<==>" )) }
+| "==>" { IMPLIES (emit_segment lexbuf (Some "==>" )) }
+| "<==" { EXPLIES (emit_segment lexbuf (Some "<==" )) }
 | comment { comment lexbuf }
 | '(' { LPAREN }
 | ')' { RPAREN }
@@ -67,6 +98,9 @@ rule f = parse
 | ':' { COLON }
 | ';' { SEMICOLON }
 | ',' { COMMA }
+| "len" { LEN }
+| "filter" { IDENTIFIER (emit_segment lexbuf (Some "filterF")) }
+| "map" { IDENTIFIER (emit_segment lexbuf (Some "mapF")) }
 | "->" { ARROW }
 | "def" { DEF (emit_segment lexbuf (Some "def" )) }
 | "if" { IF (emit_segment lexbuf (Some "if" )) }

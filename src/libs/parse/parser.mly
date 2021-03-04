@@ -1,6 +1,7 @@
 /* --explain flag */
 /* %left: reduce
 %right: shift
+menhir --list-errors
 %nonassoc: raise a SyntaxError */
 
 %{
@@ -8,18 +9,19 @@
 
   let rec replicate e n = match n with
     | 0 -> []
-    | n -> [e]@(replicate e (n - 1))
+    | n -> [e]@(replicate e ( n - 1))
 %}
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
-%token <Sourcemap.segment> DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT
+%token <Sourcemap.segment> DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT LAMBDA
 %token <Sourcemap.segment> AND OR NOT 
-%token <Sourcemap.segment> IDENTIFIER TYPE
+%token <Sourcemap.segment> IDENTIFIER INT_TYPE FLOAT_TYPE BOOL_TYPE COMPLEX_TYPE STRING_TYPE NONE_TYPE LIST_TYPE DICT_TYPE SET_TYPE TUPLE_TYPE
 %token <string> STRING
-%token <Sourcemap.segment> PLUS EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
+%token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
-%token PRE POST
+%token PRE POST INVARIANT FORALL EXISTS DECREASES
+%token LEN FILTER MAP
 
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
 %left PLUS MINUS
@@ -37,6 +39,7 @@
 
 %start <sexp> f
 
+/*  */
 %%
 
 f:
@@ -51,30 +54,42 @@ stmt:
   | s=stmt; NEWLINE { s }
   | s=stmt; SEMICOLON { s }
   | e=exp { Exp e }
-  | s=spec; NEWLINE; DEF; i=id; LPAREN; fl=param_lst; RPAREN; ARROW; t=TYPE; COLON; sl=suite { Function (s, i, fl, Type t, sl) }
+  | s=spec_lst; DEF; i=id; LPAREN; fl=param_lst; RPAREN; ARROW; t=typ; COLON; sl=suite { Function (s, i, fl, t, sl) }
   | IF; e=exp; COLON; s1=suite; ELSE; COLON; s2=suite { IfElse (e, s1, s2) }
   | IF; e=exp; COLON; s=suite; { IfElse (e, s, []) }
-  | RETURN; e=exp { Return e }
-  | RETURN { Return (Literal (NoneLiteral)) }
-  | WHILE; e=exp; COLON; s=suite; { While (e, s) }
+  | RETURN; el=exp_lst { Return el }
+  | RETURN { Return [Literal (NoneLiteral)] }
+  | sl=spec_lst; WHILE; e=exp; COLON; s=suite; { While (e, sl, s) }
   | CONTINUE { Continue }
   | BREAK { Break }
   | PRINT; LPAREN; e=exp RPAREN { Print e }
   | ASSERT; e=exp { Assert e }
   | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (List.length al)) }
   /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([Identifier s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
 assign_lst:
   | i=id { [i] }
   | al=assign_lst; EQ; i=id { al@[i] }
-  ;
-
+  
 exp:
+  | LPAREN; e=exp; RPAREN; { e }
+  | el=lst_exp { el }
+  | e=exp; s=slice { Subscript (e, s) }
+  | s=MINUS; e=exp %prec UMINUS { UnaryOp (UMinus s, e) }
+  | s=NOT; e=exp %prec NOT { UnaryOp (Not s, e) }
+  | TRUE { Literal (BooleanLiteral true) }
+  | FALSE { Literal (BooleanLiteral false) }
+  | i=INT { Literal (IntegerLiteral (i)) }
+  | s=STRING { Literal (StringLiteral (s)) }
+  | NONE { Literal (NoneLiteral) }
+  | s=IDENTIFIER { Identifier s }
+  /* | LAMBDA; fl=param_lst; ARROW; t=typ; COLON; e=exp { }  */
+  | LEN; LPAREN; e=exp; RPAREN; { Len e } 
   | e1=exp; seg=PLUS; e2=exp { BinaryOp (e1, Plus seg, e2) }
   | e1=exp; seg=MINUS; e2=exp { BinaryOp (e1, Minus seg, e2) }
   | e1=exp; seg=TIMES; e2=exp { BinaryOp (e1, Times seg, e2) }
@@ -88,23 +103,79 @@ exp:
   | e1=exp; seg=GEQ; e2=exp { BinaryOp (e1, GEq seg, e2) }
   | e1=exp; seg=AND; e2=exp { BinaryOp (e1, And seg, e2) }
   | e1=exp; seg=OR; e2=exp { BinaryOp (e1, Or seg, e2) }
-  | LPAREN; e=exp; RPAREN; { e }
-  | s=MINUS; e=exp %prec UMINUS { UnaryOp (UMinus s, e) }
-  | s=NOT; e=exp %prec NOT { UnaryOp (Not s, e) }
-  | TRUE { Literal (BooleanLiteral true) }
-  | FALSE { Literal (BooleanLiteral false) }
-  | i=INT { Literal (IntegerLiteral (i)) }
-  | s=STRING { Literal (StringLiteral (s)) }
-  | NONE { Literal (NoneLiteral) }
-  | s=IDENTIFIER { Identifier s }
-  | e=exp; LPAREN; el=exp_lst; RPAREN { Call (e, el) }
+  | e1=exp; seg=BIIMPL; e2=exp { BinaryOp (e1, BiImpl seg, e2) }
+  | e1=exp; seg=IMPLIES; e2=exp { BinaryOp (e1, Implies seg, e2) }
+  | e1=exp; seg=EXPLIES; e2=exp { BinaryOp (e1, Explies seg, e2) }
+  | s=IDENTIFIER LPAREN; el=exp_lst; RPAREN { Call (s, el) }
+  | FORALL; s=IDENTIFIER; COLON; COLON; e=exp; { Forall (s, e) }
+  | EXISTS; s=IDENTIFIER; COLON; COLON; e=exp; { Exists (s, e) }
+  ;
+
+slice: 
+  | LBRACK; e=exp; o=slice_h { Slice (Some(e), o) } 
+  ; 
+slice_h:
+  | RBRACK { None }
+  | COLON; e=exp; RBRACK { Some e }
+  ;
+
+lst_exp:
+  | LBRACK; el=exp_lst; RBRACK { List el }
+  ;
+
+spec_lst:
+  | { [] }
+  | s=spec; sl=spec_lst { s::sl }
   ;
 
 spec:
-  | PRE; pre=exp; NEWLINE; POST; post=exp; { Spec (pre, post) }
+  | PRE; e=spec_rem { Pre e }
+  | POST; e=spec_rem { Post e }
+  | DECREASES; e=spec_rem { Decreases e }
+  | INVARIANT; e=spec_rem { Invariant e }
+  ;
+
+spec_rem:
+  | e=exp; NEWLINE { e }
+  ;
+
+/* spec_prepost:
+  | PRE; pre=exp; NEWLINE; POST; post=exp; { [(Pre pre), (Post post)] } */
 
 suite:
   | NEWLINE; INDENT; sl=stmts; DEDENT { sl }
+  ;
+
+/* exp_lst:
+  | { [] }
+  | el=exp_rest; { el }
+exp_rest:
+  | e=exp; { [e] }
+  | er=exp_rest; COMMA; 3e=exp { er@[e] } */
+
+typ:
+  | t=base_typ { t }
+  | dt=data_typ { dt }
+  ;
+
+base_typ:
+  | t=INT_TYPE { Int t }
+  | t=FLOAT_TYPE { Float t }
+  | t=COMPLEX_TYPE { Complex t }
+  | t=BOOL_TYPE { Bool t }
+  | t=STRING_TYPE { Str t }
+  | t=NONE_TYPE { Non t }
+  ;
+
+data_typ:
+  | l=LIST_TYPE LBRACK t=typ RBRACK { List(l, Some t) }
+  | l=LIST_TYPE { List(l, None) }
+  | d=DICT_TYPE LBRACK t=typ RBRACK { Dict(d, Some t) }
+  | d=DICT_TYPE { Dict(d, None) }
+  | s=SET_TYPE LBRACK t=typ RBRACK { Set(s, Some t) }
+  | s=SET_TYPE { Set(s, None) }
+  | tt=TUPLE_TYPE LBRACK t=typ RBRACK { Tuple(tt, Some t) }
+  | t=TUPLE_TYPE { Tuple(t, None) }
   ;
 
 param_lst:
@@ -118,11 +189,11 @@ param_rest:
   ;
 
 param:
-  | i=IDENTIFIER; COLON; t=TYPE { Param (Identifier i, Type t) }
+  | id=IDENTIFIER; COLON; t=typ { Param (id, t) }
   ;
 
 id:
-  | i=IDENTIFIER { Identifier i }
+  | id=IDENTIFIER { id }
   ;
 
 exp_lst:
