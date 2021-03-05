@@ -91,8 +91,8 @@ let main =
   let res = parse_dfyast "" (Lexing.from_string inp) in 
   printf "\n%s\n" (Pyparse.Astdfy.print_sm !Pyparse.Astdfy.sm);
   match res with
-  | Success(s) ->  printf "%s" s; let f = write_to_file s dfy_filename command_dfy in final f
-  | Fail(s) -> printf "%s" s
+  | Success s ->  printf "%s" s; let f = write_to_file s dfy_filename command_dfy in final f
+  | Fail s -> printf "%s" s
   )
 (* 
 let main2 =

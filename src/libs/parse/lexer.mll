@@ -88,6 +88,7 @@ rule f = parse
 | "<==>" { BIIMPL (emit_segment lexbuf (Some "<==>" )) }
 | "==>" { IMPLIES (emit_segment lexbuf (Some "==>" )) }
 | "<==" { EXPLIES (emit_segment lexbuf (Some "<==" )) }
+| "::" { DOUBLECOLON }
 | comment { comment lexbuf }
 | '(' { LPAREN }
 | ')' { RPAREN }
@@ -109,7 +110,7 @@ rule f = parse
 | "while" { WHILE (emit_segment lexbuf (Some "while" )) }
 | "break" { BREAK (emit_segment lexbuf (Some "break" )) }
 | "continue" { CONTINUE (emit_segment lexbuf (Some "continue")) }
-| "print" { PRINT (emit_segment lexbuf (Some "print" )) }
+| "print" { printf "printing\n"; PRINT (emit_segment lexbuf (Some "print")) }
 | "return" { RETURN (emit_segment lexbuf (Some "return")) }
 | "assert" { ASSERT (emit_segment lexbuf (Some "assert")) }
 | "in" { IN (emit_segment lexbuf (Some "in")) }

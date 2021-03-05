@@ -102,6 +102,7 @@ let is_fn = function
 
 let prog_dfy = function
   | Program sl -> 
+      (* DProg("pyny", (List.map ~f:stmt_dfy sl)) *)
       let fn_stmts = List.filter ~f:is_fn sl in
       let d_fn_stmts = List.map ~f:stmt_dfy fn_stmts in
       let non_fn_stmts = List.filter ~f:(fun x -> not (is_fn x)) sl in

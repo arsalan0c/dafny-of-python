@@ -17,7 +17,7 @@ let rec replicate_str s n = match n with
 
 let space = " "
 let indent i = replicate_str space i
-let curr_line : int ref = ref 0
+let curr_line : int ref = ref 1
 let curr_column : int ref = ref 1
 let newline = fun () -> (curr_column := 0; curr_line := !curr_line + 1; "\n")
 let newline_f f = fun s -> (f s) ^ (newline ())
@@ -241,7 +241,7 @@ let print_rets id = function
 let rec print_stmt id = function
   (* | DAssume e -> (newcolumn ((indent id) ^ "assume")) ^ print_exp 1 e ^ (newcolumn ";")
   | DAssert e -> (newcolumn ((indent id) ^ "assert")) ^ print_exp 1 e ^ (newcolumn ";") *) 
-  | DAssign(first::rest, el) -> (printf "assign:%d\n" (List.length !vars)); let pre = if List.length (first::rest) = 0 || lookup (!curr_func) (Sourcemap.segment_value first) !vars then (indent id) 
+  | DAssign(first::rest, el) -> let pre = if List.length (first::rest) = 0 || lookup (!curr_func) (Sourcemap.segment_value first) !vars then (indent id) 
     else ((vars := (!curr_func, Sourcemap.segment_value first)::!vars); (newcolumn ((indent id) ^ "var "))) in 
     pre ^ (newcolumn_concat ", " (List.map ~f:(print_id 0) (first::rest))) ^ (newcolumn " := ") ^ 
     (newcolumn_concat ", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn ";")
@@ -281,11 +281,12 @@ let extr lst = match lst with
   | Some el -> el
   | None -> []
 
+  (* TODO: take columns into account *)
 let rec nearest_seg_helper sm line column nearest = 
   match List.hd sm with
   | Some mapping -> 
     let ldiff = Int.abs ((fst (fst mapping)) - line) in 
-    let so_far = fst (fst nearest) in
+    let so_far = Int.abs (fst (fst nearest) - line) in
     let rest = extr (List.tl sm) in
     if ldiff < so_far then nearest_seg_helper rest line column mapping else nearest_seg_helper rest line column nearest
   | None -> nearest

@@ -20,7 +20,7 @@ menhir --list-errors
 %token <string> STRING
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
-%token PRE POST INVARIANT FORALL EXISTS DECREASES
+%token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
 %token LEN FILTER MAP
 
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
@@ -107,8 +107,8 @@ exp:
   | e1=exp; seg=IMPLIES; e2=exp { BinaryOp (e1, Implies seg, e2) }
   | e1=exp; seg=EXPLIES; e2=exp { BinaryOp (e1, Explies seg, e2) }
   | s=IDENTIFIER LPAREN; el=exp_lst; RPAREN { Call (s, el) }
-  | FORALL; s=IDENTIFIER; COLON; COLON; e=exp; { Forall (s, e) }
-  | EXISTS; s=IDENTIFIER; COLON; COLON; e=exp; { Exists (s, e) }
+  | FORALL; s=IDENTIFIER; DOUBLECOLON; e=exp; { Forall (s, e) }
+  | EXISTS; s=IDENTIFIER; DOUBLECOLON; e=exp; { Exists (s, e) }
   ;
 
 slice: 
