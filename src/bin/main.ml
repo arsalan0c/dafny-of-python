@@ -67,7 +67,7 @@ let lst_lst_str olst =
 (* let parse lexbuf = try Success (Pyparse.Translate.prog_str (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)) with
   | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"]) *)
 
-let parse_dfyast prelude lexbuf = try Success (prelude ^ "\n" ^ (Pyparse.Astdfy.print_prog (Pyparse.Todafnyast.prog_dfy (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)))) with
+let parse_dfyast prelude lexbuf = try Success (prelude ^ "\n" ^ (Pyparse.Astdfy.print_prog (Pyparse.Todafnyast.prog_dfy (Pyparse.Convertcall.prog (Pyparse.Parser.f Pyparse.Indenter.f lexbuf))))) with
   | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"])
 
 let write_to_file s f c = Out_channel.write_all f ~data:s ; String.concat ~sep:"\n" (run c)

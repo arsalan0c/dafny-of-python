@@ -46,7 +46,6 @@ type pos = Lexing.position =
 type segment = pos * (string option) (* turn this into a record *)
 [@@deriving sexp]
 
-
 (* let sexp_of_segment = (string, ) *)
 
 let default_segment = (Lexing.dummy_pos, None)
@@ -55,8 +54,13 @@ let print_pos (p: pos) =
   let ln = Int.to_string p.pos_lnum in
   let cn = Int.to_string (p.pos_cnum - p.pos_bol) in
   String.concat ~sep:" " ["Line:"; ln; " Column:"; cn]
-  
 
+let new_segment l c v = 
+  ({pos_fname=""; pos_lnum=l; pos_bol=0; pos_cnum=c}, v)
+
+let update_segment_value s v =
+    (fst s, v)
+  
 let print_segment (s: segment) = 
   let p = fst s in
   let p_str = print_pos p in

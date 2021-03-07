@@ -23,8 +23,7 @@ let newline = fun () -> (curr_column := 0; curr_line := !curr_line + 1; "\n")
 let newline_f f = fun s -> (f s) ^ (newline ())
 let newcolumn s = (curr_column := !curr_column + (String.length s); s)
 
-let rec newline_concat lst = 
-  match lst with
+let rec newline_concat = function
   | [] -> ""
   | hd::[] -> hd
   | hd::tl -> hd ^ (newline ()) ^ (newline_concat tl)
@@ -85,6 +84,7 @@ type dType =
   | DSeq of segment * dType option
   | DArray of segment * dType option
   | DVoid
+  | DTuple of segment * dType list
   [@@deriving sexp]
 
 type dParam = dId * dType (* name: type *)
@@ -106,8 +106,8 @@ type dExpr =
   | DSeqExpr of dExpr list
   | DSubscript of dExpr * dExpr (* value, slice *)
   | DSlice of dExpr option * dExpr option (* lower, upper *)
-  | DForall of dId * dExpr
-  | DExists of dId * dExpr
+  | DForall of dId list * dExpr
+  | DExists of dId list * dExpr
   | DLen of dExpr
 [@@deriving sexp]
 
@@ -122,18 +122,18 @@ type dSpec =
 [@@deriving sexp]
 
 type dStmt = 
+  | DEmptyStmt
   | DAssume of dExpr
   | DAssert of dExpr
   | DAssign of dId list * dExpr list
-  | DIf of dExpr * dStmt list * dStmt list
+  | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
   | DWhile of dExpr * dSpec list * dStmt list
   | DPrint of dExpr
   | DReturn of dExpr list
   | DBreak
-  | DContinue 
   | DYield
   | DCallStmt of dId * dExpr list
-  | DMeth of dSpec list * dId * dParam list * dType * dStmt list
+  | DMeth of dSpec list * dId * dParam list * dType list * dStmt list
 [@@deriving sexp]
 
 type dProgram =
@@ -177,6 +177,7 @@ let print_type id t =
       | None -> "seq"
       end
     (* | DArray s -> add_op id s "array" *)
+    | DTuple(_, sl) -> "(" ^ (String.concat ~sep:", " (List.map ~f:get_v sl)) ^ ")"
     | _ -> ""
   in   
   let get_s t = 
@@ -187,6 +188,7 @@ let print_type id t =
     | DString s -> s
     | DChar s -> s
     | DSeq(s, _) -> s
+    | DTuple(s, _) -> s 
     (* | DArray s -> add_op id s "array" *)
     | _ -> Sourcemap.default_segment
   in add_op id (get_s t) (get_v t)
@@ -197,8 +199,8 @@ let print_param id = function
 
 let rec print_exp id = function
   | DIdentifier s -> add_sm !curr_line !curr_column s; newcolumn ((indent id) ^ Sourcemap.segment_value s);
-  | DBinary(e1, op, e2) -> (newcolumn (indent id)) ^ newcolumn_concat " " [(print_exp 0 e1); (print_op 0 op); (print_exp 0 e2)]
-  | DUnary(op, e) -> (newcolumn (indent id)) ^ (print_op 0 op) ^ (print_exp 0 e)
+  | DBinary(e1, op, e2) -> (newcolumn (indent id)) ^ newcolumn "(" ^ String.concat ~sep:" " [(print_exp 0 e1); (print_op 0 op); (print_exp 0 e2);] ^ newcolumn ")"
+  | DUnary(op, e) -> (newcolumn (indent id)) ^ newcolumn "(" ^ (print_op 0 op) ^ (print_exp 0 e) ^ newcolumn ")"
   | DIntLit l -> newcolumn ((indent id) ^ Int.to_string l)
   | DRealLit r -> newcolumn ((indent id) ^ Float.to_string r)
   | DBoolLit b -> newcolumn ((indent id) ^ Bool.to_string b)
@@ -207,8 +209,8 @@ let rec print_exp id = function
   (* | DThis -> newcolumn ((indent id) ^ "this")
   | DFresh -> newcolumn ((indent id) ^ "fresh")
   | DOld -> newcolumn ((indent id) ^ "old") *)
-  | DCallExpr(e, el) -> (newcolumn (indent id)) ^ (print_id 0 e) ^ (newcolumn "(") ^ (newcolumn_concat ", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn ")")
-  | DSeqExpr el -> (newcolumn (indent id)) ^ (newcolumn "[") ^ (newcolumn_concat ", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn "]")
+  | DCallExpr(e, el) -> (newcolumn (indent id)) ^ (print_id 0 e) ^ (newcolumn "(") ^ (String.concat ~sep:", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn ")")
+  | DSeqExpr el -> (newcolumn (indent id)) ^ (newcolumn "[") ^ (String.concat ~sep:", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn "]")
   | DSubscript(e1, e2) -> (print_exp id e1) ^ (print_exp 0 e2)
   | DSlice(e1, e2) -> let res = begin
       match e1, e2 with
@@ -218,8 +220,8 @@ let rec print_exp id = function
       | None, None -> ""
     end
     in (newcolumn ((indent id) ^ "[")) ^ res ^ (newcolumn "]")
-  | DForall(s, e) -> (newcolumn (indent id)) ^ (newcolumn "forall") ^ (print_exp 1 (DIdentifier s)) ^ (newcolumn " :: ") ^ (print_exp 0 e)
-  | DExists(s, e) -> (newcolumn (indent id)) ^ (newcolumn "exists") ^ (print_exp 1 (DIdentifier s)) ^ (newcolumn " :: ") ^ (print_exp 0 e)
+  | DForall(il, e) -> (newcolumn (indent id)) ^ (newcolumn "forall ") ^ (String.concat ~sep:", " (List.map ~f:(print_id 0) il)) ^ (newcolumn " :: ") ^ (print_exp 0 e)
+  | DExists(il, e) -> (newcolumn (indent id)) ^ (newcolumn "exists") ^ (String.concat ~sep:", " (List.map ~f:(print_id 0) il)) ^ (newcolumn " :: ") ^ (print_exp 0 e)
   | DLen e -> (newcolumn (indent id)) ^ (newcolumn "|") ^ (print_exp 0 e) ^ (newcolumn "|")
   | _ -> failwith "unsupported expr node"
 
@@ -233,33 +235,44 @@ let print_spec id = function
 let print_rets id = function
   | [] -> ""
   | DVoid::_ -> ""
-  | pl -> (newcolumn ((indent id) ^ "returns (")) ^ (newcolumn_concat ", " 
+  | tl -> (newcolumn ((indent id) ^ "returns (")) ^ (newcolumn_concat ", " 
       (List.map ~f:(fun x -> (get_name ()) ^ ":" ^ 
-      (print_type 1 x)) pl)) ^ 
+      (print_type 1 x)) tl)) ^ 
       (newcolumn ")")
 
-let rec print_stmt id = function
-  (* | DAssume e -> (newcolumn ((indent id) ^ "assume")) ^ print_exp 1 e ^ (newcolumn ";")
-  | DAssert e -> (newcolumn ((indent id) ^ "assert")) ^ print_exp 1 e ^ (newcolumn ";") *) 
+
+let rec print_else id sl = if List.length sl <= 0 then "" else 
+  (newcolumn " else {") ^ (newline ()) ^ (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (newcolumn ((indent id) ^ "}"))
+
+and print_elseif id esl = if List.length esl <= 0 then "" else 
+  let res = fun (e, sl) -> (newcolumn " else if") ^ (print_exp 1 e) ^ (newcolumn " {") ^ (newline ()) ^ (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (newcolumn ((indent id) ^ "}")) in
+  String.concat ~sep:"" (List.map ~f:res esl)
+
+
+
+and print_stmt id = function
+  | DEmptyStmt -> ""
+  | DAssume e -> (newcolumn ((indent id) ^ "assume")) ^ print_exp 1 e ^ (newcolumn ";") (* TODO: fix usage of newcolumn/newline *)
+  | DAssert e -> (newcolumn ((indent id) ^ "assert")) ^ print_exp 1 e ^ (newcolumn ";")
+  | DBreak ->  (newcolumn ((indent id) ^ "break;"))
   | DAssign(first::rest, el) -> let pre = if List.length (first::rest) = 0 || lookup (!curr_func) (Sourcemap.segment_value first) !vars then (indent id) 
     else ((vars := (!curr_func, Sourcemap.segment_value first)::!vars); (newcolumn ((indent id) ^ "var "))) in 
     pre ^ (newcolumn_concat ", " (List.map ~f:(print_id 0) (first::rest))) ^ (newcolumn " := ") ^ 
     (newcolumn_concat ", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn ";")
-  
+  | DCallStmt(ident, el) -> (newcolumn (indent id)) ^ (print_id 0 ident) ^ (newcolumn "(") ^ (String.concat ~sep:", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn ")") ^ (newcolumn ";")
   | DPrint e -> (newcolumn ((indent id) ^ "print")) ^ (print_exp 1 e) ^ (newcolumn ";")
-  | DIf(e, sl1, sl2) -> (newcolumn ((indent id) ^ "if ")) ^ (print_exp 0 e) ^ (newcolumn " {") ^ (newline ()) ^ 
-  (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl1)) ^ 
-  (if List.length sl2 > 0 then (newline ()) ^ (newcolumn (indent id ^  "} else {")) ^ (newline ()) ^ (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl2)) else "") ^ (newline ()) ^ (newcolumn ((indent id) ^ "}"))
+  | DIf(e, sl1, sl2, sl3) -> (newcolumn ((indent id) ^ "if ")) ^ (print_exp 0 e) ^ (newcolumn " {") ^ (newline ()) ^ 
+  (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl1)) ^ (newcolumn (indent id ^  "}")) ^ (print_elseif id sl2) ^ (print_else id sl3)
   | DWhile(e, speclst, sl) -> (newcolumn ((indent id) ^ "while")) ^ print_exp 1 e ^ newcolumn_h id "" ^ (newline_concat (List.map ~f:(print_spec (id+2)) speclst)) ^ newcolumn_h id "{"  ^ (newline ()) ^ 
-    (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (newline ()) ^ (indent id) ^ (newcolumn "}")
+    (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (indent id) ^ (newcolumn "}")
   | DReturn el -> (newcolumn ((indent id) ^ "return ")) ^ (newcolumn_concat ", " (List.map ~f:(print_exp 0) el)) ^ (newcolumn ";")
-  | DMeth(speclst, i, pl, t, sl) -> (curr_func := Sourcemap.segment_value i) ; 
+  | DMeth(speclst, i, pl, tl, sl) -> (curr_func := Sourcemap.segment_value i) ; 
     let prelude = (newcolumn ((indent id) ^ "method" ^ (print_id 1 i) ^ "(")) ^ 
     (newcolumn_concat ", " (List.map ~f:(fun x -> x) (List.map ~f:(print_param 0) pl))) ^ 
-    (newcolumn ")") ^ print_rets 1 [t] ^ (newline ()) ^ (newline_concat (List.map ~f:(print_spec (id+2)) speclst)) ^ 
+    (newcolumn ")") ^ print_rets 1 tl ^ (newline ()) ^ (newline_concat (List.map ~f:(print_spec (id+2)) speclst)) ^ 
     (newline ()) 
-    in let midlude = (indent id) ^ (newcolumn "{") ^ (newline ()) ^ (newcolumn_concat "\n" (List.map ~f:(print_declarations (id+2)) pl)) in 
-    let endlude = (newline ()) ^ (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (newline ()) ^ (newcolumn ((indent id) ^ "}")) ^ (newline ()) in 
+    in let midlude = (indent id) ^ (newcolumn "{") ^ (newcolumn_concat "\n" (List.map ~f:(print_declarations (id+2)) pl)) in 
+    let endlude = (newline ()) ^ (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (newcolumn ((indent id) ^ "}")) ^ (newline ()) in 
     prelude ^ midlude ^ endlude
   | _ -> failwith "unsupported AST node"
 

@@ -14,7 +14,7 @@ menhir --list-errors
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
-%token <Sourcemap.segment> DEF IF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT LAMBDA
+%token <Sourcemap.segment> DEF IF ELIF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
 %token <Sourcemap.segment> IDENTIFIER INT_TYPE FLOAT_TYPE BOOL_TYPE COMPLEX_TYPE STRING_TYPE NONE_TYPE LIST_TYPE DICT_TYPE SET_TYPE TUPLE_TYPE
 %token <string> STRING
@@ -23,17 +23,19 @@ menhir --list-errors
 %token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
 %token LEN FILTER MAP
 
+
+%left OR
+%left AND
+%left IMPLIES EXPLIES BIIMPL
+%left EQEQ NEQ
+%left LT LEQ GT GEQ
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
 %left PLUS MINUS
 %left TIMES DIVIDE
-%left EQEQ NEQ
-%left LT LEQ GT GEQ
-%left OR
-%left AND
 %right NOT UMINUS
 %left SEMICOLON
 
-%nonassoc ELSE
+%nonassoc ELSE ELIF
 %nonassoc LPAREN LBRACK LBRACE
 %nonassoc RPAREN RBRACK RBRACE
 
@@ -54,14 +56,15 @@ stmt:
   | s=stmt; NEWLINE { s }
   | s=stmt; SEMICOLON { s }
   | e=exp { Exp e }
-  | s=spec_lst; DEF; i=id; LPAREN; fl=param_lst; RPAREN; ARROW; t=typ; COLON; sl=suite { Function (s, i, fl, t, sl) }
-  | IF; e=exp; COLON; s1=suite; ELSE; COLON; s2=suite { IfElse (e, s1, s2) }
-  | IF; e=exp; COLON; s=suite; { IfElse (e, s, []) }
+  | s=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_lst; RPAREN; ARROW; t=typ; COLON; sl=suite { Function (s, id, fl, t, sl) }
+  | IF; e=exp; COLON; s1=suite; el=elif_lst; ELSE; COLON; s2=suite { IfElse (e, s1, el, s2) }
+  | IF; e=exp; COLON; s=suite; el=elif_lst; { IfElse (e, s, el, []) }
   | RETURN; el=exp_lst { Return el }
   | RETURN { Return [Literal (NoneLiteral)] }
-  | sl=spec_lst; WHILE; e=exp; COLON; s=suite; { While (e, sl, s) }
+  | sl=list(spec); WHILE; e=exp; COLON; s=suite; { While (e, sl, s) }
   | CONTINUE { Continue }
   | BREAK { Break }
+  | PASS { Pass }
   | PRINT; LPAREN; e=exp RPAREN { Print e }
   | ASSERT; e=exp { Assert e }
   | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (List.length al)) }
@@ -72,9 +75,14 @@ stmt:
   | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
+elif_lst:
+  | ELIF; e=exp; COLON; sl=suite; esl=elif_lst { (e, sl)::esl }
+  | { [] }
+
 assign_lst:
-  | i=id { [i] }
-  | al=assign_lst; EQ; i=id { al@[i] }
+  | id=IDENTIFIER { [id] }
+  | al=assign_lst; EQ; id=IDENTIFIER { al@[id] }
+  ;
   
 exp:
   | LPAREN; e=exp; RPAREN; { e }
@@ -87,6 +95,7 @@ exp:
   | i=INT { Literal (IntegerLiteral (i)) }
   | s=STRING { Literal (StringLiteral (s)) }
   | NONE { Literal (NoneLiteral) }
+  | s=IDENTIFIER; LPAREN; el=exp_lst; RPAREN { Call (s, el) }
   | s=IDENTIFIER { Identifier s }
   /* | LAMBDA; fl=param_lst; ARROW; t=typ; COLON; e=exp { }  */
   | LEN; LPAREN; e=exp; RPAREN; { Len e } 
@@ -106,9 +115,8 @@ exp:
   | e1=exp; seg=BIIMPL; e2=exp { BinaryOp (e1, BiImpl seg, e2) }
   | e1=exp; seg=IMPLIES; e2=exp { BinaryOp (e1, Implies seg, e2) }
   | e1=exp; seg=EXPLIES; e2=exp { BinaryOp (e1, Explies seg, e2) }
-  | s=IDENTIFIER LPAREN; el=exp_lst; RPAREN { Call (s, el) }
-  | FORALL; s=IDENTIFIER; DOUBLECOLON; e=exp; { Forall (s, e) }
-  | EXISTS; s=IDENTIFIER; DOUBLECOLON; e=exp; { Exists (s, e) }
+  | FORALL; il=id_lst; DOUBLECOLON; e=exp; { Forall (il, e) }
+  | EXISTS; il=id_lst; DOUBLECOLON; e=exp; { Exists (il, e) }
   ;
 
 slice: 
@@ -120,12 +128,7 @@ slice_h:
   ;
 
 lst_exp:
-  | LBRACK; el=exp_lst; RBRACK { List el }
-  ;
-
-spec_lst:
-  | { [] }
-  | s=spec; sl=spec_lst { s::sl }
+  | LBRACK; el=exp_lst; RBRACK { Lst el }
   ;
 
 spec:
@@ -158,6 +161,16 @@ typ:
   | dt=data_typ { dt }
   ;
 
+typ_lst:
+  | { [] }
+  | tr=typ_rest; { tr }
+  ;
+
+typ_rest:
+  | t=typ { [t] }
+  | tr=typ_rest; COMMA; t=typ { tr@[t] }
+  ;
+
 base_typ:
   | t=INT_TYPE { Int t }
   | t=FLOAT_TYPE { Float t }
@@ -174,7 +187,7 @@ data_typ:
   | d=DICT_TYPE { Dict(d, None) }
   | s=SET_TYPE LBRACK t=typ RBRACK { Set(s, Some t) }
   | s=SET_TYPE { Set(s, None) }
-  | tt=TUPLE_TYPE LBRACK t=typ RBRACK { Tuple(tt, Some t) }
+  | tt=TUPLE_TYPE LBRACK tl=typ_lst RBRACK { Tuple(tt, Some tl) }
   | t=TUPLE_TYPE { Tuple(t, None) }
   ;
 
@@ -192,8 +205,14 @@ param:
   | id=IDENTIFIER; COLON; t=typ { Param (id, t) }
   ;
 
-id:
-  | id=IDENTIFIER { id }
+id_lst:
+  | { [] }
+  | ir=id_rest { ir }
+  ;
+
+id_rest:
+  | id=IDENTIFIER { [id] }
+  | ir=id_rest; COMMA; id=IDENTIFIER { ir@[id] }
   ;
 
 exp_lst:

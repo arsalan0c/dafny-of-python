@@ -16,7 +16,7 @@ type pytype =
   | List of segment * pytype option
   | Dict of segment * pytype option
   | Set of segment * pytype option
-  | Tuple of segment * pytype option
+  | Tuple of segment * (pytype list) option
 (* | DSeq of segment
 | DArray of segment *)
   [@@deriving sexp]
@@ -52,11 +52,11 @@ type exp =
   | UnaryOp of (unaryop * exp)
   | Literal of literal
   | Call of (identifier * exp list)
-  | List of exp list
+  | Lst of exp list
   | Subscript of exp * exp (* value, slice *)
   | Slice of exp option * exp option (* lower, upper *)
-  | Forall of identifier * exp
-  | Exists of identifier * exp
+  | Forall of identifier list * exp
+  | Exists of identifier list * exp
   | Len of exp
   [@@deriving sexp]
 
@@ -68,7 +68,7 @@ type spec =
   [@@deriving sexp]
 
 type stmt =
-  | IfElse of (exp * stmt list * stmt list)
+  | IfElse of (exp * stmt list * (exp * stmt list) list * stmt list)
   | While of (exp * spec list * stmt list)
   | Assign of (identifier list * exp list)
   | Function of (spec list * identifier * param list * pytype * stmt list) (* spec, name, params, return type, body *)
@@ -76,6 +76,7 @@ type stmt =
   | Assert of exp
   | Break
   | Continue
+  | Pass
   | Print of exp
   | Exp of exp
   [@@deriving sexp]

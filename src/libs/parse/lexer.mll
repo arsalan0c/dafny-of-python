@@ -48,7 +48,7 @@ let none_type = "None"
 let list_type = "list"
 let dict_type = "dict"
 let set_type = "set"
-let tuple_type = "tuple"
+let tuple_type = "Tuple"
 
 (* let type = simple_type | data_type | data_type '[' type+ ']'  *)
 
@@ -74,6 +74,8 @@ rule f = parse
 | tuple_type as t { TUPLE_TYPE (emit_segment lexbuf (Some t)) }
 | indent as s { (upd lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | whitespace+ { f lexbuf }
+| "import" { comment lexbuf }
+| "from" { comment lexbuf }
 | "# pre" { PRE }
 | "# post" { POST }
 | "#pre" { PRE }
@@ -105,12 +107,14 @@ rule f = parse
 | "->" { ARROW }
 | "def" { DEF (emit_segment lexbuf (Some "def" )) }
 | "if" { IF (emit_segment lexbuf (Some "if" )) }
+| "elif" { ELIF (emit_segment lexbuf (Some "elif" )) }
 | "else" { ELSE (emit_segment lexbuf (Some "else" )) }
 | "for" { FOR (emit_segment lexbuf (Some "for" )) }
 | "while" { WHILE (emit_segment lexbuf (Some "while" )) }
 | "break" { BREAK (emit_segment lexbuf (Some "break" )) }
 | "continue" { CONTINUE (emit_segment lexbuf (Some "continue")) }
-| "print" { printf "printing\n"; PRINT (emit_segment lexbuf (Some "print")) }
+| "pass" { PASS (emit_segment lexbuf (Some "pass")) }
+| "print" { PRINT (emit_segment lexbuf (Some "print")) }
 | "return" { RETURN (emit_segment lexbuf (Some "return")) }
 | "assert" { ASSERT (emit_segment lexbuf (Some "assert")) }
 | "in" { IN (emit_segment lexbuf (Some "in")) }
