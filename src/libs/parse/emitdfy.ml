@@ -309,7 +309,7 @@ and print_stmt id = function
     let pob2 = newcolumn "{" in 
     let ppl = (newcolumn_concat (print_declarations (id+2)) "\n" pl) in 
     let nl3 = (newline ()) in
-    let pst = (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) in
+    let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
     let n3 = newcolumn (indent id) in
     let pcb2 = newcolumn "}" in 
     let nl4 = (newline ()) in 
@@ -320,7 +320,7 @@ and print_declarations id = function
   | (i, _) -> print_stmt id (DAssign ([i], [DIdentifier i]))
   
 let print_prog = function
-  | DProg(_, sl) -> (String.concat (List.map ~f:(newline_f (print_stmt 0)) sl))
+  | DProg(_, sl) -> newcolumn_concat (fun x -> newline_f (print_stmt 0) x) "" sl
 
 let extr lst = match lst with
   | Some el -> el
