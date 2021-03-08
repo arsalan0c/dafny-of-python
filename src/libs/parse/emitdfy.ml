@@ -21,7 +21,7 @@ let rec replicate_str s n = match n with
 let space = " "
 let indent i = replicate_str space i
 let curr_line : int ref = ref 1
-let curr_column : int ref = ref 1
+let curr_column : int ref = ref 0
 let newline = fun () -> (curr_column := 0; curr_line := !curr_line + 1; "\n")
 let newline_f f = fun s -> let nf = (f s) in let nl = (newline ()) in String.concat [nf; nl]
 let newcolumn s = (curr_column := !curr_column + (String.length s); s)
