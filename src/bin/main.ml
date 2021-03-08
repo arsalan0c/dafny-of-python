@@ -43,7 +43,7 @@ let replace_num p =
     | Some s -> int_of_string s
     | None -> 0
     end in
-  let seg = Pyparse.Astdfy.nearest_seg (!Pyparse.Astdfy.sm) line column in
+  let seg = Pyparse.Emitdfy.nearest_seg (!Pyparse.Emitdfy.sm) line column in
   let seg_str = Pyparse.Sourcemap.print_segment seg in seg_str
   (* (printf "Here:\n%s\n%d %d\n" (Pyparse.Ast.print_sm !Pyparse.Ast.sm) line column; seg_str) *)
 
@@ -67,7 +67,7 @@ let lst_lst_str olst =
 (* let parse lexbuf = try Success (Pyparse.Translate.prog_str (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)) with
   | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"]) *)
 
-let parse_dfyast prelude lexbuf = try Success (prelude ^ "\n" ^ (Pyparse.Astdfy.print_prog (Pyparse.Todafnyast.prog_dfy (Pyparse.Convertcall.prog (Pyparse.Parser.f Pyparse.Indenter.f lexbuf))))) with
+let parse_dfyast prelude lexbuf = try Success (prelude ^ "\n" ^ (Pyparse.Emitdfy.print_prog (Pyparse.Todafnyast.prog_dfy (Pyparse.Convertcall.prog (Pyparse.Parser.f Pyparse.Indenter.f lexbuf))))) with
   | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"])
 
 let write_to_file s f c = Out_channel.write_all f ~data:s ; String.concat ~sep:"\n" (run c)
@@ -89,7 +89,7 @@ let main =
   printf "\nTypechecking:%s\n" tc else *)
   (printf "\nParsing\n\"%s\"\n\r" inp;
   let res = parse_dfyast "" (Lexing.from_string inp) in 
-  printf "\n%s\n" (Pyparse.Astdfy.print_sm !Pyparse.Astdfy.sm);
+  printf "\n%s\n" (Pyparse.Emitdfy.print_sourcemap !Pyparse.Emitdfy.sm);
   match res with
   | Success s ->  printf "%s" s; let f = write_to_file s dfy_filename command_dfy in final f
   | Fail s -> printf "%s" s
