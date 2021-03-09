@@ -1,12 +1,11 @@
 {
   open Parser
 
+  (* TODO: emit space for comments *)
+
   exception LexError of string
-
   let printf = Stdlib.Printf.printf
-
   let[@inline] failwith msg = raise (LexError msg)
-
   let[@inline] illegal c =
     failwith (Printf.sprintf "[lexer] unexpected character: '%c'" c)
 
@@ -29,7 +28,7 @@
     lb.lex_curr_p <- { lcp with
       pos_lnum = lcp.pos_lnum + 1;
       pos_cnum = lcp.pos_cnum + cols;
-      pos_bol = lcp.pos_cnum;
+      pos_bol = lcp.pos_cnum - cols;
     }   
 }
 
@@ -146,5 +145,5 @@ rule f = parse
 | _ as c { illegal c }
 
 and comment = parse
-| indent { (upd lexbuf 0; f lexbuf) }
+| indent as s { (upd lexbuf (String.length s - 1); f lexbuf) } 
 | _ { comment lexbuf }

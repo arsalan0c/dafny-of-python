@@ -296,7 +296,7 @@ and print_stmt id = function
     let nl2 = newline () in
     let n2 = newcolumn (indent id) in
     let pcb = newcolumn "}" in 
-    let pelif = if List.length sl2 <= 0 then "" else begin
+    let pelif = if List.length sl2 = 0 then "" else begin
       let res (e, sl) = begin
         let pel = newcolumn " else if" in
         let pe = print_exp 1 e in
@@ -310,7 +310,7 @@ and print_stmt id = function
       end in
       newcolumn_concat res "" sl2
     end in
-    let pelse = if List.length sl3 <= 0 then "" else begin
+    let pelse = if List.length sl3 = 0 then "" else begin
       let pecb = newcolumn " else {" in 
       let nl = (newline ()) in 
       let pst = newline_concat (print_stmt (id+2)) sl3 in
