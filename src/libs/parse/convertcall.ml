@@ -1,7 +1,7 @@
 open Base
 open Astpy
 
-(* (string, , Int.comparator_witness) Map.t  *)
+let temp_source = Hashtbl.create (module String)
 
 let printf = Stdlib.Printf.printf
 
@@ -28,8 +28,12 @@ let rec exp_calls = function
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
     let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
     let name = var_num := !var_num + 1; "temp_call" ^ (Int.to_string !var_num) in
-    let seg = fst id in 
-    let n_id = (seg, Some name) in
+    let _ = (match snd id with
+    | Some v -> Hashtbl.add temp_source ~key:name ~data:v
+    | None -> Hashtbl.add temp_source ~key:name ~data:name
+    ) in
+    let pos = fst id in 
+    let n_id = (pos, Some name) in
     printf "%s\n" (Sourcemap.print_segment id);
     (als@[Assign ([n_id], [Call (id, n_el)])], Identifier n_id)
 

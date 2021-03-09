@@ -62,13 +62,22 @@ let newcolumn_h id s =
   let n = newcolumn (indent id) in 
   String.concat [nl; n; s]
 
-let print_id id s =
+let print_id id seg =
   let n = newcolumn (indent id) in 
-  let s = (Sourcemap.segment_value s) in
-  String.concat [n; s]
+  let s = Sourcemap.segment_value seg in
+  let source_name = begin
+    match Base.Hashtbl.find Convertcall.temp_source s with
+    | Some v -> v
+    | None -> s
+  end in
+  let n_seg = (fst seg, Some source_name) in
+  add_sm !curr_line !curr_column n_seg;
+  let ps = newcolumn s in
+  String.concat [n; ps]
 
-let add_op id s v = add_sm !curr_line !curr_column s;
+let add_op id seg v = 
   let n = newcolumn (indent id) in
+  add_sm !curr_line !curr_column seg;
   let pv = newcolumn v in
   String.concat [n; pv]
 
@@ -129,9 +138,7 @@ let print_param id = function
     String.concat [n; idd; c; print_type 1 t]
 
 let rec print_exp id = function
-  | DIdentifier s -> add_sm !curr_line !curr_column s; let n = newcolumn (indent id) in
-    let ps = newcolumn (Sourcemap.segment_value s) in
-    String.concat [n; ps]
+  | DIdentifier s -> print_id id s
   | DBinary(e1, op, e2) -> let n = (newcolumn (indent id)) in 
     let pob = (newcolumn "(") in 
     let pe1 = (print_exp 0 e1) in (* TODO: this does not work *)
@@ -371,7 +378,6 @@ let extr lst = match lst with
   | Some el -> el
   | None -> []
 
-(* TODO: take columns into account *)
 let rec nearest_seg_helper sm line column nearest = 
   match List.hd sm with
   | Some mapping -> 
@@ -388,6 +394,7 @@ let rec nearest_seg_helper sm line column nearest =
     else nearest_seg_helper rest line column nearest
   | None -> nearest
 
+(* finds the nearest dafny segment, then returns its corresponding python segment *)
 let nearest_seg sm line column = 
     printf "%d\n" line;
     let res = nearest_seg_helper sm line column ((Int.max_value, Int.max_value), Sourcemap.default_segment) in
