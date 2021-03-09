@@ -246,7 +246,8 @@ let rec print_rets id = function
   | tl -> let n = newcolumn (indent id) in 
     let r = newcolumn "returns (" in 
     let ptl = newcolumn_concat (
-        fun x -> let name = get_name () in 
+        fun x -> 
+          let name = newcolumn (get_name ()) in 
           let ps = newcolumn ":" in 
           let pt = print_type 1 x in 
           String.concat [name; ps; pt]
