@@ -5,7 +5,7 @@ open Astdfy
 
 let printf = Stdlib.Printf.printf
 
-type pos = Pos of int * int
+type pos = Pos of int * int (* line, column *)
 [@@deriving sexp]
 type sourcemap = (pos * Sourcemap.segment) list ref
 [@@deriving sexp]
@@ -21,20 +21,20 @@ let rec replicate_str s n = match n with
 let space = " "
 let indent i = replicate_str space i
 let curr_line : int ref = ref 1
-let curr_column : int ref = ref 0
-let newline = fun () -> (curr_column := 0; curr_line := !curr_line + 1; "\n")
+let curr_column : int ref = ref 1
+let newline = fun () -> (curr_column := 1; curr_line := !curr_line + 1; "\n")
 let newline_f f = fun s -> let nf = (f s) in let nl = (newline ()) in String.concat [nf; nl]
 let newcolumn s = (curr_column := !curr_column + (String.length s); s)
 
-let rec newline_concat = function
+let rec newline_concat f = function
   | [] -> ""
-  | hd::[] -> hd
-  | hd::tl -> let n = (newline ()) in 
-    let rest = newline_concat tl in 
-    String.concat [hd; n; rest]
+  | hd::[] -> f hd
+  | hd::tl -> let fhd = f hd in
+    let n = (newline ()) in 
+    let rest = newline_concat f tl in 
+    String.concat [fhd; n; rest]
 
-let rec newcolumn_concat f sep lst = 
-  match lst with
+let rec newcolumn_concat f sep = function
   | [] -> ""
   | hd::[] -> f hd
   | hd::tl ->
@@ -57,14 +57,15 @@ let rec lookup fn v = function
 
 let curr_func : string ref = ref ""
 
-let newcolumn_h id s = let nl = (newline ()) in 
+let newcolumn_h id s = 
+  let nl = newline () in 
   let n = newcolumn (indent id) in 
   String.concat [nl; n; s]
 
-  let print_id id = function
-  | s -> let n = newcolumn (indent id) in 
-    let s = (Sourcemap.segment_value s) in
-    String.concat [n; s]
+let print_id id s =
+  let n = newcolumn (indent id) in 
+  let s = (Sourcemap.segment_value s) in
+  String.concat [n; s]
 
 let add_op id s v = add_sm !curr_line !curr_column s;
   let n = newcolumn (indent id) in
@@ -215,24 +216,24 @@ let rec print_exp id = function
 
 let print_spec id = function
   | DRequires e -> let n  = newcolumn (indent id) in 
-    let s = "requires" in 
+    let s = newcolumn "requires" in 
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe] 
   | DEnsures e ->  let n  = newcolumn (indent id) in 
-    let s = "ensures" in 
+    let s = newcolumn "ensures" in 
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe]
   | DInvariant e -> let n  = newcolumn (indent id) in 
-    let s = "invariant" in 
+    let s = newcolumn "invariant" in 
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe] 
   | DDecreases e -> let n  = newcolumn (indent id) in 
-    let s = "decreases" in 
+    let s = newcolumn "decreases" in 
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe]
   | DNone -> ""
 
-let print_rets id = function
+let rec print_rets id = function
   | [] -> ""
   | DVoid::_ -> ""
   | tl -> let n = newcolumn (indent id) in 
@@ -246,74 +247,118 @@ let print_rets id = function
     let pcb = (newcolumn ")") in
     String.concat[n; r; ptl; pcb]
 
-let rec print_else id sl = if List.length sl <= 0 then "" else 
-  (newcolumn " else {") ^ (newline ()) ^ (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (newcolumn ((indent id) ^ "}"))
-
-and print_elseif id esl = if List.length esl <= 0 then "" else 
-  let res = fun (e, sl) -> (newcolumn " else if") ^ (print_exp 1 e) ^ (newcolumn " {") ^ (newline ()) ^ (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (newcolumn ((indent id) ^ "}")) in
-  String.concat ~sep:"" (List.map ~f:res esl)
-
 and print_stmt id = function
   | DEmptyStmt -> ""
   | DAssume e -> let n = newcolumn (indent id) in 
-    let a = "assume" in 
+    let a = newcolumn "assume" in 
     let pe = print_exp 1 e in 
     let ps = (newcolumn ";") in
     String.concat [n; a; pe; ps]
   | DAssert e -> let n = newcolumn (indent id) in 
-    let a = "assert" in 
+    let a = newcolumn "assert" in 
     let pe = print_exp 1 e in 
     let ps = (newcolumn ";") in
     String.concat [n; a; pe; ps]
   | DBreak -> let n = newcolumn (indent id) in 
-    let b = "break" in 
+    let b = newcolumn "break" in 
     let ps = (newcolumn ";") in
     String.concat [n; b; ps]
-  | DAssign(first::rest, el) -> let pre = if List.length (first::rest) = 0 || lookup (!curr_func) (Sourcemap.segment_value first) !vars then (indent id) 
-    else ((vars := (!curr_func, Sourcemap.segment_value first)::!vars); (newcolumn ((indent id) ^ "var "))) in 
-    pre ^ (newcolumn_concat (print_id 0) ", " (first::rest)) ^ (newcolumn " := ") ^ 
-    (newcolumn_concat (print_exp 0) ", " el) ^ (newcolumn ";")
+  | DAssign(first::rest, el) -> 
+    let exists = (List.length (first::rest) = 0) || (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
+    let n = newcolumn (indent id) in
+    let pre = if exists then "" else begin
+      vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
+      newcolumn "var "
+    end in
+    let pil = newcolumn_concat (print_id 0) ", " (first::rest) in 
+    let pa = newcolumn " := " in
+    let pel = newcolumn_concat (print_exp 0) ", " el in
+    let ps = newcolumn ";" in 
+    String.concat [n; pre; pil; pa; pel; ps]
   | DCallStmt(ident, el) -> let n = (newcolumn (indent id)) in 
-    let pident = (print_id 0 ident) in 
-    let pob = (newcolumn "(") in 
+    let pident = print_id 0 ident in 
+    let pob = newcolumn "(" in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in
     let pcb = (newcolumn ")") in 
     let ps = (newcolumn ";") in
     String.concat [n; pident; pob; pel; pcb; ps]
   | DPrint e -> let n = newcolumn (indent id) in 
-    let p = "print" in 
+    let p = newcolumn "print" in 
     let pe = (print_exp 1 e) in 
     let ps = (newcolumn ";") in
     String.concat [n; p; pe; ps]
-  | DIf(e, sl1, sl2, sl3) -> (newcolumn ((indent id) ^ "if ")) ^ (print_exp 0 e) ^ (newcolumn " {") ^ (newline ()) ^ 
-  (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl1)) ^ (newcolumn (indent id ^  "}")) ^ (print_elseif id sl2) ^ (print_else id sl3)
-  | DWhile(e, speclst, sl) -> (newcolumn ((indent id) ^ "while")) ^ print_exp 1 e ^ (newline ()) ^ (newline_concat (List.map ~f:(print_spec (id+2)) speclst)) ^ (newcolumn_h id "{")  ^ (newline ()) ^ 
-    (String.concat (List.map ~f:(newline_f (print_stmt (id+2))) sl)) ^ (indent id) ^ (newcolumn "}")
+  | DIf(e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
+    let i = newcolumn "if " in 
+    let pe = print_exp 0 e in
+    let pob = newcolumn " {" in 
+    let nl = newline () in
+    let pst = newline_concat (print_stmt (id+2)) sl1 in
+    let nl2 = newline () in
+    let n2 = newcolumn (indent id) in
+    let pcb = newcolumn "}" in 
+    let pelif = if List.length sl2 <= 0 then "" else begin
+      let res (e, sl) = begin
+        let pel = newcolumn " else if" in
+        let pe = print_exp 1 e in
+        let pob = newcolumn " {" in
+        let nl = newline () in 
+        let pst = newline_concat (print_stmt (id+2)) sl in
+        let nl2 = newline () in 
+        let n = newcolumn (indent id) in
+        let pcb = newcolumn "}" in
+        String.concat [pel; pe; pob; nl; pst; nl2; n; pcb]
+      end in
+      newcolumn_concat res "" sl2
+    end in
+    let pelse = if List.length sl3 <= 0 then "" else begin
+      let pecb = newcolumn " else {" in 
+      let nl = (newline ()) in 
+      let pst = newline_concat (print_stmt (id+2)) sl3 in
+      let n = newcolumn (indent id) in 
+      let nl2 = newline () in
+      let n2 = newcolumn (indent id) in
+      let pcb = newcolumn "}" in
+      String.concat [pecb; nl; pst; n; nl2; n2; pcb]
+    end in
+    String.concat [n; i; pe; pob; nl; pst; nl2; n2; pcb; pelif; pelse]
+  | DWhile(e, speclst, sl) -> let n = newcolumn (indent id) in
+    let w = newcolumn "while" in 
+    let pe = print_exp 1 e in 
+    let nl = (newline ()) in 
+    let psl = newline_concat (print_spec (id+2)) speclst in
+    let pob = (newcolumn_h id "{") in 
+    let nl2 = newline () in
+    let pst = newline_concat (print_stmt (id+2)) sl in
+    let nl3 = newline () in 
+    let n2 = newcolumn (indent id) in
+    let pcb = newcolumn "}" in
+    String.concat [n; w; pe; nl; psl; pob; nl2; pst; nl3; n2; pcb]
   | DReturn el -> let n = newcolumn (indent id) in
-    let r = "return " in 
+    let r = newcolumn "return " in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
-    let ps = (newcolumn ";") in
+    let ps = newcolumn ";" in
     String.concat [n; r; pel; ps]
   | DMeth(speclst, ident, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
     let n = newcolumn (indent id) in 
-    let m = "method" in
+    let m = newcolumn "method" in
     let pident = print_id 1 ident in
     let pob = newcolumn "(" in    
     let pp = newcolumn_concat (print_param 0) ", " pl in
     let pcb = newcolumn ")" in
     let pr = print_rets 1 tl in
     let nl = (newline ()) in
-    let psl = (newline_concat (List.map ~f:(print_spec (id+2)) speclst)) in
+    let psl = newline_concat (print_spec (id+2)) speclst in
     let nl2 = (newline ()) in
     let n2 = newcolumn (indent id) in 
-    let pob2 = newcolumn "{" in 
-    let ppl = (newcolumn_concat (print_declarations (id+2)) "\n" pl) in 
+    let pob2 = newcolumn "{" in
     let nl3 = (newline ()) in
+    let ppl = (newline_concat (print_declarations (id+2)) pl) in 
+    let nl4 = (newline ()) in
     let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
     let n3 = newcolumn (indent id) in
     let pcb2 = newcolumn "}" in 
-    let nl4 = (newline ()) in 
-    String.concat [n; m; pident; pob; pp; pcb; pr; nl; psl; nl2; n2; pob2; ppl; nl3; pst; n3; pcb2; nl4]
+    let nl5 = newline () in 
+    String.concat [n; m; pident; pob; pp; pcb; pr; nl; psl; nl2; n2; pob2; nl3; ppl; nl4; pst; n3; pcb2; nl5]
   | _ -> failwith "unsupported AST node"
 
 and print_declarations id = function
@@ -331,9 +376,16 @@ let rec nearest_seg_helper sm line column nearest =
   match List.hd sm with
   | Some mapping -> 
     let ldiff = Int.abs ((fst (fst mapping)) - line) in 
-    let so_far = Int.abs (fst (fst nearest) - line) in
+    let l_so_far = Int.abs ((fst (fst nearest)) - line) in
     let rest = extr (List.tl sm) in
-    if ldiff < so_far then nearest_seg_helper rest line column mapping else nearest_seg_helper rest line column nearest
+    if ldiff < l_so_far then nearest_seg_helper rest line column mapping
+    else if ldiff = l_so_far then begin
+      let cdiff = Int.abs ((snd (fst mapping)) - column) in
+      let c_so_far = Int.abs ((snd (fst nearest)) - column) in
+      if cdiff < c_so_far then nearest_seg_helper rest line column mapping 
+      else nearest_seg_helper rest line column nearest
+    end 
+    else nearest_seg_helper rest line column nearest
   | None -> nearest
 
 let nearest_seg sm line column = 

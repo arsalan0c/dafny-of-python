@@ -31,7 +31,7 @@ menhir --list-errors
 %left LT LEQ GT GEQ
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
 %left PLUS MINUS
-%left TIMES DIVIDE
+%left TIMES DIVIDE MOD
 %right NOT UMINUS
 %left SEMICOLON
 
