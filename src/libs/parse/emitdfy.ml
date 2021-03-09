@@ -12,7 +12,6 @@ type sourcemap = (pos * Sourcemap.segment) list ref
 
 let sm = ref []
 let add_sm k v s = sm := ((k, v), s)::!sm 
-let var_counter : int ref = ref 0
 let rec replicate_str s n = match n with
   | 0 -> ""
   | n -> let rest = replicate_str s (n - 1) in
@@ -43,9 +42,11 @@ let rec newcolumn_concat f sep = function
     let rest = newcolumn_concat f sep tl in
     String.concat [fhd; n; rest]
 
-let get_name = fun () ->
-  var_counter := !var_counter + 1;
-  "res" ^ Int.to_string (!var_counter)
+let ret_param_counter : int ref = ref 0
+let ret_param_reset = fun () -> ret_param_counter := 0
+let ret_param_name = fun () ->
+  ret_param_counter := !ret_param_counter + 1;
+  "res" ^ Int.to_string (!ret_param_counter)
 
 type declarations = (string * string) list ref
 let vars: declarations = ref []
@@ -82,6 +83,8 @@ let add_op id seg v =
   String.concat [n; pv]
 
 let print_op id = function
+  | DNotIn s -> add_op id s "!in"
+  | DIn s -> add_op id s "in"
   | DPlus s -> add_op id s "+"
   | DMinus s -> add_op id s "-"
   | DTimes s -> add_op id s "*"
@@ -240,19 +243,20 @@ let print_spec id = function
     String.concat [n; s; pe]
   | DNone -> ""
 
-let rec print_rets id = function
+let rec print_ret id = function
   | [] -> ""
   | DVoid::_ -> ""
   | tl -> let n = newcolumn (indent id) in 
     let r = newcolumn "returns (" in 
     let ptl = newcolumn_concat (
         fun x -> 
-          let name = newcolumn (get_name ()) in 
+          let name = newcolumn (ret_param_name ()) in 
           let ps = newcolumn ":" in 
           let pt = print_type 1 x in 
           String.concat [name; ps; pt]
       ) ", " tl in 
     let pcb = (newcolumn ")") in
+    ret_param_reset ();
     String.concat[n; r; ptl; pcb]
 
 and print_stmt id = function
@@ -291,7 +295,7 @@ and print_stmt id = function
     let ps = (newcolumn ";") in
     String.concat [n; pident; pob; pel; pcb; ps]
   | DPrint e -> let n = newcolumn (indent id) in 
-    let p = newcolumn "print" in 
+    let p = newcolumn "print" in (* TODO: assertions are parsed as prints *)
     let pe = (print_exp 1 e) in 
     let ps = (newcolumn ";") in
     String.concat [n; p; pe; ps]
@@ -353,7 +357,7 @@ and print_stmt id = function
     let pob = newcolumn "(" in    
     let pp = newcolumn_concat (print_param 0) ", " pl in
     let pcb = newcolumn ")" in
-    let pr = print_rets 1 tl in
+    let pr = print_ret 1 tl in
     let nl = (newline ()) in
     let psl = newline_concat (print_spec (id+2)) speclst in
     let nl2 = (newline ()) in

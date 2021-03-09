@@ -7,6 +7,8 @@ type dId = segment
 [@@deriving sexp]
 
 type dOp = 
+  | DNotIn of segment
+  | DIn of segment
   | DEq of segment
   | DNEq of segment
   | DPlus of segment

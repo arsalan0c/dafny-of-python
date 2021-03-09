@@ -21,7 +21,9 @@ let unaryop_dfy = function
   | Not s -> DNot s
   | UMinus s -> DMinus s
 
-let binaryop_dfy = function
+let binaryop_dfy = function 
+  | NotIn s -> DNotIn s
+  | In s -> DIn s
   | Plus s -> DPlus s
   | Minus s -> DMinus s
   | Times s -> DTimes s

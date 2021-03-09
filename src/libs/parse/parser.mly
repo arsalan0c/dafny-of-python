@@ -14,7 +14,7 @@ menhir --list-errors
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
-%token <Sourcemap.segment> DEF IF ELIF ELSE FOR WHILE BREAK CONTINUE RETURN IN PRINT ASSERT LAMBDA PASS
+%token <Sourcemap.segment> DEF IF ELIF ELSE FOR WHILE BREAK CONTINUE RETURN NOT_IN IN PRINT ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
 %token <Sourcemap.segment> IDENTIFIER INT_TYPE FLOAT_TYPE BOOL_TYPE COMPLEX_TYPE STRING_TYPE NONE_TYPE LIST_TYPE DICT_TYPE SET_TYPE TUPLE_TYPE
 %token <string> STRING
@@ -99,6 +99,8 @@ exp:
   | s=IDENTIFIER { Identifier s }
   /* | LAMBDA; fl=param_lst; ARROW; t=typ; COLON; e=exp { }  */
   | LEN; LPAREN; e=exp; RPAREN; { Len e } 
+  | e1=exp; seg=NOT_IN; e2=exp { BinaryOp (e1, NotIn seg, e2) }
+  | e1=exp; seg=IN; e2=exp { BinaryOp (e1, In seg, e2) }
   | e1=exp; seg=PLUS; e2=exp { BinaryOp (e1, Plus seg, e2) }
   | e1=exp; seg=MINUS; e2=exp { BinaryOp (e1, Minus seg, e2) }
   | e1=exp; seg=TIMES; e2=exp { BinaryOp (e1, Times seg, e2) }

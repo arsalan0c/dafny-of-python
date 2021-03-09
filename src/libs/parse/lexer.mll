@@ -101,8 +101,8 @@ rule f = parse
 | ';' { SEMICOLON }
 | ',' { COMMA }
 | "len" { LEN }
-| "filter" { IDENTIFIER (emit_segment lexbuf (Some "filterF")) }
-| "map" { IDENTIFIER (emit_segment lexbuf (Some "mapF")) }
+| "filterF" { IDENTIFIER (emit_segment lexbuf (Some "filterF")) }
+| "mapF" { IDENTIFIER (emit_segment lexbuf (Some "mapF")) }
 | "->" { ARROW }
 | "def" { DEF (emit_segment lexbuf (Some "def" )) }
 | "if" { IF (emit_segment lexbuf (Some "if" )) }
@@ -116,6 +116,7 @@ rule f = parse
 | "print" { PRINT (emit_segment lexbuf (Some "print")) }
 | "return" { RETURN (emit_segment lexbuf (Some "return")) }
 | "assert" { ASSERT (emit_segment lexbuf (Some "assert")) }
+| "!in" { NOT_IN (emit_segment lexbuf (Some "!in")) }
 | "in" { IN (emit_segment lexbuf (Some "in")) }
 | "==" { EQEQ (emit_segment lexbuf (Some "==")) }
 | '=' { EQ (emit_segment lexbuf (Some "=")) }

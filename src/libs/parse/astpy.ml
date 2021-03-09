@@ -28,6 +28,8 @@ type param = Param of (identifier * pytype)
 [@@deriving sexp]
 
 type binaryop = 
+  | NotIn of segment
+  | In of segment
   | Plus of segment 
   | Minus of segment
   | Times of segment
