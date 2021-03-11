@@ -29,13 +29,15 @@ type dOp =
   [@@deriving sexp]
 
 type dType = 
+  | DIdentType of segment
   | DInt of segment
   | DReal of segment 
   | DBool of segment  
   | DString of segment  
   | DChar of segment 
-  | DSeq of segment * dType option
-  | DArray of segment * dType option
+  | DSeq of segment * dType
+  | DSet of segment * dType
+  | DMap of segment * dType * dType
   | DVoid
   | DTuple of segment * dType list
   [@@deriving sexp]
@@ -72,7 +74,7 @@ type dSpec =
   | DDecreases of dExpr
   (* | DFresh of dExpr *)
   (* | DOld of dExpr *)
-[@@deriving sexp]
+  [@@deriving sexp]
 
 type dStmt = 
   | DEmptyStmt
@@ -81,14 +83,15 @@ type dStmt =
   | DAssign of dId list * dExpr list
   | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
   | DWhile of dExpr * dSpec list * dStmt list
-  | DPrint of dExpr
   | DReturn of dExpr list
   | DBreak
-  | DYield
   | DCallStmt of dId * dExpr list
-  | DMeth of dSpec list * dId * dParam list * dType list * dStmt list
-[@@deriving sexp]
+  [@@deriving sexp]
 
-type dProgram =
-  DProg of string * dStmt list
+type dTopLevel = 
+  | DMeth of dSpec list * dId * dParam list * dType list * dStmt list
+  | DTypeSynonym of dId * dType
+  [@@deriving sexp]
+
+type dProgram = DProg of string * dTopLevel list
 [@@deriving sexp]

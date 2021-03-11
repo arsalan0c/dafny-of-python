@@ -66,7 +66,6 @@ let rec stmt_calls s =
   | Exp _ -> [s] 
   | Break -> [s]
   | Continue -> [s]
-  | Print e -> let al, n_e = exp_calls e in al@[Print n_e]
   | Assign(il, el) -> 
     let als_nes = List.map ~f:exp_calls el in
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
@@ -85,7 +84,7 @@ let rec stmt_calls s =
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
     let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
     als@[Return n_el]
-  | Assert e -> let al, n_e = exp_calls e in al@[Print n_e]
+  | Assert e -> let al, n_e = exp_calls e in al@[Assert n_e]
   | While(e, speclst, sl) -> (* TODO: handle spec *)
     let n_sl = List.fold sl ~f:(fun so_far ls -> so_far@(stmt_calls ls)) ~init:[] in
     let al, n_e = exp_calls e in

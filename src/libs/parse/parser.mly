@@ -65,7 +65,6 @@ stmt:
   | CONTINUE { Continue }
   | BREAK { Break }
   | PASS { Pass }
-  | PRINT; LPAREN; e=exp RPAREN { Print e }
   | ASSERT; e=exp { Assert e }
   | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (List.length al)) }
   /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */
@@ -87,6 +86,7 @@ assign_lst:
 exp:
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
+  | t=typ { Type t }
   | e=exp; s=slice { Subscript (e, s) }
   | s=MINUS; e=exp %prec UMINUS { UnaryOp (UMinus s, e) }
   | s=NOT; e=exp %prec NOT { UnaryOp (Not s, e) }
@@ -144,19 +144,9 @@ spec_rem:
   | e=exp; NEWLINE { e }
   ;
 
-/* spec_prepost:
-  | PRE; pre=exp; NEWLINE; POST; post=exp; { [(Pre pre), (Post post)] } */
-
 suite:
   | NEWLINE; INDENT; sl=stmts; DEDENT { sl }
   ;
-
-/* exp_lst:
-  | { [] }
-  | el=exp_rest; { el }
-exp_rest:
-  | e=exp; { [e] }
-  | er=exp_rest; COMMA; 3e=exp { er@[e] } */
 
 typ:
   | t=base_typ { t }
@@ -176,17 +166,17 @@ typ_rest:
 base_typ:
   | t=INT_TYPE { Int t }
   | t=FLOAT_TYPE { Float t }
-  | t=COMPLEX_TYPE { Complex t }
   | t=BOOL_TYPE { Bool t }
   | t=STRING_TYPE { Str t }
   | t=NONE_TYPE { Non t }
+  | t=IDENTIFIER { IdentType t }
   ;
 
 data_typ:
   | l=LIST_TYPE LBRACK t=typ RBRACK { List(l, Some t) }
   | l=LIST_TYPE { List(l, None) }
-  | d=DICT_TYPE LBRACK t=typ RBRACK { Dict(d, Some t) }
-  | d=DICT_TYPE { Dict(d, None) }
+  | d=DICT_TYPE LBRACK t1=typ COMMA t2=typ RBRACK { Dict(d, Some t1, Some t2) }
+  | d=DICT_TYPE { Dict(d, None, None) }
   | s=SET_TYPE LBRACK t=typ RBRACK { Set(s, Some t) }
   | s=SET_TYPE { Set(s, None) }
   | tt=TUPLE_TYPE LBRACK tl=typ_lst RBRACK { Tuple(tt, Some tl) }

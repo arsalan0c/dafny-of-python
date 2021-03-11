@@ -6,20 +6,20 @@ let[@inline] failwith msg = raise (PyAstError msg)
 
 type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of string | NoneLiteral
 [@@deriving sexp]
+
 type pytype =
+  | IdentType of segment
   | Int of segment
   | Float of segment 
-  | Complex of segment 
   | Bool of segment 
   | Str of segment  
   | Non of segment
   | List of segment * pytype option
-  | Dict of segment * pytype option
+  | Dict of segment * pytype option * pytype option
   | Set of segment * pytype option
   | Tuple of segment * (pytype list) option
-(* | DSeq of segment
-| DArray of segment *)
   [@@deriving sexp]
+
 type identifier = segment
 [@@deriving sexp]
 type unaryop = Not of segment | UMinus of segment
@@ -60,6 +60,7 @@ type exp =
   | Forall of identifier list * exp
   | Exists of identifier list * exp
   | Len of exp
+  | Type of pytype
   [@@deriving sexp]
 
 type spec = 
@@ -79,7 +80,6 @@ type stmt =
   | Break
   | Continue
   | Pass
-  | Print of exp
   | Exp of exp
   [@@deriving sexp]
 

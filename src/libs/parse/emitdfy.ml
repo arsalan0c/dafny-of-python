@@ -105,30 +105,30 @@ let print_op id = function
 
 let print_type id t = 
   let rec get_v t = match t with
+    | DIdentType s -> Sourcemap.segment_value s
     | DInt _ -> "int"
     | DReal _ -> "real"
     | DBool _ -> "bool"
     | DString _ -> "string"
     | DChar _ -> "char"
-    | DSeq(_, ot) -> begin
-      match ot with
-      | Some t -> "seq<" ^ (get_v t) ^ ">"
-      | None -> "seq"
-      end
-    (* | DArray s -> add_op id s "array" *)
+    | DSeq(_, t) -> "seq<" ^ (get_v t) ^ ">"
+    | DSet(_, t) -> "set<" ^ (get_v t) ^ ">"
+    | DMap(_, t1, t2) -> "map<" ^ (get_v t1) ^ ", " ^ (get_v t2) ^ ">"
     | DTuple(_, sl) -> "(" ^ (String.concat ~sep:", " (List.map ~f:get_v sl)) ^ ")"
     | _ -> ""
   in   
   let get_s t = 
     match t with
+    | DIdentType s -> s
     | DInt s -> s
     | DReal s -> s
     | DBool s -> s
     | DString s -> s
     | DChar s -> s
     | DSeq(s, _) -> s
+    | DSet(s, _) -> s
+    | DMap(s, _,  _) -> s
     | DTuple(s, _) -> s 
-    (* | DArray s -> add_op id s "array" *)
     | _ -> Sourcemap.default_segment
   in add_op id (get_s t) (get_v t)
 
@@ -275,8 +275,9 @@ and print_stmt id = function
     let b = newcolumn "break" in 
     let ps = (newcolumn ";") in
     String.concat [n; b; ps]
+  | DAssign([], _) -> ""
   | DAssign(first::rest, el) -> 
-    let exists = (List.length (first::rest) = 0) || (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
+    let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
     let n = newcolumn (indent id) in
     let pre = if exists then "" else begin
       vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
@@ -294,11 +295,6 @@ and print_stmt id = function
     let pcb = (newcolumn ")") in 
     let ps = (newcolumn ";") in
     String.concat [n; pident; pob; pel; pcb; ps]
-  | DPrint e -> let n = newcolumn (indent id) in 
-    let p = newcolumn "print" in (* TODO: assertions are parsed as prints *)
-    let pe = (print_exp 1 e) in 
-    let ps = (newcolumn ";") in
-    String.concat [n; p; pe; ps]
   | DIf(e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
     let i = newcolumn "if " in 
     let pe = print_exp 0 e in
@@ -350,6 +346,11 @@ and print_stmt id = function
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
     let ps = newcolumn ";" in
     String.concat [n; r; pel; ps]
+
+let print_declarations id = function
+  | (i, _) -> print_stmt id (DAssign ([i], [DIdentifier i]))
+
+let print_toplevel id = function
   | DMeth(speclst, ident, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
     let n = newcolumn (indent id) in 
     let m = newcolumn "method" in
@@ -371,13 +372,19 @@ and print_stmt id = function
     let pcb2 = newcolumn "}" in 
     let nl5 = newline () in 
     String.concat [n; m; pident; pob; pp; pcb; pr; nl; psl; nl2; n2; pob2; nl3; ppl; nl4; pst; n3; pcb2; nl5]
-  | _ -> failwith "unsupported AST node"
+  | DTypeSynonym(ident, typ) -> let n = newcolumn (indent id) in
+    let t = newcolumn "type" in
+    let pident = print_id 1 ident in
+    let eq = newcolumn " = " in
+    let pt = print_type 0 typ in
+    String.concat [n; t; pident; eq; pt]
 
-and print_declarations id = function
-  | (i, _) -> print_stmt id (DAssign ([i], [DIdentifier i]))
-  
 let print_prog = function
-  | DProg(_, sl) -> newcolumn_concat (fun x -> newline_f (print_stmt 0) x) "" sl
+  | DProg(_, tll) -> newcolumn_concat (fun x -> newline_f (print_toplevel 0) x) "" tll
+
+
+
+
 
 let extr lst = match lst with
   | Some el -> el
