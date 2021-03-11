@@ -41,7 +41,6 @@ menhir --list-errors
 
 %start <sexp> f
 
-/*  */
 %%
 
 f:

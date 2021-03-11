@@ -408,7 +408,7 @@ let rec nearest_seg_helper sm line column nearest =
 
 (* finds the nearest dafny segment, then returns its corresponding python segment *)
 let nearest_seg sm line column = 
-    printf "%d\n" line;
+    (* printf "%d\n" line; *)
     let res = nearest_seg_helper sm line column ((Int.max_value, Int.max_value), Sourcemap.default_segment) in
     snd res
 

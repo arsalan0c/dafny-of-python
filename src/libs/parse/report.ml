@@ -1,5 +1,6 @@
 open Base
 
+let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
 
 let replace_num p =
@@ -33,7 +34,17 @@ let verification_errors out =
   end with
   | Re2.Exceptions.Regex_match_failed _ -> None
 
-let report out =
-  match verification_errors out with
+let verification_summary out =
+  try begin
+    let line_rgx = Re2.create_exn "verifier finished with [0-9]* verified, [0-9]* error" in 
+    let line = Re2.find_first_exn line_rgx out in
+    printf "%s\n" line
+  end with
+  | Re2.Exceptions.Regex_match_failed _ -> prerr "Error: unable to retrieve verification summary\n"
+
+
+let report out = begin match verification_errors out with
   | Some s -> prerr (s ^ "\n")
   | None -> ()
+  end;
+  verification_summary out
