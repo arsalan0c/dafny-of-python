@@ -22,9 +22,11 @@ type pytype =
 
 type identifier = segment
 [@@deriving sexp]
-type unaryop = Not of segment | UMinus of segment
-[@@deriving sexp]
+
 type param = Param of (identifier * pytype)
+[@@deriving sexp]
+
+type unaryop = Not of segment | UMinus of segment
 [@@deriving sexp]
 
 type binaryop = 

@@ -38,7 +38,6 @@ let whitespace = [' ' '\t']
 (* simple types *)
 let int_type = "int"
 let float_type = "float"
-let complex_type = "complex" 
 let bool_type = "bool"
 let string_type = "str"
 let none_type = "None"
@@ -64,7 +63,6 @@ rule f = parse
 | int_type as t { INT_TYPE (emit_segment lexbuf (Some t)) }
 | float_type as t { FLOAT_TYPE (emit_segment lexbuf (Some t)) }
 | bool_type as t { BOOL_TYPE (emit_segment lexbuf (Some t)) }
-| complex_type as t { COMPLEX_TYPE (emit_segment lexbuf (Some t)) }
 | string_type as t { STRING_TYPE (emit_segment lexbuf (Some t)) }
 | none_type as t { NONE_TYPE (emit_segment lexbuf (Some t)) }
 | list_type as t { LIST_TYPE (emit_segment lexbuf (Some t)) }
@@ -111,7 +109,6 @@ rule f = parse
 | "for" { FOR (emit_segment lexbuf (Some "for" )) }
 | "while" { WHILE (emit_segment lexbuf (Some "while" )) }
 | "break" { BREAK (emit_segment lexbuf (Some "break" )) }
-| "continue" { CONTINUE (emit_segment lexbuf (Some "continue")) }
 | "pass" { PASS (emit_segment lexbuf (Some "pass")) }
 | "return" { RETURN (emit_segment lexbuf (Some "return")) }
 | "assert" { ASSERT (emit_segment lexbuf (Some "assert")) }
@@ -129,9 +126,9 @@ rule f = parse
 | "/" { DIVIDE (emit_segment lexbuf (Some "/")) }
 | "/=" { DIVIDEEQ (emit_segment lexbuf (Some "/=")) }
 | "%" { MOD (emit_segment lexbuf (Some "%")) }     
-| "<=" { LEQ (emit_segment lexbuf (Some "<=")) }
+| "<=" { LTE (emit_segment lexbuf (Some "<=")) }
 | '<' { LT (emit_segment lexbuf (Some "<")) }
-| ">=" { GEQ (emit_segment lexbuf (Some ">=")) }
+| ">=" { GTE (emit_segment lexbuf (Some ">=")) }
 | '>' { GT (emit_segment lexbuf (Some ">")) }
 | "and" { AND (emit_segment lexbuf (Some "and")) }
 | "or" { OR (emit_segment lexbuf (Some "or")) }

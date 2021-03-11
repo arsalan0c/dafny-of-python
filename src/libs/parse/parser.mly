@@ -6,33 +6,28 @@ menhir --list-errors
 
 %{
   open Astpy
-
-  let rec replicate e n = match n with
-    | 0 -> []
-    | n -> [e]@(replicate e ( n - 1))
 %}
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
-%token <Sourcemap.segment> DEF IF ELIF ELSE FOR WHILE BREAK CONTINUE RETURN NOT_IN IN PRINT ASSERT LAMBDA PASS
+%token <Sourcemap.segment> DEF IF ELIF ELSE FOR WHILE BREAK RETURN NOT_IN IN PRINT ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
 %token <Sourcemap.segment> IDENTIFIER INT_TYPE FLOAT_TYPE BOOL_TYPE COMPLEX_TYPE STRING_TYPE NONE_TYPE LIST_TYPE DICT_TYPE SET_TYPE TUPLE_TYPE
 %token <string> STRING
-%token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ UMINUS NEQ LEQ LT GEQ GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
+%token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
 %token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
 %token LEN FILTER MAP
-
 
 %left OR
 %left AND
 %left IMPLIES EXPLIES BIIMPL
 %left EQEQ NEQ
-%left LT LEQ GT GEQ
+%left LT LTE GT GTE
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
 %left PLUS MINUS
 %left TIMES DIVIDE MOD
-%right NOT UMINUS
+%right NOT
 %left SEMICOLON
 
 %nonassoc ELSE ELIF
@@ -52,74 +47,138 @@ stmts:
   ;
 
 stmt:
-  | s=stmt; NEWLINE { s }
-  | s=stmt; SEMICOLON { s }
+  | s=compound_stmt { s }
+  | s=simple_stmt { s }
+  ;
+
+simple_stmt:
+  | s=small_stmt; NEWLINE { s }
+  /* | s=small_stmt; SEMICOLON { s } */
+  /* | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) } */
+  ;
+
+small_stmt:
+  | a=assignment { a }
   | e=exp { Exp e }
+  | RETURN; el=exp_lst { Return el }
+  | RETURN { Return [Literal (NoneLiteral)] }
+  | PASS { Pass }
+  | ASSERT; e=exp { Assert e }
+  | BREAK { Break }
+  ;
+
+compound_stmt:
   | s=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_lst; RPAREN; ARROW; t=typ; COLON; sl=suite { Function (s, id, fl, t, sl) }
   | IF; e=exp; COLON; s1=suite; el=elif_lst; ELSE; COLON; s2=suite { IfElse (e, s1, el, s2) }
   | IF; e=exp; COLON; s=suite; el=elif_lst; { IfElse (e, s, el, []) }
-  | RETURN; el=exp_lst { Return el }
-  | RETURN { Return [Literal (NoneLiteral)] }
   | sl=list(spec); WHILE; e=exp; COLON; s=suite; { While (e, sl, s) }
-  | CONTINUE { Continue }
-  | BREAK { Break }
-  | PASS { Pass }
-  | ASSERT; e=exp { Assert e }
-  | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (List.length al)) }
-  /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
+
+assignment:
+  | id=IDENTIFIER; COLON; exp; EQ; e2=exp { Assign ([id], [e2])}  /* TODO: use identifier type */
+  ;
+  /* | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (List.length al)) } */
+  /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */  
+/* assign_lst:
+  | id=IDENTIFIER { [id] }
+  | al=assign_lst; EQ; id=IDENTIFIER { al@[id] }
+  ; */
 
 elif_lst:
   | ELIF; e=exp; COLON; sl=suite; esl=elif_lst { (e, sl)::esl }
   | { [] }
-
-assign_lst:
-  | id=IDENTIFIER { [id] }
-  | al=assign_lst; EQ; id=IDENTIFIER { al@[id] }
   ;
-  
+
 exp:
-  | LPAREN; e=exp; RPAREN; { e }
-  | el=lst_exp { el }
-  /* | el=exp_lst { Tuple el } */
-  | t=typ { Type t }
-  | e=exp; s=slice { Subscript (e, s) }
-  | s=MINUS; e=exp %prec UMINUS { UnaryOp (UMinus s, e) }
-  | s=NOT; e=exp %prec NOT { UnaryOp (Not s, e) }
+  | d=disjunction; { d }
+  /* | LAMBDA; param_lst; ARROW; typ; COLON; e=exp { e } */
+  ;
+
+disjunction:
+  | c=conjunction { c }
+  | d=disjunction; s=OR; c=conjunction { BinaryOp(d, Or s, c) }
+  ;
+
+conjunction:
+  | i=inversion { i }
+  | ir=conjunction; s=AND; i=inversion { BinaryOp(ir, And s, i) }
+  ;
+
+inversion:
+  | s=NOT; i=inversion { UnaryOp(Not s, i) }
+  | c=comparison { c }
+  ;
+
+comparison:
+  | s=sum { s }
+  | c=comparison; s=EQEQ; e=sum { BinaryOp (c, EqEq s, e) }
+  | c=comparison; s=NEQ; e=sum { BinaryOp (c, NEq s, e) }
+  | c=comparison; s=LTE; e=sum { BinaryOp (c, LEq s, e) }
+  | c=comparison; s=LT; e=sum { BinaryOp (c, Lt s, e) }
+  | c=comparison; s=GTE; e=sum { BinaryOp (c, GEq s, e) }
+  | c=comparison; s=GT; e=sum { BinaryOp (c, Gt s, e) }
+  | c=comparison; s=NOT_IN; e=sum { BinaryOp (c, NotIn s, e) }
+  | c=comparison; s=IN; e=sum { BinaryOp (c, In s, e) }
+  /* | c=comparison; s=BIIMPL; e=sum { BinaryOp (c, BiImpl s, e) }
+  | c=comparison; s=IMPLIES; e=sum { BinaryOp (c, Implies s, e) }
+  | c=comparison; s=EXPLIES; e=sum { BinaryOp (c, Explies s, e) } */
+  ;
+
+sum:
+  | e=sum; s=PLUS; t=term { BinaryOp(e, Plus s, t) }
+  | e=sum; s=MINUS; t=term { BinaryOp(e, Minus s, t) }
+  | t=term { t }
+  ; 
+
+term:
+  | t=term; s=TIMES; f=factor { BinaryOp (t, Times s, f) }
+  | t=term; s=DIVIDE; f=factor { BinaryOp (t, Divide s, f) }
+  | t=term; s=MOD; f=factor { BinaryOp (t, Mod s, f) }
+  | f=factor { f }
+  ;
+
+factor:
+  | PLUS; f=factor { f }
+  | s=MINUS; f=factor { UnaryOp(UMinus s, f) }
+  | p=power { p }
+  ;
+
+power:
+  | p=primary { p }
+  ;
+
+primary:
+  | s=IDENTIFIER; el=arguments { Call(s, el) } (* TODO: allow primaries as calls *)
+  | e=primary; s=slice { Subscript (e, s) }
+  | a=atom { a }
+  ;
+
+arguments:
+  | LPAREN; el=exp_lst; RPAREN { el } (* TODO: allow default arguments *)
+  ;
+
+atom:
+  | s=IDENTIFIER { Identifier s }
   | TRUE { Literal (BooleanLiteral true) }
   | FALSE { Literal (BooleanLiteral false) }
-  | i=INT { Literal (IntegerLiteral (i)) }
-  | s=STRING { Literal (StringLiteral (s)) }
+  | s=strings { Literal (StringLiteral s) }
   | NONE { Literal (NoneLiteral) }
-  | s=IDENTIFIER; LPAREN; el=exp_lst; RPAREN { Call (s, el) }
-  | s=IDENTIFIER { Identifier s }
-  /* | LAMBDA; fl=param_lst; ARROW; t=typ; COLON; e=exp { }  */
-  | LEN; LPAREN; e=exp; RPAREN; { Len e } 
-  | e1=exp; seg=NOT_IN; e2=exp { BinaryOp (e1, NotIn seg, e2) }
-  | e1=exp; seg=IN; e2=exp { BinaryOp (e1, In seg, e2) }
-  | e1=exp; seg=PLUS; e2=exp { BinaryOp (e1, Plus seg, e2) }
-  | e1=exp; seg=MINUS; e2=exp { BinaryOp (e1, Minus seg, e2) }
-  | e1=exp; seg=TIMES; e2=exp { BinaryOp (e1, Times seg, e2) }
-  | e1=exp; seg=DIVIDE; e2=exp { BinaryOp (e1, Divide seg, e2) }
-  | e1=exp; seg=MOD; e2=exp { BinaryOp (e1, Mod seg, e2) }
-  | e1=exp; seg=EQEQ; e2=exp { BinaryOp (e1, EqEq seg, e2) }
-  | e1=exp; seg=NEQ; e2=exp { BinaryOp (e1, NEq seg, e2) }
-  | e1=exp; seg=LT; e2=exp { BinaryOp (e1, Lt seg, e2) }
-  | e1=exp; seg=LEQ; e2=exp { BinaryOp (e1, LEq seg, e2) }
-  | e1=exp; seg=GT; e2=exp { BinaryOp (e1, Gt seg, e2) }
-  | e1=exp; seg=GEQ; e2=exp { BinaryOp (e1, GEq seg, e2) }
-  | e1=exp; seg=AND; e2=exp { BinaryOp (e1, And seg, e2) }
-  | e1=exp; seg=OR; e2=exp { BinaryOp (e1, Or seg, e2) }
-  | e1=exp; seg=BIIMPL; e2=exp { BinaryOp (e1, BiImpl seg, e2) }
-  | e1=exp; seg=IMPLIES; e2=exp { BinaryOp (e1, Implies seg, e2) }
-  | e1=exp; seg=EXPLIES; e2=exp { BinaryOp (e1, Explies seg, e2) }
-  | FORALL; il=id_lst; DOUBLECOLON; e=exp; { Forall (il, e) }
-  | EXISTS; il=id_lst; DOUBLECOLON; e=exp; { Exists (il, e) }
+  | i=INT { Literal (IntegerLiteral (i)) }
+  | LPAREN; e=exp; COMMA; el=exp_lst; RPAREN { Tuple(e::el) }
+  | LPAREN; e=exp; RPAREN; { e }
+  | el=lst_exp { el }
+  | LEN; LPAREN; e=exp; RPAREN; { Len e }
+  /* | FORALL; il=id_lst; DOUBLECOLON; e=exp; { Forall (il, e) }
+  | EXISTS; il=id_lst; DOUBLECOLON; e=exp; { Exists (il, e) } */
+  /* | t=typ { Type t } */
   ;
+
+strings:
+  | s=STRING { s }
+  | sl=strings; s=STRING { sl ^ s }
 
 slice: 
   | LBRACK; e=exp; o=slice_h { Slice (Some(e), o) } 
