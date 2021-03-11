@@ -55,6 +55,7 @@ type exp =
   | Literal of literal
   | Call of (identifier * exp list)
   | Lst of exp list
+  | Tuple of exp list
   | Subscript of exp * exp (* value, slice *)
   | Slice of exp option * exp option (* lower, upper *)
   | Forall of identifier list * exp

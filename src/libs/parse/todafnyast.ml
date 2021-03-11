@@ -79,7 +79,8 @@ let rec exp_dfy = function
   | UnaryOp(op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l
   | Call(id, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(id, d_args)
-  | Lst el -> DSeqExpr (List.map ~f:exp_dfy el) 
+  | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
+  | Tuple el -> DSeqExpr (List.map ~f:exp_dfy el)  
   | Subscript(e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
   | Slice(e1, e2) -> begin
     match e1, e2 with
@@ -122,6 +123,10 @@ let is_toplevel = function
   | Assign _ -> true
   | _ -> false
 
+let not_toplevel = function
+  | Function _ -> false
+  | _ -> true
+
 let toplevel_dfy = function
   | Function(speclst, i, pl, t, sl) -> 
     let tl = begin
@@ -154,7 +159,7 @@ let prog_dfy = function
     let toplevel_stmts = List.filter ~f:is_toplevel sl in
     let d_toplevel_stmts_o = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy s)) ~init:[] toplevel_stmts in
     let d_toplevel_stmts = List.filter_map ~f:(fun x -> x) d_toplevel_stmts_o in
-    let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
+    let non_toplevel_stmts = List.filter ~f:(fun x -> not_toplevel x) sl in
     let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
     let main = DMeth([DNone], (Lexing.dummy_pos, Some "Main"), [], [DVoid], d_non_toplevel_stmts) in
     DProg("pyny", d_toplevel_stmts@[main])

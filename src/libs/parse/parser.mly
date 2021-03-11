@@ -86,6 +86,7 @@ assign_lst:
 exp:
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
+  /* | el=exp_lst { Tuple el } */
   | t=typ { Type t }
   | e=exp; s=slice { Subscript (e, s) }
   | s=MINUS; e=exp %prec UMINUS { UnaryOp (UMinus s, e) }
@@ -179,7 +180,7 @@ data_typ:
   | d=DICT_TYPE { Dict(d, None, None) }
   | s=SET_TYPE LBRACK t=typ RBRACK { Set(s, Some t) }
   | s=SET_TYPE { Set(s, None) }
-  | tt=TUPLE_TYPE LBRACK tl=typ_lst RBRACK { Tuple(tt, Some tl) }
+  | tt=TUPLE_TYPE; LBRACK; tl=typ_lst; RBRACK { Tuple(tt, Some tl) }
   | t=TUPLE_TYPE { Tuple(t, None) }
   ;
 

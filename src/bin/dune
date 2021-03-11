@@ -1,5 +1,4 @@
 (executable
   (name main)
-  (libraries verifier pyparse core re2)
-  (flags (:standard -w -14))
+  (libraries verifier pyparse core)
 )
