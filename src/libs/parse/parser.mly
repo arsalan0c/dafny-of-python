@@ -10,14 +10,14 @@ menhir --list-errors
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
-%token <Sourcemap.segment> DEF IF ELIF ELSE FOR WHILE BREAK RETURN NOT_IN IN PRINT ASSERT LAMBDA PASS
+%token <Sourcemap.segment> DEF IF ELIF ELSE WHILE BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
-%token <Sourcemap.segment> IDENTIFIER INT_TYPE FLOAT_TYPE BOOL_TYPE COMPLEX_TYPE STRING_TYPE NONE_TYPE LIST_TYPE DICT_TYPE SET_TYPE TUPLE_TYPE
+%token <Sourcemap.segment> IDENTIFIER INT_TYP FLOAT_TYP BOOL_TYP STRING_TYP NONE_TYP LIST_TYP DICT_TYP SET_TYP TUPLE_TYP
 %token <string> STRING
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
 %token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
-%token LEN FILTER MAP
+%token LEN
 
 %left OR
 %left AND
@@ -53,48 +53,44 @@ stmt:
 
 simple_stmt:
   | s=small_stmt; NEWLINE { s }
-  /* | s=small_stmt; SEMICOLON { s } */
-  /* | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) } */
+  | s=small_stmt; SEMICOLON { s }
   ;
 
 small_stmt:
   | a=assignment { a }
   | e=exp { Exp e }
-  | RETURN; el=exp_lst { Return el }
-  | RETURN { Return [Literal (NoneLiteral)] }
+  | RETURN; el=exp_lst { if List.length el = 0 then Return [Literal (NoneLiteral)] else Return el }
   | PASS { Pass }
   | ASSERT; e=exp { Assert e }
   | BREAK { Break }
   ;
 
 compound_stmt:
-  | s=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_lst; RPAREN; ARROW; t=typ; COLON; sl=suite { Function (s, id, fl, t, sl) }
-  | IF; e=exp; COLON; s1=suite; el=elif_lst; ELSE; COLON; s2=suite { IfElse (e, s1, el, s2) }
-  | IF; e=exp; COLON; s=suite; el=elif_lst; { IfElse (e, s, el, []) }
-  | sl=list(spec); WHILE; e=exp; COLON; s=suite; { While (e, sl, s) }
+  | s=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_lst; RPAREN; ARROW; t=typ; COLON; sl=block { Function (s, id, fl, t, sl) }
+  | IF; e=exp; COLON; s1=block; el=elif_lst; ELSE; COLON; s2=block { IfElse (e, s1, el, s2) }
+  | IF; e=exp; COLON; s=block; el=elif_lst; { IfElse (e, s, el, []) }
+  | sl=list(spec); WHILE; e=exp; COLON; s=block; { While (e, sl, s) }
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; exp; EQ; e2=exp { Assign ([id], [e2])}  /* TODO: use identifier type */
+  | id=IDENTIFIER; COLON; typ; EQ; e2=exp { Assign ([id], [e2])}  /* TODO: make use of the identifier type */
+  | id=IDENTIFIER; EQ; e2=typ { Assign ([id], [Typ e2]) }
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
-  /* | al=assign_lst; EQ; e=exp; { Assign (al, replicate e (List.length al)) } */
-  /* | il=id_lst; EQ; el=exp_lst { Assign (il, el) } */  
-/* assign_lst:
-  | id=IDENTIFIER { [id] }
-  | al=assign_lst; EQ; id=IDENTIFIER { al@[id] }
-  ; */
 
 elif_lst:
-  | ELIF; e=exp; COLON; sl=suite; esl=elif_lst { (e, sl)::esl }
+  | ELIF; e=exp; COLON; sl=block; esl=elif_lst { (e, sl)::esl }
   | { [] }
   ;
 
 exp:
   | d=disjunction; { d }
-  /* | LAMBDA; param_lst; ARROW; typ; COLON; e=exp { e } */
+  | FORALL; il=id_lst; DOUBLECOLON; e=exp; { Forall (il, e) }
+  | EXISTS; il=id_lst; DOUBLECOLON; e=exp; { Exists (il, e) }
+  | LAMBDA; param_lst; ARROW; typ; COLON; e=exp { e }
   ;
 
 disjunction:
@@ -122,9 +118,9 @@ comparison:
   | c=comparison; s=GT; e=sum { BinaryOp (c, Gt s, e) }
   | c=comparison; s=NOT_IN; e=sum { BinaryOp (c, NotIn s, e) }
   | c=comparison; s=IN; e=sum { BinaryOp (c, In s, e) }
-  /* | c=comparison; s=BIIMPL; e=sum { BinaryOp (c, BiImpl s, e) }
+  | c=comparison; s=BIIMPL; e=sum { BinaryOp (c, BiImpl s, e) }
   | c=comparison; s=IMPLIES; e=sum { BinaryOp (c, Implies s, e) }
-  | c=comparison; s=EXPLIES; e=sum { BinaryOp (c, Explies s, e) } */
+  | c=comparison; s=EXPLIES; e=sum { BinaryOp (c, Explies s, e) }
   ;
 
 sum:
@@ -171,9 +167,6 @@ atom:
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
   | LEN; LPAREN; e=exp; RPAREN; { Len e }
-  /* | FORALL; il=id_lst; DOUBLECOLON; e=exp; { Forall (il, e) }
-  | EXISTS; il=id_lst; DOUBLECOLON; e=exp; { Exists (il, e) } */
-  /* | t=typ { Type t } */
   ;
 
 strings:
@@ -203,7 +196,7 @@ spec_rem:
   | e=exp; NEWLINE { e }
   ;
 
-suite:
+block:
   | NEWLINE; INDENT; sl=stmts; DEDENT { sl }
   ;
 
@@ -212,34 +205,29 @@ typ:
   | dt=data_typ { dt }
   ;
 
-typ_lst:
-  | { [] }
-  | tr=typ_rest; { tr }
-  ;
-
-typ_rest:
+typ_plus:
   | t=typ { [t] }
-  | tr=typ_rest; COMMA; t=typ { tr@[t] }
+  | tr=typ_plus; COMMA; t=typ { tr@[t] }
   ;
 
 base_typ:
-  | t=INT_TYPE { Int t }
-  | t=FLOAT_TYPE { Float t }
-  | t=BOOL_TYPE { Bool t }
-  | t=STRING_TYPE { Str t }
-  | t=NONE_TYPE { Non t }
-  | t=IDENTIFIER { IdentType t }
+  | t=INT_TYP { Int t }
+  | t=FLOAT_TYP { Float t }
+  | t=BOOL_TYP { Bool t }
+  | t=STRING_TYP { Str t }
+  | t=NONE_TYP { Non t }
+  | t=IDENTIFIER { IdentTyp t }
   ;
 
 data_typ:
-  | l=LIST_TYPE LBRACK t=typ RBRACK { List(l, Some t) }
-  | l=LIST_TYPE { List(l, None) }
-  | d=DICT_TYPE LBRACK t1=typ COMMA t2=typ RBRACK { Dict(d, Some t1, Some t2) }
-  | d=DICT_TYPE { Dict(d, None, None) }
-  | s=SET_TYPE LBRACK t=typ RBRACK { Set(s, Some t) }
-  | s=SET_TYPE { Set(s, None) }
-  | tt=TUPLE_TYPE; LBRACK; tl=typ_lst; RBRACK { Tuple(tt, Some tl) }
-  | t=TUPLE_TYPE { Tuple(t, None) }
+  | l=LIST_TYP LBRACK t=typ RBRACK { List(l, Some t) }
+  | l=LIST_TYP { List(l, None) }
+  | d=DICT_TYP LBRACK t1=typ COMMA t2=typ RBRACK { Dict(d, Some t1, Some t2) }
+  | d=DICT_TYP { Dict(d, None, None) }
+  | s=SET_TYP LBRACK t=typ RBRACK { Set(s, Some t) }
+  | s=SET_TYP { Set(s, None) }
+  | tt=TUPLE_TYP; LBRACK; tl=typ_plus; RBRACK { Tuple(tt, Some tl) }
+  | t=TUPLE_TYP { Tuple(t, None) }
   ;
 
 param_lst:

@@ -105,7 +105,7 @@ let print_op id = function
 
 let print_type id t = 
   let rec get_v t = match t with
-    | DIdentType s -> Sourcemap.segment_value s
+    | DIdentTyp s -> Sourcemap.segment_value s
     | DInt _ -> "int"
     | DReal _ -> "real"
     | DBool _ -> "bool"
@@ -119,7 +119,7 @@ let print_type id t =
   in   
   let get_s t = 
     match t with
-    | DIdentType s -> s
+    | DIdentTyp s -> s
     | DInt s -> s
     | DReal s -> s
     | DBool s -> s
@@ -170,7 +170,8 @@ let rec print_exp id = function
     let es = "\"" ^ s ^ "\"" in
     String.concat [n; es]
   | DNull -> let n = newcolumn (indent id) in 
-    String.concat [n; "null"]
+    let pn = newcolumn "null" in
+    String.concat [n; pn]
   (* | DThis -> newcolumn ((indent id) ^ "this")
   | DFresh -> newcolumn ((indent id) ^ "fresh")
   | DOld -> newcolumn ((indent id) ^ "old") *)
@@ -372,7 +373,7 @@ let print_toplevel id = function
     let pcb2 = newcolumn "}" in 
     let nl5 = newline () in 
     String.concat [n; m; pident; pob; pp; pcb; pr; nl; psl; nl2; n2; pob2; nl3; ppl; nl4; pst; n3; pcb2; nl5]
-  | DTypeSynonym(ident, typ) -> let n = newcolumn (indent id) in
+  | DTypSynonym(ident, typ) -> let n = newcolumn (indent id) in
     let t = newcolumn "type" in
     let pident = print_id 1 ident in
     let eq = newcolumn " = " in

@@ -60,15 +60,15 @@ let e = ""
 
 rule f = parse
 | eof { EOF }
-| int_type as t { INT_TYPE (emit_segment lexbuf (Some t)) }
-| float_type as t { FLOAT_TYPE (emit_segment lexbuf (Some t)) }
-| bool_type as t { BOOL_TYPE (emit_segment lexbuf (Some t)) }
-| string_type as t { STRING_TYPE (emit_segment lexbuf (Some t)) }
-| none_type as t { NONE_TYPE (emit_segment lexbuf (Some t)) }
-| list_type as t { LIST_TYPE (emit_segment lexbuf (Some t)) }
-| dict_type as t { DICT_TYPE (emit_segment lexbuf (Some t)) }
-| set_type as t { SET_TYPE (emit_segment lexbuf (Some t)) }
-| tuple_type as t { TUPLE_TYPE (emit_segment lexbuf (Some t)) }
+| int_type as t { INT_TYP (emit_segment lexbuf (Some t)) }
+| float_type as t { FLOAT_TYP (emit_segment lexbuf (Some t)) }
+| bool_type as t { BOOL_TYP (emit_segment lexbuf (Some t)) }
+| string_type as t { STRING_TYP (emit_segment lexbuf (Some t)) }
+| none_type as t { NONE_TYP (emit_segment lexbuf (Some t)) }
+| list_type as t { LIST_TYP (emit_segment lexbuf (Some t)) }
+| dict_type as t { DICT_TYP (emit_segment lexbuf (Some t)) }
+| set_type as t { SET_TYP (emit_segment lexbuf (Some t)) }
+| tuple_type as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
 | indent as s { (upd lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | whitespace+ { f lexbuf }
 | "import" { comment lexbuf }
@@ -102,11 +102,12 @@ rule f = parse
 | "filter" { IDENTIFIER (emit_segment lexbuf (Some "filterF")) }
 | "map" { IDENTIFIER (emit_segment lexbuf (Some "mapF")) }
 | "->" { ARROW }
+| "->" { ARROW }
 | "def" { DEF (emit_segment lexbuf (Some "def" )) }
+| "lambda" { LAMBDA (emit_segment lexbuf (Some "lambda" )) }
 | "if" { IF (emit_segment lexbuf (Some "if" )) }
 | "elif" { ELIF (emit_segment lexbuf (Some "elif" )) }
 | "else" { ELSE (emit_segment lexbuf (Some "else" )) }
-| "for" { FOR (emit_segment lexbuf (Some "for" )) }
 | "while" { WHILE (emit_segment lexbuf (Some "while" )) }
 | "break" { BREAK (emit_segment lexbuf (Some "break" )) }
 | "pass" { PASS (emit_segment lexbuf (Some "pass")) }

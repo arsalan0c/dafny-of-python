@@ -28,21 +28,21 @@ type dOp =
   | DExplies of segment
   [@@deriving sexp]
 
-type dType = 
-  | DIdentType of segment
+type dTyp = 
+  | DIdentTyp of segment
   | DInt of segment
   | DReal of segment 
   | DBool of segment  
   | DString of segment  
   | DChar of segment 
-  | DSeq of segment * dType
-  | DSet of segment * dType
-  | DMap of segment * dType * dType
+  | DSeq of segment * dTyp
+  | DSet of segment * dTyp
+  | DMap of segment * dTyp * dTyp
   | DVoid
-  | DTuple of segment * dType list
+  | DTuple of segment * dTyp list
   [@@deriving sexp]
 
-type dParam = dId * dType (* name: type *)
+type dParam = dId * dTyp (* name: type *)
 [@@deriving sexp]
 
 type dExpr = 
@@ -89,8 +89,8 @@ type dStmt =
   [@@deriving sexp]
 
 type dTopLevel = 
-  | DMeth of dSpec list * dId * dParam list * dType list * dStmt list
-  | DTypeSynonym of dId * dType
+  | DMeth of dSpec list * dId * dParam list * dTyp list * dStmt list
+  | DTypSynonym of dId * dTyp
   [@@deriving sexp]
 
 type dProgram = DProg of string * dTopLevel list

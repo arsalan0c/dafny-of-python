@@ -11,7 +11,7 @@ let[@inline] failwith msg = raise (DfyAstError msg)
 let typ_idents = Hash_set.create (module String)
 
 let rec type_dfy = function 
-  | IdentType s -> DIdentType s
+  | IdentTyp s -> DIdentTyp s
   | Int s -> DInt s
   | Float s -> DReal s 
   | Bool s -> DBool s
@@ -92,7 +92,7 @@ let rec exp_dfy = function
   | Forall(s, e) -> DForall(s, exp_dfy e)
   | Exists(s, e) -> DExists(s, exp_dfy e)
   | Len e -> DLen (exp_dfy e)
-  | Type _ -> failwith "type in expression context only allowed as right-hand-side of assignment"
+  | Typ _ -> failwith "type in expression context only allowed as right-hand-side of assignment"
 
 let spec_dfy = function
   | Pre c -> DRequires (exp_dfy c)
@@ -139,11 +139,11 @@ let toplevel_dfy = function
       let convert_typsyn ident typ = 
         let s_ident = Sourcemap.segment_value ident in
         match typ with
-        | Type t -> Hash_set.add typ_idents s_ident; Some (DTypeSynonym (ident_dfy ident, type_dfy t))
+        | Typ t -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, type_dfy t))
         | Identifier typ_ident -> begin 
             let s_typ = Sourcemap.segment_value typ_ident in
             match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
-            | Some _ -> Hash_set.add typ_idents s_ident; Some (DTypeSynonym (ident_dfy ident, type_dfy (IdentType typ_ident)))
+            | Some _ -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, type_dfy (IdentTyp typ_ident)))
             | None -> None
           end
         | _ -> None

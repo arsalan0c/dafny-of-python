@@ -8,7 +8,7 @@ type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of
 [@@deriving sexp]
 
 type pytype =
-  | IdentType of segment
+  | IdentTyp of segment
   | Int of segment
   | Float of segment 
   | Bool of segment 
@@ -63,7 +63,7 @@ type exp =
   | Forall of identifier list * exp
   | Exists of identifier list * exp
   | Len of exp
-  | Type of pytype
+  | Typ of pytype
   [@@deriving sexp]
 
 type spec = 
