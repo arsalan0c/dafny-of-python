@@ -6,7 +6,7 @@ menhir --list-errors
 
 %{
   open Astpy
-  (* let printf = Stdlib.Printf.printf *)
+  let printf = Stdlib.Printf.printf
 %}
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
@@ -44,6 +44,7 @@ f:
   ;
 
 stmts_plus:
+  | { [] }
   | s=stmt { [s] }
   | s=stmt; NEWLINE; sl=stmts_plus { s::sl }
   | s=stmt; SEMICOLON; sl=stmts_plus { s::sl }
@@ -90,10 +91,17 @@ elif_star:
   ;
 
 exp:
+  | d=implication; { d }
+  | FORALL; il=id_star; DOUBLECOLON; e=implication { Forall (il, e) }
+  | EXISTS; il=id_star; DOUBLECOLON; e=implication { Exists (il, e) }
+  | LAMBDA; param_star; ARROW; typ; COLON; e=implication { e }
+  ;
+
+implication:
   | d=disjunction; { d }
-  | FORALL; il=id_star; DOUBLECOLON; e=exp; { Forall (il, e) }
-  | EXISTS; il=id_star; DOUBLECOLON; e=exp; { Exists (il, e) }
-  | LAMBDA; param_star; ARROW; typ; COLON; e=exp { e }
+  | im=implication; s=BIIMPL; d=disjunction { BinaryOp (im, BiImpl s, d) }
+  | im=implication; s=IMPLIES; d=disjunction { BinaryOp (im, Implies s, d) }
+  | im=implication; s=EXPLIES; d=disjunction { BinaryOp (im, Explies s, d) }
   ;
 
 disjunction:
@@ -121,9 +129,6 @@ comparison:
   | c=comparison; s=GT; e=sum { BinaryOp (c, Gt s, e) }
   | c=comparison; s=NOT_IN; e=sum { BinaryOp (c, NotIn s, e) }
   | c=comparison; s=IN; e=sum { BinaryOp (c, In s, e) }
-  | c=comparison; s=BIIMPL; e=sum { BinaryOp (c, BiImpl s, e) }
-  | c=comparison; s=IMPLIES; e=sum { BinaryOp (c, Implies s, e) }
-  | c=comparison; s=EXPLIES; e=sum { BinaryOp (c, Explies s, e) }
   ;
 
 sum:
@@ -202,18 +207,18 @@ spec_rem:
   ;
 
 block:
-  | NEWLINE; INDENT; sl=stmts_plus; DEDENT { sl } 
-  /* { let diff = ni - nd in printf "Diff: %d\n" diff; if (diff != 0) then failwith "unexpected indentation" else sl } */
+  | NEWLINE; ni=indent_plus; sl=stmts_plus; nd=dedent_plus 
+  { let diff = ni - nd in printf "Diff: %d\n" diff; if (diff != 0) then failwith "unexpected indentation" else sl }
   ;
 
 indent_plus:
   | INDENT { 1 }
-  /* | INDENT; n=indent_plus;  { n + 1 } */
+  | INDENT; n=indent_plus;  { n + 1 }
   ;
 
 dedent_plus:
   | DEDENT { 1 }
-  /* | DEDENT; n=dedent_plus;  { n + 1 } */
+  | DEDENT; n=dedent_plus;  { n + 1 }
   ;
 
 typ:

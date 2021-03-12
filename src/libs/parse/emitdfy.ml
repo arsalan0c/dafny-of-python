@@ -98,10 +98,10 @@ let print_op id = function
   | DGEq s -> add_op id s ">=" 
   | DAnd s -> add_op id s "&&" 
   | DOr s -> add_op id s "||"
+  | DNot s -> add_op id s "!"
   | DBiImpl s -> add_op id s "<==>"
   | DImplies s -> add_op id s "==>"
   | DExplies s -> add_op id s "<=="
-  | _ -> failwith "unsupported op node"
 
 let print_type id t = 
   let rec get_v t = match t with
