@@ -64,7 +64,7 @@ type dExpr =
   | DForall of dId list * dExpr
   | DExists of dId list * dExpr
   | DLen of dExpr
-[@@deriving sexp]
+  [@@deriving sexp]
 
 type dSpec = 
   | DRequires of dExpr 
