@@ -34,7 +34,7 @@ menhir --list-errors
 %nonassoc LPAREN LBRACK LBRACE
 %nonassoc RPAREN RBRACK RBRACE
 
-%start <sexp> f
+%start <program> f
 
 %%
 
@@ -167,7 +167,7 @@ atom:
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
   | LEN; LPAREN; e=exp; RPAREN; { Len e }
-  (* TODO: add slices *)
+  (* TODO: add slices, non-bracketed tuples and comprehensions *)
   ;
 
 strings:

@@ -35,7 +35,9 @@ let run =
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   typcheck inp;
   let lexed = Lexing.from_string inp in
-  let parsed = Pyparse.Parser.f Pyparse.Indenter.f lexed in
+  let parsed = try Pyparse.Parser.f Pyparse.Indenter.f lexed with 
+    | Pyparse.Parser.Error -> prerr (String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexed)); Lexing.lexeme lexed; "\n"])
+  in
   let calls_rewritten = Pyparse.Convertcall.prog parsed in
   let dafny_ast = Pyparse.Todafnyast.prog_dfy calls_rewritten in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in

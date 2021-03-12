@@ -86,6 +86,6 @@ type stmt =
   | Exp of exp
   [@@deriving sexp]
 
-type sexp =
+type program =
   | Program of stmt list
   [@@deriving sexp]
