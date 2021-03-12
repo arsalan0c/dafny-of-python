@@ -95,12 +95,12 @@ exp:
 
 disjunction:
   | c=conjunction { c }
-  | d=disjunction; s=OR; c=conjunction { BinaryOp(d, Or s, c) }
+  | d=disjunction; s=OR; c=conjunction { BinaryOp (d, Or s, c) }
   ;
 
 conjunction:
   | i=inversion { i }
-  | ir=conjunction; s=AND; i=inversion { BinaryOp(ir, And s, i) }
+  | ir=conjunction; s=AND; i=inversion { BinaryOp (ir, And s, i) }
   ;
 
 inversion:
@@ -147,7 +147,7 @@ power:
   ;
 
 primary:
-  | s=IDENTIFIER; el=arguments { Call(s, el) } (* TODO: allow primaries as calls *)
+  | s=IDENTIFIER; el=arguments { Call (s, el) } (* TODO: allow primaries as calls *)
   | e=primary; s=slice { Subscript (e, s) }
   | a=atom { a }
   ;
@@ -163,10 +163,11 @@ atom:
   | s=strings { Literal (StringLiteral s) }
   | NONE { Literal (NoneLiteral) }
   | i=INT { Literal (IntegerLiteral (i)) }
-  | LPAREN; e=exp; COMMA; el=exp_lst; RPAREN { Tuple(e::el) }
+  | LPAREN; e=exp; COMMA; el=exp_lst; RPAREN { Tuple (e::el) }
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
   | LEN; LPAREN; e=exp; RPAREN; { Len e }
+  (* TODO: add slices *)
   ;
 
 strings:
@@ -174,7 +175,7 @@ strings:
   | sl=strings; s=STRING { sl ^ s }
 
 slice: 
-  | LBRACK; e=exp; o=slice_h { Slice (Some(e), o) } 
+  | LBRACK; e=exp; o=slice_h { Slice (Some e, o) } 
   ; 
 slice_h:
   | RBRACK { None }
@@ -220,14 +221,14 @@ base_typ:
   ;
 
 data_typ:
-  | l=LIST_TYP LBRACK t=typ RBRACK { List(l, Some t) }
-  | l=LIST_TYP { List(l, None) }
-  | d=DICT_TYP LBRACK t1=typ COMMA t2=typ RBRACK { Dict(d, Some t1, Some t2) }
-  | d=DICT_TYP { Dict(d, None, None) }
-  | s=SET_TYP LBRACK t=typ RBRACK { Set(s, Some t) }
-  | s=SET_TYP { Set(s, None) }
-  | tt=TUPLE_TYP; LBRACK; tl=typ_plus; RBRACK { Tuple(tt, Some tl) }
-  | t=TUPLE_TYP { Tuple(t, None) }
+  | l=LIST_TYP LBRACK t=typ RBRACK { List (l, Some t) }
+  | l=LIST_TYP { List (l, None) }
+  | d=DICT_TYP LBRACK t1=typ COMMA t2=typ RBRACK { Dict (d, Some t1, Some t2) }
+  | d=DICT_TYP { Dict (d, None, None) }
+  | s=SET_TYP LBRACK t=typ RBRACK { Set (s, Some t) }
+  | s=SET_TYP { Set (s, None) }
+  | tt=TUPLE_TYP; LBRACK; tl=typ_plus; RBRACK { Tuple (tt, Some tl) }
+  | t=TUPLE_TYP { Tuple (t, None) }
   ;
 
 param_lst:

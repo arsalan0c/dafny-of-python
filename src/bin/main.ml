@@ -13,9 +13,9 @@ let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
 
 let prelude_f = "./src/libs/parse/prelude.dfy" 
-let dafny_f = "pyny_program.dfy"
+let dafny_f = "program.dfy"
 let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f] (* prelude_f *)
-let python_f = "pyny_program.py"
+let python_f = "program.py"
 let mypy_command = String.concat ~sep:" " ["mypy"; python_f]
 
 let system cmd =
@@ -28,7 +28,7 @@ let typcheck s =
   Out_channel.write_all python_f ~data:s;
   let tc_out = system mypy_command in
   match String.substr_index tc_out ~pattern:"error" with
-  | Some _ -> prerr ("Typechecking failed:\n" ^ tc_out ^ "\n")
+  | Some _ -> prerr ("\nTypechecking failed:\n" ^ tc_out ^ "\n")
   | None -> ()
 
 let run =
