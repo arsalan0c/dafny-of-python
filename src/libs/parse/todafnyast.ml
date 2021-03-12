@@ -163,3 +163,5 @@ let prog_dfy = function
     let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
     let main = DMeth([DNone], (Lexing.dummy_pos, Some "Main"), [], [DVoid], d_non_toplevel_stmts) in
     DProg("pyny", d_toplevel_stmts@[main])
+
+    (* | indent as s { (upd lexbuf (String.length s - 1); main lexbuf) }  *)

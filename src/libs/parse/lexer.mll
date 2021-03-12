@@ -48,8 +48,6 @@ let dict_type = "dict"
 let set_type = "set"
 let tuple_type = "Tuple"
 
-(* let type = simple_type | data_type | data_type '[' type+ ']'  *)
-
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']
 let integer = (digit | ['1' - '9'] digit*)

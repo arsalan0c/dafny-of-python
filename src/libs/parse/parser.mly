@@ -6,6 +6,7 @@ menhir --list-errors
 
 %{
   open Astpy
+  (* let printf = Stdlib.Printf.printf *)
 %}
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
@@ -39,36 +40,38 @@ menhir --list-errors
 %%
 
 f:
-  | sl=stmts; EOF { Program sl }
+  | sl=stmts_plus; EOF { Program sl }
   ;
 
-stmts:
-  | sl=list(stmt) { sl }
+stmts_plus:
+  | s=stmt { [s] }
+  | s=stmt; NEWLINE; sl=stmts_plus { s::sl }
+  | s=stmt; SEMICOLON; sl=stmts_plus { s::sl }
+  ;
+
+newline_star:
+  | { [] }
+  | NEWLINE; newline_star { [] }
   ;
 
 stmt:
-  | s=compound_stmt { s }
-  | s=simple_stmt { s }
-  ;
-
-simple_stmt:
-  | s=small_stmt; NEWLINE { s }
-  | s=small_stmt; SEMICOLON { s }
+  | newline_star; s=compound_stmt { s }
+  | newline_star; s=small_stmt { s }
   ;
 
 small_stmt:
   | a=assignment { a }
   | e=exp { Exp e }
-  | RETURN; el=exp_lst { if List.length el = 0 then Return [Literal (NoneLiteral)] else Return el }
+  | RETURN; el=exp_star { if List.length el = 0 then Return [Literal (NoneLiteral)] else Return el }
   | PASS { Pass }
   | ASSERT; e=exp { Assert e }
   | BREAK { Break }
   ;
 
 compound_stmt:
-  | s=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_lst; RPAREN; ARROW; t=typ; COLON; sl=block { Function (s, id, fl, t, sl) }
-  | IF; e=exp; COLON; s1=block; el=elif_lst; ELSE; COLON; s2=block { IfElse (e, s1, el, s2) }
-  | IF; e=exp; COLON; s=block; el=elif_lst; { IfElse (e, s, el, []) }
+  | s=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=typ; COLON; sl=block { Function (s, id, fl, t, sl) }
+  | IF; e=exp; COLON; s1=block; el=elif_star; ELSE; COLON; s2=block { IfElse (e, s1, el, s2) }
+  | IF; e=exp; COLON; s=block; el=elif_star; { IfElse (e, s, el, []) }
   | sl=list(spec); WHILE; e=exp; COLON; s=block; { While (e, sl, s) }
   ;
 
@@ -81,16 +84,16 @@ assignment:
   | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
-elif_lst:
-  | ELIF; e=exp; COLON; sl=block; esl=elif_lst { (e, sl)::esl }
+elif_star:
+  | ELIF; e=exp; COLON; sl=block; esl=elif_star { (e, sl)::esl }
   | { [] }
   ;
 
 exp:
   | d=disjunction; { d }
-  | FORALL; il=id_lst; DOUBLECOLON; e=exp; { Forall (il, e) }
-  | EXISTS; il=id_lst; DOUBLECOLON; e=exp; { Exists (il, e) }
-  | LAMBDA; param_lst; ARROW; typ; COLON; e=exp { e }
+  | FORALL; il=id_star; DOUBLECOLON; e=exp; { Forall (il, e) }
+  | EXISTS; il=id_star; DOUBLECOLON; e=exp; { Exists (il, e) }
+  | LAMBDA; param_star; ARROW; typ; COLON; e=exp { e }
   ;
 
 disjunction:
@@ -153,7 +156,7 @@ primary:
   ;
 
 arguments:
-  | LPAREN; el=exp_lst; RPAREN { el } (* TODO: allow default arguments *)
+  | LPAREN; el=exp_star; RPAREN { el } (* TODO: allow default arguments *)
   ;
 
 atom:
@@ -163,7 +166,7 @@ atom:
   | s=strings { Literal (StringLiteral s) }
   | NONE { Literal (NoneLiteral) }
   | i=INT { Literal (IntegerLiteral (i)) }
-  | LPAREN; e=exp; COMMA; el=exp_lst; RPAREN { Tuple (e::el) }
+  | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
   | LEN; LPAREN; e=exp; RPAREN; { Len e }
@@ -173,6 +176,7 @@ atom:
 strings:
   | s=STRING { s }
   | sl=strings; s=STRING { sl ^ s }
+  ;
 
 slice: 
   | LBRACK; e=exp; o=slice_h { Slice (Some e, o) } 
@@ -183,7 +187,7 @@ slice_h:
   ;
 
 lst_exp:
-  | LBRACK; el=exp_lst; RBRACK { Lst el }
+  | LBRACK; el=exp_star; RBRACK { Lst el }
   ;
 
 spec:
@@ -198,7 +202,18 @@ spec_rem:
   ;
 
 block:
-  | NEWLINE; INDENT; sl=stmts; DEDENT { sl }
+  | NEWLINE; INDENT; sl=stmts_plus; DEDENT { sl } 
+  /* { let diff = ni - nd in printf "Diff: %d\n" diff; if (diff != 0) then failwith "unexpected indentation" else sl } */
+  ;
+
+indent_plus:
+  | INDENT { 1 }
+  /* | INDENT; n=indent_plus;  { n + 1 } */
+  ;
+
+dedent_plus:
+  | DEDENT { 1 }
+  /* | DEDENT; n=dedent_plus;  { n + 1 } */
   ;
 
 typ:
@@ -208,7 +223,7 @@ typ:
 
 typ_plus:
   | t=typ { [t] }
-  | tr=typ_plus; COMMA; t=typ { tr@[t] }
+  | t=typ; COMMA; tr=typ_plus { t::tr }
   ;
 
 base_typ:
@@ -231,38 +246,38 @@ data_typ:
   | t=TUPLE_TYP { Tuple (t, None) }
   ;
 
-param_lst:
+param_star:
   | { [] }
   | pr=param_rest; { pr }
   ;
 
 param_rest:
   | p=param;  { [p] }
-  | pr=param_rest; COMMA; p=param { pr@[p] }
+  | p=param; COMMA; pr=param_rest { p::pr }
   ;
 
 param:
   | id=IDENTIFIER; COLON; t=typ { Param (id, t) }
   ;
 
-id_lst:
+id_star:
   | { [] }
   | ir=id_rest { ir }
   ;
 
 id_rest:
   | id=IDENTIFIER { [id] }
-  | ir=id_rest; COMMA; id=IDENTIFIER { ir@[id] }
+  | id=IDENTIFIER; COMMA; ir=id_rest { id::ir }
   ;
 
-exp_lst:
+exp_star:
   | { [] }
   | er=exp_rest { er }
   ;
 
 exp_rest:
   | e=exp { [e] }
-  | er=exp_rest; COMMA; e=exp { er@[e] }
+  | e=exp; COMMA; er=exp_rest;   { e::er }
   ;
 
 %%
