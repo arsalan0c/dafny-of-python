@@ -32,8 +32,8 @@
     }   
 }
 
-let indent = '\n' ' '*
-let whitespace = [' ' '\t']
+let indent = '\n' [' ' '\t']*
+let whitespace = [' ' '\t']+
 
 (* simple types *)
 let int_type = "int"
@@ -56,9 +56,13 @@ let integer = (digit | ['1' - '9'] digit*)
 let stringliteral = ('"'[^'"''\\']*('\\'_[^'"''\\']*)*'"')
 let comment = '#'
 let boolean = "True" | "False"
-let e = ""
 
-rule f = parse
+let pre = '#' [' ' '\t']* "pre"
+let post = '#' [' ' '\t']* "post"
+let invariant = '#' [' ' '\t']* "invariant"
+let decreases = '#' [' ' '\t']* "decreases"
+
+rule main = parse
 | eof { EOF }
 | int_type as t { INT_TYP (emit_segment lexbuf (Some t)) }
 | float_type as t { FLOAT_TYP (emit_segment lexbuf (Some t)) }
@@ -70,25 +74,18 @@ rule f = parse
 | set_type as t { SET_TYP (emit_segment lexbuf (Some t)) }
 | tuple_type as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
 | indent as s { (upd lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
-| whitespace+ { f lexbuf }
 | "import" { comment lexbuf }
 | "from" { comment lexbuf }
-| "# pre" { PRE }
-| "# post" { POST }
-| "#pre" { PRE }
-| "pre" { PRE }
-| "#post" { POST }
-| "# invariant" { INVARIANT }
-| "#invariant" { INVARIANT }
-| "#decreases" { DECREASES }
-| "# decreases" { DECREASES }
+| pre { PRE }
+| post { POST }
+| invariant { INVARIANT }
+| decreases { DECREASES }
 | "forall" { FORALL }
 | "exists" { EXISTS }
 | "<==>" { BIIMPL (emit_segment lexbuf (Some "<==>" )) }
 | "==>" { IMPLIES (emit_segment lexbuf (Some "==>" )) }
 | "<==" { EXPLIES (emit_segment lexbuf (Some "<==" )) }
 | "::" { DOUBLECOLON }
-| comment { comment lexbuf }
 | '(' { LPAREN }
 | ')' { RPAREN }
 | '{' { LBRACE }
@@ -140,8 +137,10 @@ rule f = parse
 | integer as i { INT (int_of_string i) }
 | identifier as i { IDENTIFIER (emit_segment lexbuf (Some i)) }
 | stringliteral as s { STRING (strip_quotes s) }
+| whitespace { main lexbuf }
+| comment { comment lexbuf }
 | _ as c { illegal c }
 
 and comment = parse
-| indent as s { (upd lexbuf (String.length s - 1); f lexbuf) } 
+| indent as s { (upd lexbuf (String.length s - 1); main lexbuf) } 
 | _ { comment lexbuf }

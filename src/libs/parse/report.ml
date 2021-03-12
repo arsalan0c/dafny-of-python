@@ -40,7 +40,7 @@ let verification_summary out =
     let line = Re2.find_first_exn line_rgx out in
     printf "%s\n" line
   end with
-  | Re2.Exceptions.Regex_match_failed _ -> prerr "Error: unable to retrieve verification summary\n"
+  | Re2.Exceptions.Regex_match_failed _ -> () (* ) *)
 
 
 let report out = begin match verification_errors out with
