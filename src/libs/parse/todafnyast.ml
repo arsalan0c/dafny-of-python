@@ -42,17 +42,18 @@ let rec typ_dfy = function
       (* List.iter ~f:(fun t -> if (not (t = ft)) then failwith "All elements in the tuple must have the same type" else ()) lt; *)
       DSeq (s, typ_dfy ft) (* translate to sequence type instead of tuple *)
     | Some [] -> failwith "Please specify the exact tuple type"
-    | None -> failwith "Please specify the exact tuple type"
+    | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)
     end
 
 let ident_dfy = function
   | s -> s
 
 let literal_dfy = function
-  | BooleanLiteral b -> DBoolLit b
-  | IntegerLiteral i -> DIntLit i
-  | StringLiteral s -> DStringLit s
-  | NoneLiteral -> DNull
+  | BoolLit b -> DBoolLit b
+  | IntLit i -> DIntLit i
+  | FloatLit f -> DRealLit f
+  | StringLit s -> DStringLit s
+  | NoneLit -> DNull
 
 let unaryop_dfy = function
   | Not s -> DNot s
@@ -114,7 +115,7 @@ let rec stmt_dfy = function
     DCallStmt(id, d_el)
   | Assign(il, el) -> DAssign (List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
   | IfElse(e, sl1, esl, sl3) -> let d_esl = List.map ~f:(fun (e,sl) -> let d_e = exp_dfy e in (d_e, (List.map ~f:stmt_dfy sl))) esl in DIf(exp_dfy e, (List.map ~f:stmt_dfy sl1), d_esl, (List.map ~f:stmt_dfy sl3))
-  | Return el -> DReturn (List.map ~f:exp_dfy el)
+  | Return el -> DReturn [exp_dfy el]
   | Assert e -> DAssert (exp_dfy e)
   | Break -> DBreak
   | Continue -> failwith "continue statements are not supported"

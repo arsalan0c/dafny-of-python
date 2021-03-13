@@ -4,7 +4,7 @@ open Sexplib.Std
 exception PyAstError of string
 let[@inline] failwith msg = raise (PyAstError msg)
 
-type literal = BooleanLiteral of bool | IntegerLiteral of int | StringLiteral of string | NoneLiteral
+type literal = BoolLit of bool | IntLit of int | FloatLit of float | StringLit of string | NoneLit
 [@@deriving sexp]
 
 type pytype =
@@ -78,7 +78,7 @@ type stmt =
   | While of (exp * spec list * stmt list)
   | Assign of (identifier list * exp list)
   | Function of (spec list * identifier * param list * pytype * stmt list) (* spec, name, params, return type, body *)
-  | Return of exp list
+  | Return of exp
   | Assert of exp
   | Break
   | Continue

@@ -79,11 +79,9 @@ let rec stmt_calls s =
     let n_esl = List.fold res ~f:(fun so_far ((_, n_e), ls) -> so_far@[(n_e, ls)]) ~init:[] in
     let n_sl3 = List.fold sl3 ~f:(fun so_far ls -> so_far@(stmt_calls ls)) ~init:[] in
     al@als@[IfElse(n_e, n_sl1, n_esl, n_sl3)]
-  | Return el -> 
-    let als_nes = List.map ~f:exp_calls el in
-    let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
-    let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
-    als@[Return n_el]
+  | Return e -> 
+    let al, n_e = exp_calls e in
+    al@[Return n_e]
   | Assert e -> let al, n_e = exp_calls e in al@[Assert n_e]
   | While(e, speclst, sl) -> (* TODO: handle spec *)
     let n_sl = List.fold sl ~f:(fun so_far ls -> so_far@(stmt_calls ls)) ~init:[] in

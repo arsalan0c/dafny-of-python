@@ -17,6 +17,7 @@ menhir --list-errors
 %token <string> STRING
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
+%token <float> FLOAT
 %token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
 %token LEN
 
@@ -30,6 +31,7 @@ menhir --list-errors
 %left TIMES DIVIDE MOD
 %right NOT
 %left SEMICOLON
+%left COMMA
 
 %nonassoc ELSE ELIF
 %nonassoc LPAREN LBRACK LBRACE
@@ -51,8 +53,8 @@ stmts_plus:
   ;
 
 newline_star:
-  | { [] }
   | NEWLINE; newline_star { [] }
+  | { [] }
   ;
 
 stmt:
@@ -62,8 +64,8 @@ stmt:
 
 small_stmt:
   | a=assignment { a }
-  | e=exp { Exp e }
-  | RETURN; el=exp_star { if List.length el = 0 then Return [Literal (NoneLiteral)] else Return el }
+  | e=star_exps { Exp e }
+  | RETURN; el=star_exps { Return el }
   | PASS { Pass }
   | ASSERT; e=exp { Assert e }
   | BREAK { Break }
@@ -77,17 +79,29 @@ compound_stmt:
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; typ; EQ; e2=exp { Assign ([id], [e2])}  /* TODO: make use of the identifier type */
+  | id=IDENTIFIER; COLON; typ; EQ; e2=star_exps { Assign ([id], [e2])}  /* TODO: make use of the identifier type */
   | id=IDENTIFIER; EQ; e2=typ { Assign ([id], [Typ e2]) }
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=exp { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
 elif_star:
   | ELIF; e=exp; COLON; sl=block; esl=elif_star { (e, sl)::esl }
   | { [] }
+  ;
+
+star_exps:
+  | e=exp; el=star_exps_rest; COMMA { Tuple (e::el) }
+  | e=exp; el=star_exps_rest { Tuple (e::el) }
+  | e=exp; COMMA { Tuple [e] }
+  | e=exp { e }
+  ;
+
+star_exps_rest:
+  | el=star_exps_rest; COMMA; e=exp;  { el@[e] }
+  | COMMA; e=exp { [e] }
   ;
 
 exp:
@@ -98,10 +112,10 @@ exp:
   ;
 
 implication:
-  | d=disjunction; { d }
   | im=implication; s=BIIMPL; d=disjunction { BinaryOp (im, BiImpl s, d) }
   | im=implication; s=IMPLIES; d=disjunction { BinaryOp (im, Implies s, d) }
   | im=implication; s=EXPLIES; d=disjunction { BinaryOp (im, Explies s, d) }
+  | d=disjunction; { d }
   ;
 
 disjunction:
@@ -110,8 +124,8 @@ disjunction:
   ;
 
 conjunction:
-  | i=inversion { i }
   | ir=conjunction; s=AND; i=inversion { BinaryOp (ir, And s, i) }
+  | i=inversion { i }
   ;
 
 inversion:
@@ -166,16 +180,17 @@ arguments:
 
 atom:
   | s=IDENTIFIER { Identifier s }
-  | TRUE { Literal (BooleanLiteral true) }
-  | FALSE { Literal (BooleanLiteral false) }
-  | s=strings { Literal (StringLiteral s) }
-  | NONE { Literal (NoneLiteral) }
-  | i=INT { Literal (IntegerLiteral (i)) }
+  | TRUE { Literal (BoolLit true) }
+  | FALSE { Literal (BoolLit false) }
+  | i=INT { Literal (IntLit (i)) }
+  | i=FLOAT { Literal (FloatLit (i)) }
+  | s=strings { Literal (StringLit s) }
+  | NONE { Literal (NoneLit) }
   | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
   | LEN; LPAREN; e=exp; RPAREN; { Len e }
-  (* TODO: add slices, non-bracketed tuples and comprehensions *)
+  (* TODO: add slices and comprehensions *)
   ;
 
 strings:
@@ -213,12 +228,12 @@ block:
 
 indent_plus:
   | INDENT { 1 }
-  | INDENT; n=indent_plus;  { n + 1 }
+  /* | INDENT; n=indent_plus;  { n + 1 } */
   ;
 
 dedent_plus:
   | DEDENT { 1 }
-  | DEDENT; n=dedent_plus;  { n + 1 }
+  /* | DEDENT; n=dedent_plus;  { n + 1 } */
   ;
 
 typ:
@@ -258,6 +273,7 @@ param_star:
 
 param_rest:
   | p=param;  { [p] }
+  | p=param; COMMA { [p] }
   | p=param; COMMA; pr=param_rest { p::pr }
   ;
 
@@ -282,6 +298,7 @@ exp_star:
 
 exp_rest:
   | e=exp { [e] }
+  | e=exp; COMMA { [e] }
   | e=exp; COMMA; er=exp_rest;   { e::er }
   ;
 

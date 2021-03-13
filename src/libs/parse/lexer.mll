@@ -23,7 +23,7 @@
     (* printf "Seg: %s, %s\n" (Sourcemap.print_pos s) (pring v); *)
     (s, v)
 
-  let upd (lb: Lexing.lexbuf) cols =
+  let next_line (lb: Lexing.lexbuf) cols =
     let lcp = lb.lex_curr_p in
     lb.lex_curr_p <- { lcp with
       pos_lnum = lcp.pos_lnum + 1;
@@ -50,7 +50,10 @@ let tuple_type = "Tuple"
 
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']
-let integer = (digit | ['1' - '9'] digit*)
+let integer = '-'? digit digit*
+let frac = '.' digit*
+let exp = ['e' 'E'] ['-' '+']? digit+
+let float = frac exp | digit+ exp | digit+ frac exp | digit* frac
 let stringliteral = ('"'[^'"''\\']*('\\'_[^'"''\\']*)*'"')
 let comment = '#'
 let boolean = "True" | "False"
@@ -71,7 +74,7 @@ rule main = parse
 | dict_type as t { DICT_TYP (emit_segment lexbuf (Some t)) }
 | set_type as t { SET_TYP (emit_segment lexbuf (Some t)) }
 | tuple_type as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
-| indent as s { (upd lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
+| indent as s { (next_line lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | "import" { comment lexbuf }
 | "from" { comment lexbuf }
 | pre { PRE }
@@ -133,6 +136,7 @@ rule main = parse
 | "False" { FALSE }
 | "None" { NONE  }
 | integer as i { INT (int_of_string i) }
+| float as f { FLOAT (float_of_string f) }
 | identifier as i { IDENTIFIER (emit_segment lexbuf (Some i)) }
 | stringliteral as s { STRING (strip_quotes s) }
 | whitespace { main lexbuf }
@@ -140,5 +144,5 @@ rule main = parse
 | _ as c { illegal c }
 
 and comment = parse
-| indent as s { (upd lexbuf (String.length s - 1); main lexbuf) } 
+| indent as s { (next_line lexbuf (String.length s - 1); main lexbuf) } 
 | _ { comment lexbuf }
