@@ -190,7 +190,7 @@ atom:
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
   | LEN; LPAREN; e=exp; RPAREN; { Len e }
-  (* TODO: add slices and comprehensions *)
+  (* TODO: add comprehensions *)
   ;
 
 strings:
