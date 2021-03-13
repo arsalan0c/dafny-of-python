@@ -241,8 +241,8 @@ base_typ:
   ;
 
 data_typ:
-  | l=LIST_TYP LBRACK t=typ RBRACK { List (l, Some t) }
-  | l=LIST_TYP { List (l, None) }
+  | l=LIST_TYP LBRACK t=typ RBRACK { LstTyp (l, Some t) }
+  | l=LIST_TYP { LstTyp (l, None) }
   | d=DICT_TYP LBRACK t1=typ COMMA t2=typ RBRACK { Dict (d, Some t1, Some t2) }
   | d=DICT_TYP { Dict (d, None, None) }
   | s=SET_TYP LBRACK t=typ RBRACK { Set (s, Some t) }

@@ -14,7 +14,7 @@ type pytype =
   | Bool of segment 
   | Str of segment  
   | Non of segment
-  | List of segment * pytype option
+  | LstTyp of segment * pytype option
   | Dict of segment * pytype option * pytype option
   | Set of segment * pytype option
   | Tuple of segment * (pytype list) option

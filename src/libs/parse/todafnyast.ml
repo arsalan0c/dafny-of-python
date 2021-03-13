@@ -10,33 +10,38 @@ let[@inline] failwith msg = raise (DfyAstError msg)
 
 let typ_idents = Hash_set.create (module String)
 
-let rec type_dfy = function 
+let rec typ_dfy = function 
   | IdentTyp s -> DIdentTyp s
   | Int s -> DInt s
   | Float s -> DReal s 
   | Bool s -> DBool s
   | Str s -> DString s
   | Non _ -> DVoid
-  | List(s, ot) -> begin
+  | LstTyp(s, ot) -> begin
     match ot with
-    | Some t -> let r = type_dfy t in DSeq(s, r)
+    | Some t -> let r = typ_dfy t in DSeq(s, r)
     | None -> failwith "Please specify the exact sequence type"
     end
   | Set(s, ot) -> begin
     match ot with
-    | Some t -> let r = type_dfy t in DSet(s, r)
+    | Some t -> let r = typ_dfy t in DSet(s, r)
     | None -> failwith "Please specify the exact set type"
     end
   | Dict(s, ot1, ot2) -> begin
     match ot1, ot2 with
-    | Some t1, Some t2 -> let r1 = type_dfy t1 in let r2 = type_dfy t2 in DMap (s, r1, r2)
+    | Some t1, Some t2 -> let r1 = typ_dfy t1 in let r2 = typ_dfy t2 in DMap (s, r1, r2)
     | None, _ -> failwith "Please specify the exact map type"
     | _, None -> failwith "Please specify the exact map type"
 
     end
-  | Tuple(s, olt) -> begin
+  | Tuple(s, olt) -> 
+    begin
     match olt with
-    | Some lt -> DTuple (s, (List.map ~f:type_dfy lt))
+    | Some (ft::_) -> 
+    (* TODO: add postcondition to check number of args match number returned *)
+      (* List.iter ~f:(fun t -> if (not (t = ft)) then failwith "All elements in the tuple must have the same type" else ()) lt; *)
+      DSeq (s, typ_dfy ft) (* translate to sequence type instead of tuple *)
+    | Some [] -> failwith "Please specify the exact tuple type"
     | None -> failwith "Please specify the exact tuple type"
     end
 
@@ -92,7 +97,7 @@ let rec exp_dfy = function
   | Forall(s, e) -> DForall(s, exp_dfy e)
   | Exists(s, e) -> DExists(s, exp_dfy e)
   | Len e -> DLen (exp_dfy e)
-  | Typ _ -> failwith "type in expression context only allowed as right-hand-side of assignment"
+  | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
 
 let spec_dfy = function
   | Pre c -> DRequires (exp_dfy c)
@@ -101,7 +106,7 @@ let spec_dfy = function
   | Decreases d -> DDecreases (exp_dfy d)
 
 let param_dfy = function
-  | Param(id, t) -> ((ident_dfy id), (type_dfy t))
+  | Param(id, t) -> ((ident_dfy id), (typ_dfy t))
 
 let rec stmt_dfy = function
   | Exp(Call(id, el)) -> 
@@ -129,21 +134,16 @@ let not_toplevel = function
 
 let toplevel_dfy = function
   | Function(speclst, i, pl, t, sl) -> 
-    let tl = begin
-      match type_dfy t with
-      | DTuple(_, tl) -> tl
-      | t -> [t]
-      end 
-    in [Some (DMeth (List.map ~f:spec_dfy speclst, i, List.map ~f:param_dfy pl, tl, List.map ~f:stmt_dfy sl))]
+    [Some (DMeth (List.map ~f:spec_dfy speclst, i, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl))]
   | Assign(il, el) ->
       let convert_typsyn ident typ = 
         let s_ident = Sourcemap.segment_value ident in
         match typ with
-        | Typ t -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, type_dfy t))
+        | Typ t -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, typ_dfy t))
         | Identifier typ_ident -> begin 
             let s_typ = Sourcemap.segment_value typ_ident in
             match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
-            | Some _ -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, type_dfy (IdentTyp typ_ident)))
+            | Some _ -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, typ_dfy (IdentTyp typ_ident)))
             | None -> None
           end
         | _ -> None
