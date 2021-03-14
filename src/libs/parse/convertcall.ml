@@ -57,7 +57,8 @@ let rec exp_calls = function
     end *)
   (* | Forall(s, e) -> DForall(s, exp_dfy e)
   | Exists(s, e) -> DExists(s, exp_dfy e) *)
-  | Len e -> let al, n_e = exp_calls e in (al, Len n_e)
+  | Len (s, e) -> let al, n_e = exp_calls e in (al, Len (s, n_e))
+  | Old (s, e) -> let al, n_e = exp_calls e in (al, Old (s, n_e))
   | e -> ([], e)   
 
 let spec_calls = function

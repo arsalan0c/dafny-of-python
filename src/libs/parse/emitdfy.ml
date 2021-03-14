@@ -145,20 +145,20 @@ let print_param id = function
 let rec print_exp id = function
   | DIdentifier s -> print_id id s
   | DBinary(e1, op, e2) -> let n = (newcolumn (indent id)) in 
-    let pob = (newcolumn "(") in 
+    let ob = (newcolumn "(") in 
     let pe1 = (print_exp 0 e1) in
     let ps1 = newcolumn " " in
     let pop = (print_op 0 op) in
     let ps2 = newcolumn " " in 
     let pe2 = (print_exp 0 e2) in
-    let pcb = newcolumn ")" in
-    String.concat [n; pob; pe1; ps1; pop; ps2; pe2; pcb]
+    let cb = newcolumn ")" in
+    String.concat [n; ob; pe1; ps1; pop; ps2; pe2; cb]
   | DUnary(op, e) -> let n = (newcolumn (indent id)) in 
-    let pob = newcolumn "(" in 
+    let ob = newcolumn "(" in 
     let pop = (print_op 0 op) in 
     let pe = print_exp 0 e in 
-    let pcb = newcolumn ")" in
-    String.concat [n; pob; pop; pe; pcb]
+    let cb = newcolumn ")" in
+    String.concat [n; ob; pop; pe; cb]
   | DIntLit i -> let n = newcolumn (indent id) in 
     let si = Int.to_string i in
     String.concat [n; si]
@@ -176,25 +176,46 @@ let rec print_exp id = function
     String.concat [n; pn]
   (* | DThis -> newcolumn ((indent id) ^ "this")
   | DFresh -> newcolumn ((indent id) ^ "fresh")
-  | DOld -> newcolumn ((indent id) ^ "old") *)
+   *)
   | DCallExpr(e, el) -> let n = (newcolumn (indent id)) in 
     let pe = (print_id 0 e) in 
-    let pob = (newcolumn "(") in 
+    let ob = (newcolumn "(") in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
-    let pcb = (newcolumn ")") in
-    String.concat [n; pe; pob; pel; pcb]
+    let cb = (newcolumn ")") in
+    String.concat [n; pe; ob; pel; cb]
   | DSeqExpr el -> let n = (newcolumn (indent id)) in 
-    let pob = (newcolumn "[") in 
+    let ob = (newcolumn "[") in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
-    let pcb = (newcolumn "]") in 
-    String.concat [n; pob; pel; pcb]
+    let cb = (newcolumn "]") in 
+    String.concat [n; ob; pel; cb]
+  | DArrayExpr el -> let n = (newcolumn (indent id)) in 
+    let ob = (newcolumn "[") in 
+    let pel = (newcolumn_concat (print_exp 0) ", " el) in 
+    let cb = (newcolumn "]") in 
+    String.concat [n; ob; pel; cb] 
+  | DSetExpr el -> let n = (newcolumn (indent id)) in 
+    let ob = (newcolumn "{") in 
+    let pel = (newcolumn_concat (print_exp 0) ", " el) in 
+    let cb = (newcolumn "}") in 
+    String.concat [n; ob; pel; cb]
+  | DMapExpr eel -> let n = (newcolumn (indent id)) in
+    let m = newcolumn "map[" in
+    let peel = newcolumn_concat (
+      fun (k,v) -> 
+        let pk = print_exp 0 k in 
+        let c = newcolumn " := " in 
+        let pv = print_exp 0 v in 
+        String.concat [pk; c; pv]
+      ) ", " eel in 
+    let cb = (newcolumn "]") in 
+    String.concat [n; m; peel; cb]
   | DSubscript(e1, e2) -> let n = (newcolumn (indent id)) in
     let pe1 = (print_exp id e1) in 
     let pe2 = (print_exp 0 e2) in
     String.concat [n; pe1; pe2]
   | DSlice(e1, e2) ->
     let n = newcolumn (indent id) in 
-    let pob = (newcolumn "[") in
+    let ob = (newcolumn "[") in
     let res = begin
       match e1, e2 with
       | Some r1, Some r2 -> let pe1 = (print_exp 0 r1) in 
@@ -206,8 +227,8 @@ let rec print_exp id = function
       | None, None -> ""
     end
     in 
-    let pcb =  (newcolumn "]") in
-    String.concat [n; pob; res; pcb]
+    let cb =  (newcolumn "]") in
+    String.concat [n; ob; res; cb]
   | DForall(il, e) -> let n = newcolumn (indent id) in 
     let f = (newcolumn "forall ") in 
     let pil = (newcolumn_concat (print_id 0) ", " il) in 
@@ -220,11 +241,16 @@ let rec print_exp id = function
     let pc = (newcolumn " :: ") in 
     let pe = (print_exp 0 e) in
     String.concat [n; ex; pil; pc; pe]
-  | DLen e -> let n = newcolumn (indent id) in 
-    let pob = (newcolumn "|") in 
-    let pe = (print_exp 0 e) in
-    let pcb = (newcolumn "|") in
-    String.concat [n; pob; pe; pcb]
+  | DLen (_, e) -> let n = newcolumn (indent id) in 
+    let ob = newcolumn "|" in 
+    let pe = print_exp 0 e in
+    let cb = newcolumn "|" in
+    String.concat [n; ob; pe; cb]
+  | DOld (_, e) -> let n = newcolumn (indent id) in 
+    let old = newcolumn "old(" in 
+    let pe = print_exp 0 e in
+    let cb = newcolumn ")" in
+    String.concat [n; old; pe; cb]
   | DLambda (fl, sl, e) -> let n = newcolumn (indent id) in
     let ob = newcolumn "(" in
     let pfl = newcolumn_concat (print_param 0) ", " fl in
@@ -266,9 +292,9 @@ let rec print_ret id = function
           let pt = print_type 1 x in 
           String.concat [name; ps; pt]
       ) ", " tl in 
-    let pcb = (newcolumn ")") in
+    let cb = (newcolumn ")") in
     ret_param_reset ();
-    String.concat[n; r; ptl; pcb]
+    String.concat[n; r; ptl; cb]
 
 and print_stmt id = function
   | DEmptyStmt -> ""
@@ -305,31 +331,31 @@ and print_stmt id = function
     String.concat [n; pre; pil; pt; pa; pel; ps]
   | DCallStmt(ident, el) -> let n = (newcolumn (indent id)) in 
     let pident = print_id 0 ident in 
-    let pob = newcolumn "(" in 
+    let ob = newcolumn "(" in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in
-    let pcb = (newcolumn ")") in 
+    let cb = (newcolumn ")") in 
     let ps = (newcolumn ";") in
-    String.concat [n; pident; pob; pel; pcb; ps]
+    String.concat [n; pident; ob; pel; cb; ps]
   | DIf(e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
     let i = newcolumn "if " in 
     let pe = print_exp 0 e in
-    let pob = newcolumn " {" in 
+    let ob = newcolumn " {" in 
     let nl = newline () in
     let pst = newline_concat (print_stmt (id+2)) sl1 in
     let nl2 = newline () in
     let n2 = newcolumn (indent id) in
-    let pcb = newcolumn "}" in 
+    let cb = newcolumn "}" in 
     let pelif = if List.length sl2 = 0 then "" else begin
       let res (e, sl) = begin
         let pel = newcolumn " else if" in
         let pe = print_exp 1 e in
-        let pob = newcolumn " {" in
+        let ob = newcolumn " {" in
         let nl = newline () in 
         let pst = newline_concat (print_stmt (id+2)) sl in
         let nl2 = newline () in 
         let n = newcolumn (indent id) in
-        let pcb = newcolumn "}" in
-        String.concat [pel; pe; pob; nl; pst; nl2; n; pcb]
+        let cb = newcolumn "}" in
+        String.concat [pel; pe; ob; nl; pst; nl2; n; cb]
       end in
       newcolumn_concat res "" sl2
     end in
@@ -340,22 +366,22 @@ and print_stmt id = function
       let n = newcolumn (indent id) in 
       let nl2 = newline () in
       let n2 = newcolumn (indent id) in
-      let pcb = newcolumn "}" in
-      String.concat [pecb; nl; pst; n; nl2; n2; pcb]
+      let cb = newcolumn "}" in
+      String.concat [pecb; nl; pst; n; nl2; n2; cb]
     end in
-    String.concat [n; i; pe; pob; nl; pst; nl2; n2; pcb; pelif; pelse]
+    String.concat [n; i; pe; ob; nl; pst; nl2; n2; cb; pelif; pelse]
   | DWhile(e, speclst, sl) -> let n = newcolumn (indent id) in
     let w = newcolumn "while" in 
     let pe = print_exp 1 e in 
     let nl = (newline ()) in 
     let psl = newline_concat (print_spec (id+2)) speclst in
-    let pob = (newcolumn_h id "{") in 
+    let ob = (newcolumn_h id "{") in 
     let nl2 = newline () in
     let pst = newline_concat (print_stmt (id+2)) sl in
     let nl3 = newline () in 
     let n2 = newcolumn (indent id) in
-    let pcb = newcolumn "}" in
-    String.concat [n; w; pe; nl; psl; pob; nl2; pst; nl3; n2; pcb]
+    let cb = newcolumn "}" in
+    String.concat [n; w; pe; nl; psl; ob; nl2; pst; nl3; n2; cb]
   | DReturn el -> let n = newcolumn (indent id) in
     let r = newcolumn "return " in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
@@ -370,23 +396,23 @@ let print_toplevel id = function
     let n = newcolumn (indent id) in 
     let m = newcolumn "method" in
     let pident = print_id 1 ident in
-    let pob = newcolumn "(" in    
+    let ob = newcolumn "(" in    
     let pp = newcolumn_concat (print_param 0) ", " pl in
-    let pcb = newcolumn ")" in
+    let cb = newcolumn ")" in
     let pr = print_ret 1 tl in
     let nl = (newline ()) in
     let psl = newline_concat (print_spec (id+2)) speclst in
     let nl2 = (newline ()) in
     let n2 = newcolumn (indent id) in 
-    let pob2 = newcolumn "{" in
+    let ob2 = newcolumn "{" in
     let nl3 = (newline ()) in
     let ppl = (newline_concat (print_declaration (id+2)) pl) in 
     let nl4 = (newline ()) in
     let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
     let n3 = newcolumn (indent id) in
-    let pcb2 = newcolumn "}" in 
+    let cb2 = newcolumn "}" in 
     let nl5 = newline () in 
-    String.concat [n; m; pident; pob; pp; pcb; pr; nl; psl; nl2; n2; pob2; nl3; ppl; nl4; pst; n3; pcb2; nl5]
+    String.concat [n; m; pident; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5]
   | DTypSynonym(ident, typ) -> let n = newcolumn (indent id) in
     let t = newcolumn "type" in
     let pident = print_id 1 ident in

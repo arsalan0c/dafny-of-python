@@ -84,12 +84,16 @@ type exp =
   | Literal of literal
   | Call of (identifier * exp list)
   | Lst of exp list
+  | Array of exp list
+  | Set of exp list
+  | Dict of (exp * exp) list
   | Tuple of exp list
   | Subscript of exp * exp (* value, slice *)
   | Slice of exp option * exp option (* lower, upper *)
   | Forall of identifier list * exp
   | Exists of identifier list * exp
-  | Len of exp
+  | Len of segment * exp
+  | Old of segment * exp
   | Typ of pytype
   | Lambda of identifier list * exp
   [@@deriving sexp]

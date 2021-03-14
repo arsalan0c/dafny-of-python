@@ -94,7 +94,8 @@ rule main = parse
 | ':' { COLON }
 | ';' { SEMICOLON }
 | ',' { COMMA }
-| "len" { LEN } 
+| "old" { OLD (emit_segment lexbuf None) }
+| "len" { LEN (emit_segment lexbuf None) } 
 | "filter" { IDENTIFIER (emit_segment lexbuf (Some "filterF")) }
 | "map" { IDENTIFIER (emit_segment lexbuf (Some "mapF")) }
 | "->" { ARROW }

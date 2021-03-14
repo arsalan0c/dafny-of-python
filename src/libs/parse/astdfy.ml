@@ -38,6 +38,7 @@ type dTyp =
   | DSeq of segment * dTyp
   | DSet of segment * dTyp
   | DMap of segment * dTyp * dTyp
+  | DArray of segment * dTyp
   | DVoid
   | DTuple of segment * dTyp list
   [@@deriving sexp]
@@ -50,7 +51,7 @@ type dExpr =
   | DNull
   | DThis
   | DFresh
-  | DOld
+  | DOld of segment * dExpr
   | DIntLit of int
   | DRealLit of float
   | DBoolLit of bool
@@ -59,11 +60,14 @@ type dExpr =
   | DUnary of dOp * dExpr
   | DCallExpr of dId * dExpr list
   | DSeqExpr of dExpr list
+  | DSetExpr of dExpr list
+  | DMapExpr of (dExpr * dExpr) list
+  | DArrayExpr of dExpr list
   | DSubscript of dExpr * dExpr (* value, slice *)
   | DSlice of dExpr option * dExpr option (* lower, upper *)
   | DForall of dId list * dExpr
   | DExists of dId list * dExpr
-  | DLen of dExpr
+  | DLen of segment * dExpr
   | DLambda of dParam list * dSpec list * dExpr
 
 and dSpec = 

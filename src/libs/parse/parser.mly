@@ -19,18 +19,19 @@ menhir --list-errors
 %token <int> INT
 %token <float> FLOAT
 %token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
-%token LEN
+%token <Sourcemap.segment> LEN OLD
 
-%left OR
-%left AND
+%left COLON
 %left IMPLIES EXPLIES BIIMPL
+%left OR 
+%left AND
 %left EQEQ NEQ
 %left LT LTE GT GTE
 %right EQ PLUSEQ MINUSEQ DIVIDEEQ TIMESEQ
 %left PLUS MINUS
 %left TIMES DIVIDE MOD
 %right NOT
-%left SEMICOLON
+%left SEMICOLON 
 %left COMMA
 
 %nonassoc ELSE ELIF
@@ -189,8 +190,11 @@ atom:
   | NONE { Literal (NonLit) }
   | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
   | LPAREN; e=exp; RPAREN; { e }
-  | el=lst_exp { el }
-  | LEN; LPAREN; e=exp; RPAREN; { Len e }
+  | l=lst_exp { l }
+  | s=set_exp { s }
+  | d=dict_exp { d }
+  | s=LEN; LPAREN; e=star_exps; RPAREN; { Len (s, e) }
+  | s=OLD; LPAREN; e=star_exps; RPAREN; { Old (s, e) }
   (* TODO: add comprehensions *)
   ;
 
@@ -211,8 +215,28 @@ lst_exp:
   | LBRACK; el=exp_star; RBRACK { Lst el }
   ;
 
-/* set_exp:
-  | LBRACE; el=exp_star; RBRACE { } */
+dict_exp:
+  | LBRACE; eel=kv_star; RBRACE { Dict eel }
+  ;
+
+kv_star:
+  | pr=kv_rest; { pr }
+  | { [] }
+  ;
+
+kv_rest:
+  | p=kv COMMA; pr=kv_rest { p::pr }
+  | p=kv; COMMA { [p] }
+  | p=kv;  { [p] }
+  ;
+
+kv:
+  | k=exp; COLON; v=exp { (k, v) }
+  ;
+
+set_exp:
+  | LBRACE; el=exp_star; RBRACE { Set el }
+  ;
 
 spec:
   | PRE; e=spec_rem { Pre e }

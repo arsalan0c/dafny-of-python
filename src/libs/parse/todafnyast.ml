@@ -82,23 +82,27 @@ let binaryop_dfy = function
   
 let rec exp_dfy = function
   | Identifier s -> DIdentifier s
-  | BinaryOp(e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
-  | UnaryOp(op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
+  | BinaryOp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
+  | UnaryOp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l
-  | Call(id, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(id, d_args)
+  | Call (id, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(id, d_args)
   | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
+  | Array el -> DArrayExpr (List.map ~f:exp_dfy el)
+  | Set el -> DSetExpr (List.map ~f:exp_dfy el)
+  | Dict eel -> DMapExpr (List.map ~f:(fun (k,v) -> (exp_dfy k, exp_dfy v)) eel)
   | Tuple el -> DSeqExpr (List.map ~f:exp_dfy el)  
-  | Subscript(e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
-  | Slice(e1, e2) -> begin
+  | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
+  | Slice (e1, e2) -> begin
     match e1, e2 with
     | Some r1, Some r2 -> DSlice(Some (exp_dfy r1), Some (exp_dfy r2))
     | Some r1, None -> DSlice(Some (exp_dfy r1), None)
     | None, Some r2 -> DSlice(None, Some (exp_dfy r2))
     | None, None -> DSlice (None, None)
     end
-  | Forall(s, e) -> DForall(s, exp_dfy e)
-  | Exists(s, e) -> DExists(s, exp_dfy e)
-  | Len e -> DLen (exp_dfy e)
+  | Forall (s, e) -> DForall(s, exp_dfy e)
+  | Exists (s, e) -> DExists(s, exp_dfy e)
+  | Len (s, e) -> DLen (s, exp_dfy e)
+  | Old (s, e) -> DOld (s, exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
   | Lambda (fl, e) -> let dfl = List.map ~f:(fun x -> (x, DVoid)) fl in DLambda (dfl, [], exp_dfy e)
 
