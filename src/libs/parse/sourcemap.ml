@@ -73,5 +73,8 @@ let segment_value (s: segment) =
     match (snd s) with
       | Some v -> v
       | None -> ""
+  
+let segment_values_compare s1 s2 =
+  String.compare (segment_value s1) (segment_value s2)
 
 let segment_pos (s: segment) = fst s

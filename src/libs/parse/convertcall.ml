@@ -35,7 +35,7 @@ let rec exp_calls = function
     let pos = fst id in 
     let n_id = (pos, Some name) in
     printf "%s\n" (Sourcemap.print_segment id);
-    (als@[Assign ([n_id], [Call (id, n_el)])], Identifier n_id)
+    (als@[Assign (Non (Sourcemap.default_segment), [n_id], [Call (id, n_el)])], Identifier n_id)
 
   | Lst el -> 
     let als_nes = List.map ~f:exp_calls el in
@@ -57,8 +57,15 @@ let rec exp_calls = function
     end *)
   (* | Forall(s, e) -> DForall(s, exp_dfy e)
   | Exists(s, e) -> DExists(s, exp_dfy e) *)
-  | Len e -> let al, n_e = exp_calls e in (al, Len n_e)
+  | Len (s, e) -> let al, n_e = exp_calls e in (al, Len (s, n_e))
+  | Old (s, e) -> let al, n_e = exp_calls e in (al, Old (s, n_e))
   | e -> ([], e)   
+
+let spec_calls = function
+  | Pre e -> let al, n_e = exp_calls e in (al, Pre n_e)
+  | Post e -> let al, n_e = exp_calls e in (al, Post n_e)
+  | Invariant e -> let al, n_e = exp_calls e in (al, Invariant n_e)
+  | Decreases e -> let al, n_e = exp_calls e in (al, Decreases n_e)
 
 let rec stmt_calls s = 
   match s with
@@ -66,38 +73,38 @@ let rec stmt_calls s =
   | Exp _ -> [s] 
   | Break -> [s]
   | Continue -> [s]
-  | Assign(il, el) -> 
+  | Assign (t, il, el) -> 
     let als_nes = List.map ~f:exp_calls el in
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
     let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
-    als@[Assign(il, n_el)]
+    als@[Assign (t, il, n_el)]
   | IfElse(e, sl1, esl, sl3) -> 
     let al, n_e = exp_calls e in
-    let n_sl1 = List.fold sl1 ~f:(fun so_far ls -> so_far@(stmt_calls ls)) ~init:[] in
-    let res = List.map esl ~f:(fun (e,ls) -> (exp_calls e, List.fold ls ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[])) in (* fold here to flatten list *)
+    let n_sl1 = List.fold sl1 ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
+    let res = List.map esl ~f:(fun (e, s) -> (exp_calls e, List.fold s ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[])) in (* fold here to flatten list *)
     let als = List.fold res ~f:(fun so_far ((al,_), _) -> so_far@al) ~init:[] in
-    let n_esl = List.fold res ~f:(fun so_far ((_, n_e), ls) -> so_far@[(n_e, ls)]) ~init:[] in
-    let n_sl3 = List.fold sl3 ~f:(fun so_far ls -> so_far@(stmt_calls ls)) ~init:[] in
-    al@als@[IfElse(n_e, n_sl1, n_esl, n_sl3)]
-  | Return el -> 
-    let als_nes = List.map ~f:exp_calls el in
-    let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
-    let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
-    als@[Return n_el]
-  | Assert e -> let al, n_e = exp_calls e in al@[Assert n_e]
-  | While(e, speclst, sl) -> (* TODO: handle spec *)
-    let n_sl = List.fold sl ~f:(fun so_far ls -> so_far@(stmt_calls ls)) ~init:[] in
+    let n_esl = List.fold res ~f:(fun so_far ((_, n_e), s) -> so_far@[(n_e, s)]) ~init:[] in
+    let n_sl3 = List.fold sl3 ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
+    al@als@[IfElse (n_e, n_sl1, n_esl, n_sl3)]
+  | Return e -> 
     let al, n_e = exp_calls e in
-    al@[While(n_e, speclst, n_sl)]
-  | Function(speclst, i, pl, t, sl) ->
-    let n_sl = List.fold sl ~f:(fun so_far ls -> so_far@(stmt_calls ls)) ~init:[] in
-    [Function(speclst, i, pl, t, n_sl)]
+    al@[Return n_e]
+  | Assert e -> let al, n_e = exp_calls e in al@[Assert n_e]
+  | While (e, specl, sl) -> (* TODO: add spec assignments update at end of body/before break statement *)
+    let al, n_e = exp_calls e in
+    let als_nspecl = List.map specl ~f:spec_calls in
+    let n_specl = List.fold als_nspecl ~f:(fun so_far (_, n_spec) -> so_far@[n_spec]) ~init:[] in
+    let als = List.fold als_nspecl ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
+    let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
+    let aug_n_sl = n_sl@als in
+    al@als@[While (n_e, n_specl, aug_n_sl)]
+  | Function (specl, i, pl, t, sl) ->
+    List.iter specl ~f:(fun spec -> let al, _ = spec_calls spec in if List.length al > 0 then failwith "Calls are not allowed in function specifications");
+    let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
+    [Function (specl, i, pl, t, n_sl)]
 
 let prog = function 
   | Program sl -> Program (List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[])
 
-
-
-
-  (* let r = List.map ~f:(calls_to_assign e) (exp_calls e) in r@[s] *)
-  (* let r = concat_olst (List.map ~f:exp_calls el) in Some r *)
+(* let r = List.map ~f:(calls_to_assign e) (exp_calls e) in r@[s] *)
+(* let r = concat_olst (List.map ~f:exp_calls el) in Some r *)

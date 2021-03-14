@@ -28,21 +28,22 @@ type dOp =
   | DExplies of segment
   [@@deriving sexp]
 
-type dType = 
-  | DIdentType of segment
+type dTyp = 
+  | DIdentTyp of segment
   | DInt of segment
   | DReal of segment 
   | DBool of segment  
   | DString of segment  
   | DChar of segment 
-  | DSeq of segment * dType
-  | DSet of segment * dType
-  | DMap of segment * dType * dType
+  | DSeq of segment * dTyp
+  | DSet of segment * dTyp
+  | DMap of segment * dTyp * dTyp
+  | DArray of segment * dTyp
   | DVoid
-  | DTuple of segment * dType list
+  | DTuple of segment * dTyp list
   [@@deriving sexp]
 
-type dParam = dId * dType (* name: type *)
+type dParam = dId * dTyp (* name: type *)
 [@@deriving sexp]
 
 type dExpr = 
@@ -50,7 +51,7 @@ type dExpr =
   | DNull
   | DThis
   | DFresh
-  | DOld
+  | DOld of segment * dExpr
   | DIntLit of int
   | DRealLit of float
   | DBoolLit of bool
@@ -59,14 +60,17 @@ type dExpr =
   | DUnary of dOp * dExpr
   | DCallExpr of dId * dExpr list
   | DSeqExpr of dExpr list
+  | DSetExpr of dExpr list
+  | DMapExpr of (dExpr * dExpr) list
+  | DArrayExpr of dExpr list
   | DSubscript of dExpr * dExpr (* value, slice *)
   | DSlice of dExpr option * dExpr option (* lower, upper *)
   | DForall of dId list * dExpr
   | DExists of dId list * dExpr
-  | DLen of dExpr
-[@@deriving sexp]
+  | DLen of segment * dExpr
+  | DLambda of dParam list * dSpec list * dExpr
 
-type dSpec = 
+and dSpec = 
   | DRequires of dExpr 
   | DEnsures of dExpr
   | DNone
@@ -80,7 +84,7 @@ type dStmt =
   | DEmptyStmt
   | DAssume of dExpr
   | DAssert of dExpr
-  | DAssign of dId list * dExpr list
+  | DAssign of dTyp * dId list * dExpr list
   | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
   | DWhile of dExpr * dSpec list * dStmt list
   | DReturn of dExpr list
@@ -89,8 +93,8 @@ type dStmt =
   [@@deriving sexp]
 
 type dTopLevel = 
-  | DMeth of dSpec list * dId * dParam list * dType list * dStmt list
-  | DTypeSynonym of dId * dType
+  | DMeth of dSpec list * dId * dParam list * dTyp list * dStmt list
+  | DTypSynonym of dId * dTyp
   [@@deriving sexp]
 
 type dProgram = DProg of string * dTopLevel list

@@ -13,9 +13,9 @@ let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
 
 let prelude_f = "./src/libs/parse/prelude.dfy" 
-let dafny_f = "pyny_program.dfy"
+let dafny_f = "program.dfy"
 let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f] (* prelude_f *)
-let python_f = "pyny_program.py"
+let python_f = "program.py"
 let mypy_command = String.concat ~sep:" " ["mypy"; python_f]
 
 let system cmd =
@@ -28,14 +28,16 @@ let typcheck s =
   Out_channel.write_all python_f ~data:s;
   let tc_out = system mypy_command in
   match String.substr_index tc_out ~pattern:"error" with
-  | Some _ -> prerr "Typechecking failed:%s\n"
+  | Some _ -> prerr ("\nTypechecking failed:\n" ^ tc_out ^ "\n")
   | None -> ()
 
 let run =
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   typcheck inp;
   let lexed = Lexing.from_string inp in
-  let parsed = Pyparse.Parser.f Pyparse.Indenter.f lexed in
+  let parsed = try Pyparse.Parser.f Pyparse.Indenter.f lexed with 
+    | Pyparse.Parser.Error -> failwith "Parser error"
+  in
   let calls_rewritten = Pyparse.Convertcall.prog parsed in
   let dafny_ast = Pyparse.Todafnyast.prog_dfy calls_rewritten in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
@@ -56,3 +58,5 @@ let main2 =
   let res = Pyparse.Astdfy.sexp_of_dProgram (Pyparse.Todafnyast.prog_dfy (Pyparse.Parser.f Pyparse.Indenter.f (Lexing.from_string inp))) in 
   let se = Sexp.to_string res in
   printf "->\n%s\n" se *)
+
+  (* (String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexed)); Lexing.lexeme lexed; "\n"]) *)
