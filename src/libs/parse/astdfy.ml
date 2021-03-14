@@ -64,9 +64,9 @@ type dExpr =
   | DForall of dId list * dExpr
   | DExists of dId list * dExpr
   | DLen of dExpr
-  [@@deriving sexp]
+  | DLambda of dParam list * dSpec list * dExpr
 
-type dSpec = 
+and dSpec = 
   | DRequires of dExpr 
   | DEnsures of dExpr
   | DNone
@@ -80,7 +80,7 @@ type dStmt =
   | DEmptyStmt
   | DAssume of dExpr
   | DAssert of dExpr
-  | DAssign of dId list * dExpr list
+  | DAssign of dTyp * dId list * dExpr list
   | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
   | DWhile of dExpr * dSpec list * dStmt list
   | DReturn of dExpr list

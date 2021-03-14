@@ -11,6 +11,7 @@ let[@inline] failwith msg = raise (DfyAstError msg)
 let typ_idents = Hash_set.create (module String)
 
 let rec typ_dfy = function 
+  | Void -> DVoid
   | IdentTyp s -> DIdentTyp s
   | Int s -> DInt s
   | Float s -> DReal s 
@@ -37,9 +38,9 @@ let rec typ_dfy = function
   | Tuple(s, olt) -> 
     begin
     match olt with
-    | Some (ft::_) -> 
+    | Some (ft::lt) -> 
     (* TODO: add postcondition to check number of args match number returned *)
-      (* List.iter ~f:(fun t -> if (not (t = ft)) then failwith "All elements in the tuple must have the same type" else ()) lt; *)
+      List.iter ~f:(fun t -> if (not (pytype_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt;
       DSeq (s, typ_dfy ft) (* translate to sequence type instead of tuple *)
     | Some [] -> failwith "Please specify the exact tuple type"
     | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)
@@ -53,7 +54,7 @@ let literal_dfy = function
   | IntLit i -> DIntLit i
   | FloatLit f -> DRealLit f
   | StringLit s -> DStringLit s
-  | NoneLit -> DNull
+  | NonLit -> DNull
 
 let unaryop_dfy = function
   | Not s -> DNot s
@@ -99,6 +100,7 @@ let rec exp_dfy = function
   | Exists(s, e) -> DExists(s, exp_dfy e)
   | Len e -> DLen (exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
+  | Lambda (fl, e) -> let dfl = List.map ~f:(fun x -> (x, DVoid)) fl in DLambda (dfl, [], exp_dfy e)
 
 let spec_dfy = function
   | Pre c -> DRequires (exp_dfy c)
@@ -113,7 +115,7 @@ let rec stmt_dfy = function
   | Exp(Call(id, el)) -> 
     let d_el = List.map ~f:exp_dfy el in
     DCallStmt(id, d_el)
-  | Assign(il, el) -> DAssign (List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
+  | Assign(t, il, el) -> DAssign (typ_dfy t, List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
   | IfElse(e, sl1, esl, sl3) -> let d_esl = List.map ~f:(fun (e,sl) -> let d_e = exp_dfy e in (d_e, (List.map ~f:stmt_dfy sl))) esl in DIf(exp_dfy e, (List.map ~f:stmt_dfy sl1), d_esl, (List.map ~f:stmt_dfy sl3))
   | Return el -> DReturn [exp_dfy el]
   | Assert e -> DAssert (exp_dfy e)
@@ -126,19 +128,20 @@ let rec stmt_dfy = function
 
 let is_toplevel = function
   | Function _ -> true
-  | Assign _ -> true
+  | Assign (_, _, ((Typ _)::_)) -> true
   | _ -> false
 
-let not_toplevel = function
+(* let not_toplevel = function
   | Function _ -> false
-  | _ -> true
+  | Assign _ -> false
+  | _ -> true *)
 
 let toplevel_dfy = function
   | Function(speclst, i, pl, t, sl) -> 
-    [Some (DMeth (List.map ~f:spec_dfy speclst, i, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl))]
-  | Assign(il, el) ->
-      let convert_typsyn ident typ = 
-        let s_ident = Sourcemap.segment_value ident in
+    [DMeth (List.map ~f:spec_dfy speclst, i, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
+  | Assign(_, il, el) ->
+    let convert_typsyn ident typ = begin
+      let s_ident = Sourcemap.segment_value ident in 
         match typ with
         | Typ t -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, typ_dfy t))
         | Identifier typ_ident -> begin 
@@ -148,19 +151,19 @@ let toplevel_dfy = function
             | None -> None
           end
         | _ -> None
-      in begin
-        match List.map2 ~f:convert_typsyn il el with
-        | Ok typ_syns -> typ_syns
-        | Unequal_lengths -> failwith "Number of left-hand identifiers must be equal to number of right-hand expressions"
-      end
-  | _ -> [None]
+    end 
+    in begin
+      match List.map2 ~f:convert_typsyn il el with
+      | Ok typ_syns -> List.filter_map ~f:(fun x -> x) typ_syns
+      | Unequal_lengths -> failwith "Number of left-hand identifiers must be equal to number of right-hand expressions"
+    end
+  | _ -> []
 
 let prog_dfy = function
   | Program sl -> 
     let toplevel_stmts = List.filter ~f:is_toplevel sl in
-    let d_toplevel_stmts_o = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy s)) ~init:[] toplevel_stmts in
-    let d_toplevel_stmts = List.filter_map ~f:(fun x -> x) d_toplevel_stmts_o in
-    let non_toplevel_stmts = List.filter ~f:(fun x -> not_toplevel x) sl in
+    let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy s)) ~init:[] toplevel_stmts in
+    let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
     let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
     let main = DMeth([DNone], (Lexing.dummy_pos, Some "Main"), [], [DVoid], d_non_toplevel_stmts) in
     DProg("pyny", d_toplevel_stmts@[main])

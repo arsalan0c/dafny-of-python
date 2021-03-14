@@ -1,8 +1,6 @@
 {
   open Parser
 
-  (* TODO: emit space for comments *)
-
   exception LexError of string
   let printf = Stdlib.Printf.printf
   let[@inline] failwith msg = raise (LexError msg)
@@ -46,7 +44,7 @@ let none_type = "None"
 let list_type = "list"
 let dict_type = "dict"
 let set_type = "set"
-let tuple_type = "Tuple"
+let tuple_type = "tuple"
 
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']

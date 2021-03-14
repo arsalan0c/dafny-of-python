@@ -137,14 +137,16 @@ let print_param id = function
   | (i, t) -> 
     let n = (newcolumn (indent id)) in 
     let idd = print_id 0 i in 
-    let c = (newcolumn ":") in 
-    String.concat [n; idd; c; print_type 1 t]
+    let pt = match t with 
+    | DVoid -> "" 
+    | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt] in
+    String.concat [n; idd; pt]
 
 let rec print_exp id = function
   | DIdentifier s -> print_id id s
   | DBinary(e1, op, e2) -> let n = (newcolumn (indent id)) in 
     let pob = (newcolumn "(") in 
-    let pe1 = (print_exp 0 e1) in (* TODO: this does not work *)
+    let pe1 = (print_exp 0 e1) in
     let ps1 = newcolumn " " in
     let pop = (print_op 0 op) in
     let ps2 = newcolumn " " in 
@@ -223,9 +225,17 @@ let rec print_exp id = function
     let pe = (print_exp 0 e) in
     let pcb = (newcolumn "|") in
     String.concat [n; pob; pe; pcb]
+  | DLambda (fl, sl, e) -> let n = newcolumn (indent id) in
+    let ob = newcolumn "(" in
+    let pfl = newcolumn_concat (print_param 0) ", " fl in
+    let cb = newcolumn ")" in
+    let psl = newcolumn_concat (print_spec 0) ", " sl in
+    let op = newcolumn " =>" in
+    let pe = print_exp 1 e in
+    String.concat [n; ob; pfl; cb; psl; op; pe]
   | _ -> failwith "unsupported expr node"
 
-let print_spec id = function
+and print_spec id = function
   | DRequires e -> let n  = newcolumn (indent id) in 
     let s = newcolumn "requires" in 
     let pe = (print_exp 1 e) in
@@ -276,19 +286,23 @@ and print_stmt id = function
     let b = newcolumn "break" in 
     let ps = (newcolumn ";") in
     String.concat [n; b; ps]
-  | DAssign([], _) -> ""
-  | DAssign(first::rest, el) -> 
+  | DAssign(_, [], _) -> ""
+  | DAssign(t, first::rest, el) -> 
     let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
     let n = newcolumn (indent id) in
     let pre = if exists then "" else begin
       vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
       newcolumn "var "
     end in
-    let pil = newcolumn_concat (print_id 0) ", " (first::rest) in 
+    let pil = newcolumn_concat (print_id 0) ", " (first::rest) in
+    let pt = begin match t with 
+    | DVoid -> "" 
+    | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
+    end in
     let pa = newcolumn " := " in
     let pel = newcolumn_concat (print_exp 0) ", " el in
     let ps = newcolumn ";" in 
-    String.concat [n; pre; pil; pa; pel; ps]
+    String.concat [n; pre; pil; pt; pa; pel; ps]
   | DCallStmt(ident, el) -> let n = (newcolumn (indent id)) in 
     let pident = print_id 0 ident in 
     let pob = newcolumn "(" in 
@@ -348,8 +362,8 @@ and print_stmt id = function
     let ps = newcolumn ";" in
     String.concat [n; r; pel; ps]
 
-let print_declarations id = function
-  | (i, _) -> print_stmt id (DAssign ([i], [DIdentifier i]))
+let print_declaration id = function
+  | (i, t) -> print_stmt id (DAssign (t, [i], [DIdentifier i]))
 
 let print_toplevel id = function
   | DMeth(speclst, ident, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
@@ -366,7 +380,7 @@ let print_toplevel id = function
     let n2 = newcolumn (indent id) in 
     let pob2 = newcolumn "{" in
     let nl3 = (newline ()) in
-    let ppl = (newline_concat (print_declarations (id+2)) pl) in 
+    let ppl = (newline_concat (print_declaration (id+2)) pl) in 
     let nl4 = (newline ()) in
     let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
     let n3 = newcolumn (indent id) in

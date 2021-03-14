@@ -79,12 +79,12 @@ compound_stmt:
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; typ; EQ; e2=star_exps { Assign ([id], [e2])}  /* TODO: make use of the identifier type */
-  | id=IDENTIFIER; EQ; e2=typ { Assign ([id], [Typ e2]) }
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign ([s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
+  | id=IDENTIFIER; COLON; t=typ; EQ; e2=star_exps { Assign (t, [id], [e2]) }
+  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Void, [id], [e2]) } (* used for type aliasing and variable updates *)
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
 elif_star:
@@ -96,6 +96,7 @@ star_exps:
   | e=exp; el=star_exps_rest; COMMA { Tuple (e::el) }
   | e=exp; el=star_exps_rest { Tuple (e::el) }
   | e=exp; COMMA { Tuple [e] }
+  | e2=typ { Typ e2 }
   | e=exp { e }
   ;
 
@@ -105,10 +106,10 @@ star_exps_rest:
   ;
 
 exp:
-  | d=implication; { d }
   | FORALL; il=id_star; DOUBLECOLON; e=implication { Forall (il, e) }
   | EXISTS; il=id_star; DOUBLECOLON; e=implication { Exists (il, e) }
-  | LAMBDA; param_star; ARROW; typ; COLON; e=implication { e }
+  | LAMBDA; il=id_star; COLON; e=implication { Lambda (il, e) }
+  | e=implication; { e }
   ;
 
 implication:
@@ -185,7 +186,7 @@ atom:
   | i=INT { Literal (IntLit (i)) }
   | i=FLOAT { Literal (FloatLit (i)) }
   | s=strings { Literal (StringLit s) }
-  | NONE { Literal (NoneLit) }
+  | NONE { Literal (NonLit) }
   | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
   | LPAREN; e=exp; RPAREN; { e }
   | el=lst_exp { el }
@@ -209,6 +210,9 @@ slice_h:
 lst_exp:
   | LBRACK; el=exp_star; RBRACK { Lst el }
   ;
+
+/* set_exp:
+  | LBRACE; el=exp_star; RBRACE { } */
 
 spec:
   | PRE; e=spec_rem { Pre e }
@@ -237,22 +241,21 @@ dedent_plus:
   ;
 
 typ:
-  | t=base_typ { t }
   | dt=data_typ { dt }
+  | t=base_typ { t }
   ;
 
 typ_plus:
+  | tr=typ_plus; COMMA; t=typ  { tr@[t] }
   | t=typ { [t] }
-  | t=typ; COMMA; tr=typ_plus { t::tr }
   ;
 
 base_typ:
+  | t=STRING_TYP { Str t }
   | t=INT_TYP { Int t }
   | t=FLOAT_TYP { Float t }
   | t=BOOL_TYP { Bool t }
-  | t=STRING_TYP { Str t }
   | t=NONE_TYP { Non t }
-  | t=IDENTIFIER { IdentTyp t }
   ;
 
 data_typ:
@@ -267,14 +270,14 @@ data_typ:
   ;
 
 param_star:
-  | { [] }
   | pr=param_rest; { pr }
+  | { [] }
   ;
 
 param_rest:
-  | p=param;  { [p] }
-  | p=param; COMMA { [p] }
   | p=param; COMMA; pr=param_rest { p::pr }
+  | p=param; COMMA { [p] }
+  | p=param;  { [p] }
   ;
 
 param:
@@ -287,19 +290,19 @@ id_star:
   ;
 
 id_rest:
-  | id=IDENTIFIER { [id] }
   | id=IDENTIFIER; COMMA; ir=id_rest { id::ir }
+  | id=IDENTIFIER { [id] }
   ;
 
 exp_star:
-  | { [] }
   | er=exp_rest { er }
+  | { [] }
   ;
 
 exp_rest:
-  | e=exp { [e] }
-  | e=exp; COMMA { [e] }
   | e=exp; COMMA; er=exp_rest;   { e::er }
+  | e=exp; COMMA { [e] }
+  | e=exp { [e] }
   ;
 
 %%
