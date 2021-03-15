@@ -105,6 +105,7 @@ let rec exp_dfy = function
   | Old (s, e) -> DOld (s, exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
   | Lambda (fl, e) -> let dfl = List.map ~f:(fun x -> (x, DVoid)) fl in DLambda (dfl, [], exp_dfy e)
+  | IfElseExp (e1, c, e2) -> DIfElseExpr (exp_dfy c, exp_dfy e1, exp_dfy e2)
 
 let spec_dfy = function
   | Pre c -> DRequires (exp_dfy c)

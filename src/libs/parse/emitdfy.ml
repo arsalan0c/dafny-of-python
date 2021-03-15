@@ -259,6 +259,14 @@ let rec print_exp id = function
     let op = newcolumn " =>" in
     let pe = print_exp 1 e in
     String.concat [n; ob; pfl; cb; psl; op; pe]
+  | DIfElseExpr (c, e1, e2) -> let n = newcolumn (indent id) in
+    let i = newcolumn "if" in
+    let pc = print_exp 1 c in
+    let t = newcolumn " then" in
+    let pe1 = print_exp 1 e1 in
+    let el = newcolumn " else" in
+    let pe2 = print_exp 1 e2 in
+    String.concat [n; i; pc; t; pe1; el; pe2]
   | _ -> failwith "unsupported expr node"
 
 and print_spec id = function

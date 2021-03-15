@@ -69,6 +69,7 @@ type dExpr =
   | DExists of dId list * dExpr
   | DLen of segment * dExpr
   | DLambda of dParam list * dSpec list * dExpr
+  | DIfElseExpr of dExpr * dExpr * dExpr
 
 and dSpec = 
   | DRequires of dExpr 

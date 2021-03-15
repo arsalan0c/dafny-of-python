@@ -73,10 +73,10 @@ small_stmt:
   ;
 
 compound_stmt:
-  | s=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=typ; COLON; sl=block { Function (s, id, fl, t, sl) }
+  | specl=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=typ; COLON; sl=block { Function (specl, id, fl, t, sl) }
   | IF; e=exp; COLON; s1=block; el=elif_star; ELSE; COLON; s2=block { IfElse (e, s1, el, s2) }
   | IF; e=exp; COLON; s=block; el=elif_star; { IfElse (e, s, el, []) }
-  | sl=list(spec); WHILE; e=exp; COLON; s=block; { While (e, sl, s) }
+  | specl=list(spec); WHILE; e=exp; COLON; s=block; { While (e, specl, s) }
   ;
 
 assignment:
@@ -114,6 +114,7 @@ exp:
   ;
 
 implication:
+  | d1=disjunction; IF; d2=disjunction; ELSE; im=implication { IfElseExp (d1, d2, im) }
   | im=implication; s=BIIMPL; d=disjunction { BinaryOp (im, BiImpl s, d) }
   | im=implication; s=IMPLIES; d=disjunction { BinaryOp (im, Implies s, d) }
   | im=implication; s=EXPLIES; d=disjunction { BinaryOp (im, Explies s, d) }

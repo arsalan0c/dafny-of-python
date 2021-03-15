@@ -96,6 +96,7 @@ type exp =
   | Old of segment * exp
   | Typ of pytype
   | Lambda of identifier list * exp
+  | IfElseExp of exp * exp * exp
   [@@deriving sexp]
 
 type spec = 
