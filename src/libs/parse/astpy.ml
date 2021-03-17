@@ -15,11 +15,12 @@ type pytype =
   | Float of segment 
   | Bool of segment 
   | Str of segment  
-  | Non of segment
+  | NonTyp of segment
   | LstTyp of segment * pytype option
   | Dict of segment * pytype option * pytype option
   | Set of segment * pytype option
   | Tuple of segment * (pytype list) option
+  (* | Union of segment * pytype list *)
   [@@deriving sexp]
 
 let rec pytype_compare pt1 pt2 = 
@@ -35,7 +36,7 @@ let rec pytype_compare pt1 pt2 =
   | Float f1, Float f2 -> segment_values_compare f1 f2
   | Bool b1, Bool b2 -> segment_values_compare b1 b2
   | Str s1, Str s2 -> segment_values_compare s1 s2
-  | Non _, Non _ -> 0
+  | NonTyp _, NonTyp _ -> 0
   | LstTyp (_, ot1), LstTyp (_, ot2) -> o_compare ot1 ot2
   | Dict (_, ot1, ot3), Dict (_, ot2, ot4) -> (o_compare ot1 ot2) + (o_compare ot3 ot4)
   | Set (_, ot1), Set (_, ot2) -> o_compare ot1 ot2
@@ -48,9 +49,6 @@ let rec pytype_compare pt1 pt2 =
   | _, _ -> -1
 
 type identifier = segment
-[@@deriving sexp]
-
-type param = Param of identifier * pytype
 [@@deriving sexp]
 
 type unaryop = Not of segment | UMinus of segment
@@ -78,14 +76,15 @@ type binaryop =
   [@@deriving sexp]
 
 type exp =
-  | Identifier of segment
-  | BinaryOp of (exp * binaryop * exp)
-  | UnaryOp of (unaryop * exp)
+  | Identifier of identifier
+  | BinaryOp of exp * binaryop * exp
+  | UnaryOp of unaryop * exp
   | Literal of literal
-  | Call of (identifier * exp list)
+  | Call of identifier * exp list
   | Lst of exp list
   | Array of exp list
   | Set of exp list
+  (* | SetComp of exp * exp *  *)
   | Dict of (exp * exp) list
   | Tuple of exp list
   | Subscript of exp * exp (* value, slice *)
@@ -99,6 +98,9 @@ type exp =
   | IfElseExp of exp * exp * exp
   [@@deriving sexp]
 
+type param = Param of identifier * exp (* name: type *)
+[@@deriving sexp]
+
 type spec = 
   | Pre of exp 
   | Post of exp 
@@ -108,9 +110,10 @@ type spec =
 
 type stmt =
   | IfElse of exp * stmt list * (exp * stmt list) list * stmt list
-  | While of exp * spec list * stmt list
-  | Assign of pytype * identifier list * exp list
-  | Function of spec list * identifier * param list * pytype * stmt list (* spec, name, params, return type, body *)
+  | For of spec list * exp list * exp * stmt list
+  | While of spec list * exp * stmt list
+  | Assign of exp * identifier list * exp list
+  | Function of spec list * identifier * param list * exp * stmt list (* spec, name, params, return type, body *)
   | Return of exp
   | Assert of exp
   | Break

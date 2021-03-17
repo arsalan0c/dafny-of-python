@@ -34,17 +34,18 @@ let indent = '\n' [' ' '\t']*
 let whitespace = [' ' '\t']+
 
 (* simple types *)
-let int_type = "int"
-let float_type = "float"
-let bool_type = "bool"
-let string_type = "str"
-let none_type = "None"
+let int_typ = "int"
+let float_typ = "float"
+let bool_typ = "bool"
+let string_typ = "str"
+let none_typ = "None"
 
-(* data types *)
-let list_type = "list"
-let dict_type = "dict"
-let set_type = "set"
-let tuple_type = "tuple"
+(* complex types *)
+let list_typ = "list"
+let dict_typ = "dict"
+let set_typ = "set"
+let tuple_typ = "tuple"
+let union_typ = "Union"
 
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']
@@ -63,15 +64,16 @@ let decreases = '#' [' ' '\t']* "decreases"
 
 rule main = parse
 | eof { EOF }
-| int_type as t { INT_TYP (emit_segment lexbuf (Some t)) }
-| float_type as t { FLOAT_TYP (emit_segment lexbuf (Some t)) }
-| bool_type as t { BOOL_TYP (emit_segment lexbuf (Some t)) }
-| string_type as t { STRING_TYP (emit_segment lexbuf (Some t)) }
-| none_type as t { NONE_TYP (emit_segment lexbuf (Some t)) }
-| list_type as t { LIST_TYP (emit_segment lexbuf (Some t)) }
-| dict_type as t { DICT_TYP (emit_segment lexbuf (Some t)) }
-| set_type as t { SET_TYP (emit_segment lexbuf (Some t)) }
-| tuple_type as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
+| int_typ as t { INT_TYP (emit_segment lexbuf (Some t)) }
+| float_typ as t { FLOAT_TYP (emit_segment lexbuf (Some t)) }
+| bool_typ as t { BOOL_TYP (emit_segment lexbuf (Some t)) }
+| string_typ as t { STRING_TYP (emit_segment lexbuf (Some t)) }
+| none_typ as t { NONE_TYP (emit_segment lexbuf (Some t)) }
+| list_typ as t { LIST_TYP (emit_segment lexbuf (Some t)) }
+| dict_typ as t { DICT_TYP (emit_segment lexbuf (Some t)) }
+| set_typ as t { SET_TYP (emit_segment lexbuf (Some t)) }
+| tuple_typ as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
+| union_typ as t { UNION_TYP (emit_segment lexbuf (Some t)) }
 | indent as s { (next_line lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | "import" { comment lexbuf }
 | "from" { comment lexbuf }
@@ -105,6 +107,7 @@ rule main = parse
 | "if" { IF (emit_segment lexbuf (Some "if" )) }
 | "elif" { ELIF (emit_segment lexbuf (Some "elif" )) }
 | "else" { ELSE (emit_segment lexbuf (Some "else" )) }
+| "for" { FOR (emit_segment lexbuf (Some "for" )) }
 | "while" { WHILE (emit_segment lexbuf (Some "while" )) }
 | "break" { BREAK (emit_segment lexbuf (Some "break" )) }
 | "pass" { PASS (emit_segment lexbuf (Some "pass")) }

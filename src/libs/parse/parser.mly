@@ -11,9 +11,9 @@ menhir --list-errors
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
-%token <Sourcemap.segment> DEF IF ELIF ELSE WHILE BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
+%token <Sourcemap.segment> DEF IF ELIF ELSE WHILE FOR BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
-%token <Sourcemap.segment> IDENTIFIER INT_TYP FLOAT_TYP BOOL_TYP STRING_TYP NONE_TYP LIST_TYP DICT_TYP SET_TYP TUPLE_TYP
+%token <Sourcemap.segment> IDENTIFIER INT_TYP FLOAT_TYP BOOL_TYP STRING_TYP NONE_TYP LIST_TYP DICT_TYP SET_TYP TUPLE_TYP UNION_TYP
 %token <string> STRING
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
@@ -38,11 +38,11 @@ menhir --list-errors
 %nonassoc LPAREN LBRACK LBRACE
 %nonassoc RPAREN RBRACK RBRACE
 
-%start <program> f
+%start <program> program
 
 %%
 
-f:
+program:
   | sl=stmts_plus; EOF { Program sl }
   ;
 
@@ -73,19 +73,21 @@ small_stmt:
   ;
 
 compound_stmt:
-  | specl=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=typ; COLON; sl=block { Function (specl, id, fl, t, sl) }
+  | specl=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=exp; COLON; sl=block { Function (specl, id, fl, t, sl) }
   | IF; e=exp; COLON; s1=block; el=elif_star; ELSE; COLON; s2=block { IfElse (e, s1, el, s2) }
   | IF; e=exp; COLON; s=block; el=elif_star; { IfElse (e, s, el, []) }
-  | specl=list(spec); WHILE; e=exp; COLON; s=block; { While (e, specl, s) }
+  | specl=list(spec); FOR; t=star_targets; IN; e=star_exps; COLON; b=block { For (specl, t, e, b) }
+  | specl=list(spec); WHILE; e=exp; COLON; s=block; { While (specl, e, s) }
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; t=typ; EQ; e2=star_exps { Assign (t, [id], [e2]) }
-  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Void, [id], [e2]) } (* used for type aliasing and variable updates *)
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Void, [s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
+  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (t, [id], [e2]) }
+  /* | id=IDENTIFIER; COLON; t=IDENTIFIER; EQ; e2=star_exps { Assign (IdentTyp t, [id], [e2]) } */
+  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Typ Void, [id], [e2]) } (* used for type aliasing and variable updates *)
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
 elif_star:
@@ -97,7 +99,6 @@ star_exps:
   | e=exp; el=star_exps_rest; COMMA { Tuple (e::el) }
   | e=exp; el=star_exps_rest { Tuple (e::el) }
   | e=exp; COMMA { Tuple [e] }
-  | e2=typ { Typ e2 }
   | e=exp { e }
   ;
 
@@ -106,10 +107,26 @@ star_exps_rest:
   | COMMA; e=exp { [e] }
   ;
 
+star_targets:
+  | st=star_target; str=star_targets_rest; COMMA; { [st]@str }
+  | st=star_target; str=star_targets_rest { [st]@str }
+  | st=star_target { [st] }
+  ;
+
+star_targets_rest:
+  | str=star_targets_rest; COMMA; st=star_target; { str@[st] }
+  | COMMA; st=star_target; { [st] }
+  ;
+
+star_target:
+  | id=IDENTIFIER { Identifier id }
+  ;
+
 exp:
   | FORALL; il=id_star; DOUBLECOLON; e=implication { Forall (il, e) }
   | EXISTS; il=id_star; DOUBLECOLON; e=implication { Exists (il, e) }
   | LAMBDA; il=id_star; COLON; e=implication { Lambda (il, e) }
+  | e=typ { Typ e }
   | e=implication; { e }
   ;
 
@@ -149,8 +166,8 @@ comparison:
   ;
 
 sum:
-  | e=sum; s=PLUS; t=term { BinaryOp(e, Plus s, t) }
-  | e=sum; s=MINUS; t=term { BinaryOp(e, Minus s, t) }
+  | e=sum; s=PLUS; t=term { BinaryOp (e, Plus s, t) }
+  | e=sum; s=MINUS; t=term { BinaryOp (e, Minus s, t) }
   | t=term { t }
   ; 
 
@@ -163,7 +180,7 @@ term:
 
 factor:
   | PLUS; f=factor { f }
-  | s=MINUS; f=factor { UnaryOp(UMinus s, f) }
+  | s=MINUS; f=factor { UnaryOp (UMinus s, f) }
   | p=power { p }
   ;
 
@@ -185,8 +202,8 @@ atom:
   | s=IDENTIFIER { Identifier s }
   | TRUE { Literal (BoolLit true) }
   | FALSE { Literal (BoolLit false) }
-  | i=INT { Literal (IntLit (i)) }
-  | i=FLOAT { Literal (FloatLit (i)) }
+  | i=INT { Literal (IntLit i) }
+  | i=FLOAT { Literal (FloatLit i) }
   | s=strings { Literal (StringLit s) }
   | NONE { Literal (NonLit) }
   | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
@@ -228,7 +245,7 @@ kv_star:
 kv_rest:
   | p=kv COMMA; pr=kv_rest { p::pr }
   | p=kv; COMMA { [p] }
-  | p=kv;  { [p] }
+  | p=kv; { [p] }
   ;
 
 kv:
@@ -251,7 +268,7 @@ spec_rem:
   ;
 
 block:
-  | NEWLINE; ni=indent_plus; sl=stmts_plus; nd=dedent_plus 
+  | NEWLINE; newline_star; ni=indent_plus; sl=stmts_plus; nd=dedent_plus 
   { let diff = ni - nd in printf "Diff: %d\n" diff; if (diff != 0) then failwith "unexpected indentation" else sl }
   ;
 
@@ -265,33 +282,40 @@ dedent_plus:
   /* | DEDENT; n=dedent_plus;  { n + 1 } */
   ;
 
+typ_id:
+  | t=typ { t }
+  | t=IDENTIFIER { IdentTyp t }
+  ;
+
 typ:
   | dt=data_typ { dt }
   | t=base_typ { t }
   ;
 
 typ_plus:
-  | tr=typ_plus; COMMA; t=typ  { tr@[t] }
-  | t=typ { [t] }
+  | tr=typ_plus; COMMA; t=typ_id  { tr@[t] }
+  | t=typ_id { [t] }
   ;
 
 base_typ:
+  /* | t=IDENTIFIER { IdentTyp t } */
   | t=STRING_TYP { Str t }
   | t=INT_TYP { Int t }
   | t=FLOAT_TYP { Float t }
   | t=BOOL_TYP { Bool t }
-  | t=NONE_TYP { Non t }
+  | t=NONE_TYP { NonTyp t }
   ;
 
 data_typ:
-  | l=LIST_TYP LBRACK t=typ RBRACK { LstTyp (l, Some t) }
+  | l=LIST_TYP LBRACK t=typ_id RBRACK { LstTyp (l, Some t) }
   | l=LIST_TYP { LstTyp (l, None) }
-  | d=DICT_TYP LBRACK t1=typ COMMA t2=typ RBRACK { Dict (d, Some t1, Some t2) }
+  | d=DICT_TYP LBRACK t1=typ_id COMMA t2=typ_id RBRACK { Dict (d, Some t1, Some t2) }
   | d=DICT_TYP { Dict (d, None, None) }
-  | s=SET_TYP LBRACK t=typ RBRACK { Set (s, Some t) }
+  | s=SET_TYP LBRACK t=typ_id RBRACK { Set (s, Some t) }
   | s=SET_TYP { Set (s, None) }
-  | tt=TUPLE_TYP; LBRACK; tl=typ_plus; RBRACK { Tuple (tt, Some tl) }
+  | tt=TUPLE_TYP LBRACK tl=typ_plus; RBRACK { Tuple (tt, Some tl) }
   | t=TUPLE_TYP { Tuple (t, None) }
+  /* | u=UNION_TYP LBRACK tl=typ_plus; RBRACK { Union (u, tl) } */
   ;
 
 param_star:
@@ -306,7 +330,7 @@ param_rest:
   ;
 
 param:
-  | id=IDENTIFIER; COLON; t=typ { Param (id, t) }
+  | id=IDENTIFIER; COLON; t=exp { Param (id, t) }
   ;
 
 id_star:

@@ -10,6 +10,11 @@ let[@inline] failwith msg = raise (DfyAstError msg)
 
 let typ_idents = Hash_set.create (module String)
 
+let check_exp_typ = function
+  | Typ t -> t
+  | Identifier s -> IdentTyp s
+  | _ -> failwith "Invalid type"
+
 let rec typ_dfy = function 
   | Void -> DVoid
   | IdentTyp s -> DIdentTyp s
@@ -17,8 +22,8 @@ let rec typ_dfy = function
   | Float s -> DReal s 
   | Bool s -> DBool s
   | Str s -> DString s
-  | Non _ -> DVoid
-  | LstTyp(s, ot) -> begin
+  | NonTyp _ -> DVoid
+  | LstTyp (s, ot) -> begin
     match ot with
     | Some t -> let r = typ_dfy t in DSeq(s, r)
     | None -> failwith "Please specify the exact sequence type"
@@ -35,7 +40,7 @@ let rec typ_dfy = function
     | _, None -> failwith "Please specify the exact map type"
 
     end
-  | Tuple(s, olt) -> 
+  | Tuple (s, olt) -> 
     begin
     match olt with
     | Some (ft::lt) -> 
@@ -94,13 +99,13 @@ let rec exp_dfy = function
   | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
   | Slice (e1, e2) -> begin
     match e1, e2 with
-    | Some r1, Some r2 -> DSlice(Some (exp_dfy r1), Some (exp_dfy r2))
-    | Some r1, None -> DSlice(Some (exp_dfy r1), None)
-    | None, Some r2 -> DSlice(None, Some (exp_dfy r2))
+    | Some r1, Some r2 -> DSlice (Some (exp_dfy r1), Some (exp_dfy r2))
+    | Some r1, None -> DSlice (Some (exp_dfy r1), None)
+    | None, Some r2 -> DSlice (None, Some (exp_dfy r2))
     | None, None -> DSlice (None, None)
     end
-  | Forall (s, e) -> DForall(s, exp_dfy e)
-  | Exists (s, e) -> DExists(s, exp_dfy e)
+  | Forall (s, e) -> DForall (s, exp_dfy e)
+  | Exists (s, e) -> DExists (s, exp_dfy e)
   | Len (s, e) -> DLen (s, exp_dfy e)
   | Old (s, e) -> DOld (s, exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
@@ -114,63 +119,64 @@ let spec_dfy = function
   | Decreases d -> DDecreases (exp_dfy d)
 
 let param_dfy = function
-  | Param(id, t) -> ((ident_dfy id), (typ_dfy t))
+  | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
 
 let rec stmt_dfy = function
   | Exp(Call(id, el)) -> 
     let d_el = List.map ~f:exp_dfy el in
-    DCallStmt(id, d_el)
-  | Assign(t, il, el) -> DAssign (typ_dfy t, List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
-  | IfElse(e, sl1, esl, sl3) -> let d_esl = List.map ~f:(fun (e,sl) -> let d_e = exp_dfy e in (d_e, (List.map ~f:stmt_dfy sl))) esl in DIf(exp_dfy e, (List.map ~f:stmt_dfy sl1), d_esl, (List.map ~f:stmt_dfy sl3))
+    DCallStmt (id, d_el)
+  | Assign (t, il, el) -> begin match t with 
+    | Typ t -> DAssign (typ_dfy t, List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
+    | _ -> failwith "Invalid type of assignment"
+    end
+  | IfElse (e, sl1, esl, sl3) -> let d_esl = List.map ~f:(fun (e,sl) -> let d_e = exp_dfy e in (d_e, (List.map ~f:stmt_dfy sl))) esl in DIf(exp_dfy e, (List.map ~f:stmt_dfy sl1), d_esl, (List.map ~f:stmt_dfy sl3))
   | Return el -> DReturn [exp_dfy el]
   | Assert e -> DAssert (exp_dfy e)
   | Break -> DBreak
   | Continue -> failwith "continue statements are not supported"
   | Pass -> DEmptyStmt
-  | While(e, speclst, sl) -> DWhile (exp_dfy e, List.map ~f:spec_dfy speclst, List.map ~f:stmt_dfy sl)
+  | While (speclst, e, sl) -> DWhile (List.map ~f:spec_dfy speclst, exp_dfy e, List.map ~f:stmt_dfy sl)
+  (* | For (specl, el, e, sl) -> DWhile () *)
+  | For _ -> failwith "for loops are not supported"
   | Function _  -> assert false
-  | Exp(_) -> failwith "non-call expressions are not allowed as statements"
+  | Exp _ -> failwith "non-call expressions are not allowed as statements"
+
+
 
 let is_toplevel = function
   | Function _ -> true
   | Assign (_, _, ((Typ _)::_)) -> true
   | _ -> false
 
-(* let not_toplevel = function
-  | Function _ -> false
-  | Assign _ -> false
-  | _ -> true *)
+let convert_typsyn ident rhs = let ident_v = Sourcemap.segment_value ident in 
+  match rhs with
+  | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
+  | Identifier typ_ident -> begin 
+      let s_typ = Sourcemap.segment_value typ_ident in
+      match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
+      | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp typ_ident))))
+      | None -> None
+    end
+  | _ -> None
 
-let toplevel_dfy = function
-  | Function(speclst, i, pl, t, sl) -> 
-    [DMeth (List.map ~f:spec_dfy speclst, i, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
-  | Assign(_, il, el) ->
-    let convert_typsyn ident typ = begin
-      let s_ident = Sourcemap.segment_value ident in 
-        match typ with
-        | Typ t -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, typ_dfy t))
-        | Identifier typ_ident -> begin 
-            let s_typ = Sourcemap.segment_value typ_ident in
-            match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
-            | Some _ -> Hash_set.add typ_idents s_ident; Some (DTypSynonym (ident_dfy ident, typ_dfy (IdentTyp typ_ident)))
-            | None -> None
-          end
-        | _ -> None
-    end 
-    in begin
-      match List.map2 ~f:convert_typsyn il el with
-      | Ok typ_syns -> List.filter_map ~f:(fun x -> x) typ_syns
-      | Unequal_lengths -> failwith "Number of left-hand identifiers must be equal to number of right-hand expressions"
+let toplevel_dfy generics = function
+  | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in
+    [DMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
+  | Assign (_, il, el) -> begin
+    match List.map2 ~f:convert_typsyn il el with
+    | Ok typ_syns -> List.filter_map ~f:(fun x -> x) typ_syns
+    | Unequal_lengths -> failwith "Number of left-hand identifiers must be equal to number of right-hand expressions"
     end
   | _ -> []
 
-let prog_dfy = function
-  | Program sl -> 
-    let toplevel_stmts = List.filter ~f:is_toplevel sl in
-    let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy s)) ~init:[] toplevel_stmts in
-    let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
-    let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
-    let main = DMeth([DNone], (Lexing.dummy_pos, Some "Main"), [], [DVoid], d_non_toplevel_stmts) in
-    DProg("pyny", d_toplevel_stmts@[main])
+let prog_dfy p =
+  let (n_p, gens) = Convertgeneric.prog p in
+  let (Program sl) = Convertcall.prog n_p in
+  let toplevel_stmts = List.filter ~f:is_toplevel sl in
+  let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
+  let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
+  let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
+  let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), gens, [], [], d_non_toplevel_stmts) in
+  DProg ("daffodil", d_toplevel_stmts@[main])
 
     (* | indent as s { (upd lexbuf (String.length s - 1); main lexbuf) }  *)

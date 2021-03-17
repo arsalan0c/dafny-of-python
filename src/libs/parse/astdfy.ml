@@ -74,7 +74,6 @@ type dExpr =
 and dSpec = 
   | DRequires of dExpr 
   | DEnsures of dExpr
-  | DNone
   | DInvariant of dExpr
   | DDecreases of dExpr
   (* | DFresh of dExpr *)
@@ -87,15 +86,18 @@ type dStmt =
   | DAssert of dExpr
   | DAssign of dTyp * dId list * dExpr list
   | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
-  | DWhile of dExpr * dSpec list * dStmt list
+  | DWhile of dSpec list * dExpr * dStmt list
   | DReturn of dExpr list
   | DBreak
   | DCallStmt of dId * dExpr list
   [@@deriving sexp]
 
+type dGeneric = string
+[@@deriving sexp]
+
 type dTopLevel = 
-  | DMeth of dSpec list * dId * dParam list * dTyp list * dStmt list
-  | DTypSynonym of dId * dTyp
+  | DMeth of dSpec list * dId * dGeneric list * dParam list * dTyp list * dStmt list
+  | DTypSynonym of dId * dTyp option
   [@@deriving sexp]
 
 type dProgram = DProg of string * dTopLevel list

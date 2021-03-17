@@ -22,14 +22,14 @@ let indent i = replicate_str space i
 let curr_line : int ref = ref 1
 let curr_column : int ref = ref 1
 let newline = fun () -> (curr_column := 1; curr_line := !curr_line + 1; "\n")
-let newline_f f = fun s -> let nf = (f s) in let nl = (newline ()) in String.concat [nf; nl]
+let newline_f f = fun s -> let nf = (f s) in let nl = newline () in String.concat [nf; nl]
 let newcolumn s = (curr_column := !curr_column + (String.length s); s)
 
 let rec newline_concat f = function
   | [] -> ""
   | hd::[] -> f hd
   | hd::tl -> let fhd = f hd in
-    let n = (newline ()) in 
+    let n = newline () in 
     let rest = newline_concat f tl in 
     String.concat [fhd; n; rest]
 
@@ -286,7 +286,6 @@ and print_spec id = function
     let s = newcolumn "decreases" in 
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe]
-  | DNone -> ""
 
 let rec print_ret id = function
   | [] -> ""
@@ -369,7 +368,7 @@ and print_stmt id = function
     end in
     let pelse = if List.length sl3 = 0 then "" else begin
       let pecb = newcolumn " else {" in 
-      let nl = (newline ()) in 
+      let nl = newline () in 
       let pst = newline_concat (print_stmt (id+2)) sl3 in
       let n = newcolumn (indent id) in 
       let nl2 = newline () in
@@ -378,10 +377,10 @@ and print_stmt id = function
       String.concat [pecb; nl; pst; n; nl2; n2; cb]
     end in
     String.concat [n; i; pe; ob; nl; pst; nl2; n2; cb; pelif; pelse]
-  | DWhile(e, speclst, sl) -> let n = newcolumn (indent id) in
+  | DWhile(speclst, e, sl) -> let n = newcolumn (indent id) in
     let w = newcolumn "while" in 
     let pe = print_exp 1 e in 
-    let nl = (newline ()) in 
+    let nl = newline () in 
     let psl = newline_concat (print_spec (id+2)) speclst in
     let ob = (newcolumn_h id "{") in 
     let nl2 = newline () in
@@ -400,33 +399,40 @@ let print_declaration id = function
   | (i, t) -> print_stmt id (DAssign (t, [i], [DIdentifier i]))
 
 let print_toplevel id = function
-  | DMeth(speclst, ident, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
+  | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
     let n = newcolumn (indent id) in 
     let m = newcolumn "method" in
     let pident = print_id 1 ident in
+    let pgl = match gl with | [] -> "" | gl -> begin
+      let ob = newcolumn "<" in
+      let pvs = newcolumn_concat (fun s -> s) ", " gl in
+      let cb = newcolumn ">" in
+      String.concat [ob; pvs; cb]
+    end in
     let ob = newcolumn "(" in    
     let pp = newcolumn_concat (print_param 0) ", " pl in
     let cb = newcolumn ")" in
     let pr = print_ret 1 tl in
-    let nl = (newline ()) in
+    let nl = newline () in
     let psl = newline_concat (print_spec (id+2)) speclst in
-    let nl2 = (newline ()) in
+    let nl2 = newline () in
     let n2 = newcolumn (indent id) in 
     let ob2 = newcolumn "{" in
-    let nl3 = (newline ()) in
+    let nl3 = newline () in
     let ppl = (newline_concat (print_declaration (id+2)) pl) in 
-    let nl4 = (newline ()) in
+    let nl4 = newline () in
     let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
     let n3 = newcolumn (indent id) in
     let cb2 = newcolumn "}" in 
     let nl5 = newline () in 
-    String.concat [n; m; pident; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5]
-  | DTypSynonym(ident, typ) -> let n = newcolumn (indent id) in
+    String.concat [n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5]
+  | DTypSynonym (ident, otyp) -> let n = newcolumn (indent id) in
     let t = newcolumn "type" in
     let pident = print_id 1 ident in
-    let eq = newcolumn " = " in
-    let pt = print_type 0 typ in
-    String.concat [n; t; pident; eq; pt]
+    let pet = match otyp with | None -> "" 
+      | Some typ -> let eq = newcolumn " = " in let pt = print_type 0 typ in
+      String.concat [eq; pt] in
+    String.concat [n; t; pident; pet]
 
 let print_prog = function
   | DProg(_, tll) -> newcolumn_concat (fun x -> newline_f (print_toplevel 0) x) "" tll

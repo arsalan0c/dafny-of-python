@@ -35,11 +35,10 @@ let run =
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   typcheck inp;
   let lexed = Lexing.from_string inp in
-  let parsed = try Pyparse.Parser.f Pyparse.Indenter.f lexed with 
+  let parsed = try Pyparse.Parser.program Pyparse.Indenter.f lexed with 
     | Pyparse.Parser.Error -> failwith "Parser error"
   in
-  let calls_rewritten = Pyparse.Convertcall.prog parsed in
-  let dafny_ast = Pyparse.Todafnyast.prog_dfy calls_rewritten in
+  let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
   printf "\n%s\n" dafny_source; 
   Out_channel.write_all dafny_f ~data:dafny_source;
