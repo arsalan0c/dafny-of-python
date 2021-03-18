@@ -4,7 +4,6 @@ open Astpy
 let printf = Stdlib.Printf.printf
 
 let counter_num : int ref = ref 0
-(* let limit_num : int ref = ref 0 *)
 
 let rec stmt_for s = 
   match s with
