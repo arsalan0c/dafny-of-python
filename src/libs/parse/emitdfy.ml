@@ -287,11 +287,11 @@ and print_spec id = function
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe]
 
-let rec print_ret id = function
+let rec print_rets id = function
   | [] -> ""
   | DVoid::_ -> ""
   | tl -> let n = newcolumn (indent id) in 
-    let r = newcolumn "returns (" in 
+    let r = newcolumn "(" in 
     let ptl = newcolumn_concat (
         fun x -> 
           let name = newcolumn (ret_param_name ()) in 
@@ -431,7 +431,10 @@ let print_toplevel id = function
     let ob = newcolumn "(" in    
     let pp = newcolumn_concat (print_param 0) ", " pl in
     let cb = newcolumn ")" in
-    let pr = print_ret 1 tl in
+    let pr = begin match tl with | [] -> "" | DVoid::_ -> "" 
+      | tl -> let rt = newcolumn " returns" in let pp = print_rets 1 tl in
+      String.concat [rt; pp]
+    end in
     let nl = newline () in
     let psl = newline_concat (print_spec (id+2)) speclst in
     let nl2 = newline () in
@@ -445,6 +448,38 @@ let print_toplevel id = function
     let cb2 = newcolumn "}" in 
     let nl5 = newline () in 
     String.concat [n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5]
+  | DFuncMeth (speclst, ident, gl, pl, t, e) -> (curr_func := Sourcemap.segment_value ident);
+    let n = newcolumn (indent id) in 
+    let m = newcolumn "function method" in
+    let pident = print_id 1 ident in
+    let pgl = match gl with | [] -> "" | gl -> begin
+      let ob = newcolumn "<" in
+      let pvs = newcolumn_concat (fun s -> s) ", " gl in
+      let cb = newcolumn ">" in
+      String.concat [ob; pvs; cb]
+    end in
+    let ob = newcolumn "(" in    
+    let pp = newcolumn_concat (print_param 0) ", " pl in
+    let cb = newcolumn ")" in
+    let pr = begin
+      match t with | DVoid -> "" 
+      | t -> let c = newcolumn ":" in let pp = print_rets 1 [t] in
+      String.concat [c; pp]
+    end in
+    let nl = newline () in
+    let psl = newline_concat (print_spec (id+2)) speclst in
+    let nl2 = newline () in
+    let n2 = newcolumn (indent id) in 
+    let ob2 = newcolumn "{" in
+    let nl3 = newline () in
+    let n3 = newcolumn (indent (id+2)) in
+    let pe = print_exp 0 e in
+    let nl4 = newline () in
+    let n4 = newcolumn (indent id) in
+    let cb2 = newcolumn "}" in 
+    let nl5 = newline () in 
+    String.concat [n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; n3; pe; nl4; n4; cb2; nl5] 
+
   | DTypSynonym (ident, otyp) -> let n = newcolumn (indent id) in
     let t = newcolumn "type" in
     let pident = print_id 1 ident in

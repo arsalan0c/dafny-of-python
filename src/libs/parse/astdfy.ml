@@ -99,7 +99,7 @@ type dGeneric = string
 
 type dTopLevel = 
   | DMeth of dSpec list * dId * dGeneric list * dParam list * dTyp list * dStmt list
-  (* | DFuncMeth of dSpec list * dId * dGeneric list * dParam list * dTyp * dExpr *)
+  | DFuncMeth of dSpec list * dId * dGeneric list * dParam list * dTyp * dExpr
   | DTypSynonym of dId * dTyp option
   [@@deriving sexp]
 

@@ -164,6 +164,8 @@ let convert_typsyn ident rhs =
   | _ -> None
 
 let toplevel_dfy generics = function
+  | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in
     [DMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
   | Assign (_, il, el) -> begin
@@ -181,5 +183,5 @@ let prog_dfy p =
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
   let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
-  let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), gens, [], [], d_non_toplevel_stmts) in
+  let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), [], [], [], d_non_toplevel_stmts) in
   DProg ("daffodil", d_toplevel_stmts@[main])

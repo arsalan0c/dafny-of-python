@@ -99,13 +99,10 @@ let rec stmt_calls s =
     let aug_n_sl = n_sl@als in
     al@als@[While (n_specl, n_e, aug_n_sl)]
   | Function (specl, i, pl, t, sl) ->
-    List.iter specl ~f:(fun spec -> let al, _ = spec_calls spec in if List.length al > 0 then failwith "Calls are not allowed in function specifications");
+    (* List.iter specl ~f:(fun spec -> let al, _ = spec_calls spec in if List.length al > 0 then failwith "Calls are not allowed in function specifications"); *)
     let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
     [Function (specl, i, pl, t, n_sl)]
   | s -> [s]
 
 let prog = function 
   | Program sl -> Program (List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[])
-
-(* let r = List.map ~f:(calls_to_assign e) (exp_calls e) in r@[s] *)
-(* let r = concat_olst (List.map ~f:exp_calls el) in Some r *)
