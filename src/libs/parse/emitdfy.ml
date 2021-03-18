@@ -320,14 +320,28 @@ and print_stmt id = function
     let ps = (newcolumn ";") in
     String.concat [n; b; ps]
   | DAssign(_, [], _) -> ""
-  | DAssign(t, first::rest, el) -> 
+  | DAssign(t, (DTupleExpr ((DIdentifier first)::rest))::_, el) -> let n = newcolumn (indent id) in
     let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
-    let n = newcolumn (indent id) in
     let pre = if exists then "" else begin
       vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
       newcolumn "var "
     end in
-    let pil = newcolumn_concat (print_id 0) ", " (first::rest) in
+    let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
+    let pt = begin match t with 
+    | DVoid -> "" 
+    | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
+    end in
+    let pa = newcolumn " := " in
+    let pel = newcolumn_concat (print_exp 0) ", " el in
+    let ps = newcolumn ";" in 
+    String.concat [n; pre; pil; pt; pa; pel; ps] 
+  | DAssign(t, (DIdentifier first)::rest, el) -> let n = newcolumn (indent id) in
+    let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
+    let pre = if exists then "" else begin
+      vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
+      newcolumn "var "
+    end in
+    let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
     let pt = begin match t with 
     | DVoid -> "" 
     | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
@@ -336,6 +350,7 @@ and print_stmt id = function
     let pel = newcolumn_concat (print_exp 0) ", " el in
     let ps = newcolumn ";" in 
     String.concat [n; pre; pil; pt; pa; pel; ps]
+  | DAssign _ -> failwith "unsupported Dafny assignment targets"
   | DCallStmt(ident, el) -> let n = (newcolumn (indent id)) in 
     let pident = print_id 0 ident in 
     let ob = newcolumn "(" in 
@@ -396,7 +411,7 @@ and print_stmt id = function
     String.concat [n; r; pel; ps]
 
 let print_declaration id = function
-  | (i, t) -> print_stmt id (DAssign (t, [i], [DIdentifier i]))
+  | (i, t) -> print_stmt id (DAssign (t, [DIdentifier i], [DIdentifier i]))
 
 let print_toplevel id = function
   | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 

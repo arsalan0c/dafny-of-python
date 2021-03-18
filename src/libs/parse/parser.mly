@@ -81,13 +81,12 @@ compound_stmt:
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (t, [id], [e2]) }
-  /* | id=IDENTIFIER; COLON; t=IDENTIFIER; EQ; e2=star_exps { Assign (IdentTyp t, [id], [e2]) } */
-  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Typ Void, [id], [e2]) } (* used for type aliasing and variable updates *)
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Typ Void, [s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
+  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (t, [Identifier id], [e2]) }
+  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Typ Void, [Identifier id], [e2]) } (* used for type aliasing and variable updates *)
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
   ;
 
 elif_star:
@@ -120,6 +119,8 @@ star_targets_rest:
 
 star_target:
   | id=IDENTIFIER { Identifier id }
+  | LPAREN st=star_targets RPAREN { Tuple st } 
+  | LBRACK st=star_targets RBRACK { Lst st } 
   ;
 
 exp:
@@ -298,7 +299,6 @@ typ_plus:
   ;
 
 base_typ:
-  /* | t=IDENTIFIER { IdentTyp t } */
   | t=STRING_TYP { Str t }
   | t=INT_TYP { Int t }
   | t=FLOAT_TYP { Float t }

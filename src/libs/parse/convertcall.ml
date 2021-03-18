@@ -35,7 +35,7 @@ let rec exp_calls = function
     let pos = fst id in 
     let n_id = (pos, Some name) in
     printf "%s\n" (Sourcemap.print_segment id);
-    (als@[Assign (Typ (NonTyp (Sourcemap.default_segment)), [n_id], [Call (id, n_el)])], Identifier n_id)
+    (als@[Assign (Typ (NonTyp (Sourcemap.default_segment)), [Identifier n_id], [Call (id, n_el)])], Identifier n_id)
 
   | Lst el -> 
     let als_nes = List.map ~f:exp_calls el in

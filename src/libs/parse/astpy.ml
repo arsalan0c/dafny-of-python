@@ -84,7 +84,7 @@ type exp =
   | Lst of exp list
   | Array of exp list
   | Set of exp list
-  (* | SetComp of exp * exp *  *)
+  (* | SetComp of exp * exp * exp * exp list result, target, domain, conditions *)
   | Dict of (exp * exp) list
   | Tuple of exp list
   | Subscript of exp * exp (* value, slice *)
@@ -112,7 +112,7 @@ type stmt =
   | IfElse of exp * stmt list * (exp * stmt list) list * stmt list
   | For of spec list * exp list * exp * stmt list
   | While of spec list * exp * stmt list
-  | Assign of exp * identifier list * exp list
+  | Assign of exp * exp list * exp list
   | Function of spec list * identifier * param list * exp * stmt list (* spec, name, params, return type, body *)
   | Return of exp
   | Assert of exp

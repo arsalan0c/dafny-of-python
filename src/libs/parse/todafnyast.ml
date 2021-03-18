@@ -94,6 +94,7 @@ let rec exp_dfy = function
   | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
   | Array el -> DArrayExpr (List.map ~f:exp_dfy el)
   | Set el -> DSetExpr (List.map ~f:exp_dfy el)
+  (* | SetComp el -> DSetCompExpr (List.map ~f:exp_dfy el) *)
   | Dict eel -> DMapExpr (List.map ~f:(fun (k,v) -> (exp_dfy k, exp_dfy v)) eel)
   | Tuple el -> DSeqExpr (List.map ~f:exp_dfy el)  
   | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
@@ -126,7 +127,7 @@ let rec stmt_dfy = function
     let d_el = List.map ~f:exp_dfy el in
     DCallStmt (id, d_el)
   | Assign (t, il, el) -> begin match t with 
-    | Typ t -> DAssign (typ_dfy t, List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
+    | Typ t -> DAssign (typ_dfy t, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
     end
   | IfElse (e, sl1, esl, sl3) -> let d_esl = List.map ~f:(fun (e,sl) -> let d_e = exp_dfy e in (d_e, (List.map ~f:stmt_dfy sl))) esl in DIf(exp_dfy e, (List.map ~f:stmt_dfy sl1), d_esl, (List.map ~f:stmt_dfy sl3))
@@ -148,14 +149,17 @@ let is_toplevel = function
   | Assign (_, _, ((Typ _)::_)) -> true
   | _ -> false
 
-let convert_typsyn ident rhs = let ident_v = Sourcemap.segment_value ident in 
-  match rhs with
-  | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
-  | Identifier typ_ident -> begin 
-      let s_typ = Sourcemap.segment_value typ_ident in
-      match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
-      | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp typ_ident))))
-      | None -> None
+let convert_typsyn ident rhs =
+  match ident with | Identifier ident -> let ident_v = Sourcemap.segment_value ident in begin
+    match rhs with 
+    | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
+    | Identifier typ_ident -> begin 
+        let s_typ = Sourcemap.segment_value typ_ident in
+        match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
+        | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp typ_ident))))
+        | None -> None
+      end
+    | _ -> None
     end
   | _ -> None
 
@@ -171,12 +175,11 @@ let toplevel_dfy generics = function
 
 let prog_dfy p =
   let (n_p, gens) = Convertgeneric.prog p in
-  let (Program sl) = Convertcall.prog n_p in
+  let calls_rewritten = Convertcall.prog n_p in
+  let (Program sl) = Convertfor.prog calls_rewritten in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
   let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
   let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), gens, [], [], d_non_toplevel_stmts) in
   DProg ("daffodil", d_toplevel_stmts@[main])
-
-    (* | indent as s { (upd lexbuf (String.length s - 1); main lexbuf) }  *)

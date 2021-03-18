@@ -61,6 +61,7 @@ type dExpr =
   | DCallExpr of dId * dExpr list
   | DSeqExpr of dExpr list
   | DSetExpr of dExpr list
+  (* | DSetComp of dId list * dExpr * dExpr list * dExpr variables, target, conditions, result *)
   | DMapExpr of (dExpr * dExpr) list
   | DArrayExpr of dExpr list
   | DSubscript of dExpr * dExpr (* value, slice *)
@@ -70,6 +71,7 @@ type dExpr =
   | DLen of segment * dExpr
   | DLambda of dParam list * dSpec list * dExpr
   | DIfElseExpr of dExpr * dExpr * dExpr
+  | DTupleExpr of dExpr list
 
 and dSpec = 
   | DRequires of dExpr 
@@ -84,7 +86,7 @@ type dStmt =
   | DEmptyStmt
   | DAssume of dExpr
   | DAssert of dExpr
-  | DAssign of dTyp * dId list * dExpr list
+  | DAssign of dTyp * dExpr list * dExpr list
   | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
   | DWhile of dSpec list * dExpr * dStmt list
   | DReturn of dExpr list
@@ -97,6 +99,7 @@ type dGeneric = string
 
 type dTopLevel = 
   | DMeth of dSpec list * dId * dGeneric list * dParam list * dTyp list * dStmt list
+  (* | DFuncMeth of dSpec list * dId * dGeneric list * dParam list * dTyp * dExpr *)
   | DTypSynonym of dId * dTyp option
   [@@deriving sexp]
 
