@@ -137,13 +137,12 @@ let rec stmt_dfy = function
   | Continue -> failwith "continue statements are not supported"
   | Pass -> DEmptyStmt
   | While (speclst, e, sl) -> DWhile (List.map ~f:spec_dfy speclst, exp_dfy e, List.map ~f:stmt_dfy sl)
-  (* | For (specl, el, e, sl) -> DWhile () *)
   | For _ -> failwith "for loops are not supported"
   | Function _  -> assert false
   | Exp _ -> failwith "non-call expressions are not allowed as statements"
 
 
-
+  
 let is_toplevel = function
   | Function _ -> true
   | Assign (_, _, ((Typ _)::_)) -> true
