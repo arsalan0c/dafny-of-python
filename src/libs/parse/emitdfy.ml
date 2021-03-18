@@ -111,10 +111,11 @@ let print_type id t =
     | DBool _ -> "bool"
     | DString _ -> "string"
     | DChar _ -> "char"
-    | DSeq(_, t) -> "seq<" ^ (get_v t) ^ ">"
-    | DSet(_, t) -> "set<" ^ (get_v t) ^ ">"
-    | DMap(_, t1, t2) -> "map<" ^ (get_v t1) ^ ", " ^ (get_v t2) ^ ">"
-    | DTuple(_, sl) -> "(" ^ (String.concat ~sep:", " (List.map ~f:get_v sl)) ^ ")"
+    | DSeq (_, t) -> "seq<" ^ (get_v t) ^ ">"
+    | DSet (_, t) -> "set<" ^ (get_v t) ^ ">"
+    | DMap (_, t1, t2) -> "map<" ^ (get_v t1) ^ ", " ^ (get_v t2) ^ ">"
+    | DTuple (_, tl) -> "(" ^ (String.concat ~sep:", " (List.map ~f:get_v tl)) ^ ")"
+    | DFunTyp (_, tl, t) -> "(" ^ (String.concat ~sep:", " (List.map ~f:get_v tl)) ^ ") -> " ^ (get_v t)
     | _ -> ""
   in   
   let get_s t = 
@@ -129,6 +130,7 @@ let print_type id t =
     | DSet(s, _) -> s
     | DMap(s, _,  _) -> s
     | DTuple(s, _) -> s 
+    | DFunTyp (s, _, _) -> s
     | _ -> Sourcemap.default_segment
   in add_op id (get_s t) (get_v t)
 

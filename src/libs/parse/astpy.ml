@@ -20,6 +20,7 @@ type pytype =
   | Dict of segment * pytype option * pytype option
   | Set of segment * pytype option
   | Tuple of segment * (pytype list) option
+  | Callable of segment * (pytype list) * pytype (* args, return *)
   (* | Union of segment * pytype list *)
   [@@deriving sexp]
 

@@ -41,6 +41,7 @@ type dTyp =
   | DArray of segment * dTyp
   | DVoid
   | DTuple of segment * dTyp list
+  | DFunTyp of segment * dTyp list * dTyp
   [@@deriving sexp]
 
 type dParam = dId * dTyp (* name: type *)

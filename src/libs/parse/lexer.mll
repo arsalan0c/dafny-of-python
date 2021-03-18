@@ -45,6 +45,7 @@ let list_typ = "list"
 let dict_typ = "dict"
 let set_typ = "set"
 let tuple_typ = "tuple"
+let callable_typ = "Callable"
 let union_typ = "Union"
 
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
@@ -73,6 +74,7 @@ rule main = parse
 | dict_typ as t { DICT_TYP (emit_segment lexbuf (Some t)) }
 | set_typ as t { SET_TYP (emit_segment lexbuf (Some t)) }
 | tuple_typ as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
+| callable_typ as t { CALLABLE_TYP (emit_segment lexbuf (Some t)) }
 | union_typ as t { UNION_TYP (emit_segment lexbuf (Some t)) }
 | indent as s { (next_line lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | "import" { comment lexbuf }

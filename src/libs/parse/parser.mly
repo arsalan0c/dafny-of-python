@@ -13,7 +13,7 @@ menhir --list-errors
 %token <int> SPACE
 %token <Sourcemap.segment> DEF IF ELIF ELSE WHILE FOR BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
-%token <Sourcemap.segment> IDENTIFIER INT_TYP FLOAT_TYP BOOL_TYP STRING_TYP NONE_TYP LIST_TYP DICT_TYP SET_TYP TUPLE_TYP UNION_TYP
+%token <Sourcemap.segment> IDENTIFIER INT_TYP FLOAT_TYP BOOL_TYP STRING_TYP NONE_TYP LIST_TYP DICT_TYP SET_TYP TUPLE_TYP CALLABLE_TYP UNION_TYP
 %token <string> STRING
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
@@ -315,6 +315,7 @@ data_typ:
   | s=SET_TYP { Set (s, None) }
   | tt=TUPLE_TYP LBRACK tl=typ_plus; RBRACK { Tuple (tt, Some tl) }
   | t=TUPLE_TYP { Tuple (t, None) }
+  | ct=CALLABLE_TYP LBRACK LBRACK tl=typ_plus RBRACK COMMA t=typ_id RBRACK { Callable (ct, tl, t)  }
   /* | u=UNION_TYP LBRACK tl=typ_plus; RBRACK { Union (u, tl) } */
   ;
 

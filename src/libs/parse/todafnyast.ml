@@ -40,8 +40,7 @@ let rec typ_dfy = function
     | _, None -> failwith "Please specify the exact map type"
 
     end
-  | Tuple (s, olt) -> 
-    begin
+  | Tuple (s, olt) -> begin
     match olt with
     | Some (ft::lt) -> 
     (* TODO: add postcondition to check number of args match number returned *)
@@ -50,6 +49,7 @@ let rec typ_dfy = function
     | Some [] -> failwith "Please specify the exact tuple type"
     | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)
     end
+  | Callable (s, tl, t) -> DFunTyp (s, List.map ~f:typ_dfy tl, typ_dfy t)
 
 let ident_dfy = function
   | s -> s
@@ -142,7 +142,7 @@ let rec stmt_dfy = function
   | Exp _ -> failwith "non-call expressions are not allowed as statements"
 
 
-  
+
 let is_toplevel = function
   | Function _ -> true
   | Assign (_, _, ((Typ _)::_)) -> true
