@@ -19,7 +19,7 @@ let rec stmt_for s =
     let counter_name = counter_num := !counter_num + 1; "tempforcounter_" ^ (Int.to_string !counter_num) in
     let counter_ident = Identifier (Sourcemap.new_segment 0 0 (Some counter_name)) in 
     let assign_counter = Assign (Typ Void, [counter_ident], [Literal (IntLit 0)]) in
-    (* let limit_name = limit_num := !limit_num + 1; "tempforlimit_" ^ (Int.to_string limit_num) in *)
+    let declare_target_vars = Assign (Typ Void, el, []) in
     let counter_limit = Len (Sourcemap.default_segment, e) in
     let loop_cond = BinaryOp (counter_ident, Lt Sourcemap.default_segment, counter_limit) in
     let domain_counter = Slice (Some (counter_ident), None) in
@@ -29,14 +29,12 @@ let rec stmt_for s =
     let incr_counter = BinaryOp (counter_ident, Plus Sourcemap.default_segment, Literal (IntLit 1)) in
     let update_counter = Assign (Typ Void, [counter_ident], [incr_counter]) in
     let n_sl = assign_targets::rest@[update_counter] in
-    assign_counter::[While (specl, loop_cond, n_sl)]
+    [assign_counter; declare_target_vars; While (specl, loop_cond, n_sl)]
   | IfElse (e, sl1, esl, sl2) ->
     let n_sl1 = List.fold sl1 ~f:(fun so_far s -> so_far@(stmt_for s)) ~init:[] in
     let n_esl = List.map esl ~f:(fun (e, s) -> (e, 
       List.fold s ~f:(fun so_far s -> so_far@(stmt_for s)) ~init:[])
     ) in
-    (* let als = List.fold res ~f:(fun so_far ((al,_), _) -> so_far@al) ~init:[] in
-    let n_esl = List.fold res ~f:(fun so_far ((_, n_e), s) -> so_far@[(n_e, s)]) ~init:[] in *)
     let n_sl2 = List.fold sl2 ~f:(fun so_far s -> so_far@(stmt_for s)) ~init:[] in
     [IfElse (e, n_sl1, n_esl, n_sl2)]
   | While (specl, e, sl) ->

@@ -346,11 +346,15 @@ and print_stmt id = function
     | DVoid -> "" 
     | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
     end in
-    let pa = newcolumn " := " in
-    let pel = newcolumn_concat (print_exp 0) ", " el in
+    let prhs = match el with 
+      | [] -> "" | el -> begin
+        let pa = newcolumn " := " in
+        let pel = newcolumn_concat (print_exp 0) ", " el in
+        String.concat[pa; pel]
+      end in
     let ps = newcolumn ";" in 
-    String.concat [n; pre; pil; pt; pa; pel; ps]
-  | DAssign _ -> failwith "unsupported Dafny assignment targets"
+    String.concat [n; pre; pil; pt; prhs; ps]
+  | DAssign _ -> failwith "unsupported assignment targets"
   | DCallStmt(ident, el) -> let n = (newcolumn (indent id)) in 
     let pident = print_id 0 ident in 
     let ob = newcolumn "(" in 
@@ -447,7 +451,7 @@ let print_toplevel id = function
     let pet = match otyp with | None -> "" 
       | Some typ -> let eq = newcolumn " = " in let pt = print_type 0 typ in
       String.concat [eq; pt] in
-    String.concat [n; t; pident; pet]
+    String.concat [n; t; pident; pet] 
 
 let print_prog = function
   | DProg(_, tll) -> newcolumn_concat (fun x -> newline_f (print_toplevel 0) x) "" tll
