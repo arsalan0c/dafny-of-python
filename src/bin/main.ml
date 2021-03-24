@@ -14,7 +14,7 @@ let prerr = Stdlib.prerr_string
 
 let prelude_f = "./src/libs/parse/prelude.dfy" 
 let dafny_f = "program.dfy"
-let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f] (* prelude_f *)
+let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f; prelude_f]
 let python_f = "program.py"
 let mypy_command = String.concat ~sep:" " ["mypy"; python_f]
 

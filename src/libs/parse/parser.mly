@@ -21,8 +21,7 @@ menhir --list-errors
 %token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
 %token <Sourcemap.segment> LEN OLD
 
-%left COLON
-%left IMPLIES EXPLIES BIIMPL
+%left BIIMPL IMPLIES EXPLIES 
 %left OR 
 %left AND
 %left EQEQ NEQ
@@ -124,24 +123,22 @@ star_target:
   ;
 
 exp:
-  | FORALL; il=id_star; DOUBLECOLON; e=implication { Forall (il, e) }
-  | EXISTS; il=id_star; DOUBLECOLON; e=implication { Exists (il, e) }
-  | LAMBDA; il=id_star; COLON; e=implication { Lambda (il, e) }
+  | d1=implication; IF; d2=implication; ELSE; im=exp { IfElseExp (d1, d2, im) }
+  | LAMBDA; il=id_star; COLON; e=exp { Lambda (il, e) }
+  | e=implication { e }
   | e=typ { Typ e }
-  | e=implication; { e }
   ;
 
 implication:
-  | d1=disjunction; IF; d2=disjunction; ELSE; im=implication { IfElseExp (d1, d2, im) }
-  | im=implication; s=BIIMPL; d=disjunction { BinaryOp (im, BiImpl s, d) }
+  | bim=implication; s=BIIMPL; d=disjunction { BinaryOp (bim, BiImpl s, d) }
   | im=implication; s=IMPLIES; d=disjunction { BinaryOp (im, Implies s, d) }
   | im=implication; s=EXPLIES; d=disjunction { BinaryOp (im, Explies s, d) }
   | d=disjunction; { d }
   ;
 
 disjunction:
-  | c=conjunction { c }
   | d=disjunction; s=OR; c=conjunction { BinaryOp (d, Or s, c) }
+  | c=conjunction { c }
   ;
 
 conjunction:
@@ -155,7 +152,6 @@ inversion:
   ;
 
 comparison:
-  | s=sum { s }
   | c=comparison; s=EQEQ; e=sum { BinaryOp (c, EqEq s, e) }
   | c=comparison; s=NEQ; e=sum { BinaryOp (c, NEq s, e) }
   | c=comparison; s=LTE; e=sum { BinaryOp (c, LEq s, e) }
@@ -164,6 +160,7 @@ comparison:
   | c=comparison; s=GT; e=sum { BinaryOp (c, Gt s, e) }
   | c=comparison; s=NOT_IN; e=sum { BinaryOp (c, NotIn s, e) }
   | c=comparison; s=IN; e=sum { BinaryOp (c, In s, e) }
+  | s=sum { s }
   ;
 
 sum:
@@ -190,7 +187,7 @@ power:
   ;
 
 primary:
-  | s=IDENTIFIER; el=arguments { Call (s, el) } (* TODO: allow primaries as calls *)
+  | s=IDENTIFIER el=arguments { Call (s, el) } (* TODO: allow primaries as calls *)
   | e=primary; s=slice { Subscript (e, s) }
   | a=atom { a }
   ;
@@ -207,6 +204,8 @@ atom:
   | i=FLOAT { Literal (FloatLit i) }
   | s=strings { Literal (StringLit s) }
   | NONE { Literal (NonLit) }
+  | FORALL; il=id_star; DOUBLECOLON; e=exp { Forall (il, e) }
+  | EXISTS; il=id_star; DOUBLECOLON; e=exp { Exists (il, e) }
   | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
   | LPAREN; e=exp; RPAREN; { e }
   | l=lst_exp { l }
