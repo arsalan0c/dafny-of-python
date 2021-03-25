@@ -16,27 +16,33 @@ let olst = function
 
 let concat_olst sl = List.concat (List.map ~f:olst sl)
 
-let rec exp_calls = function
+let rec exp_calls = function (* TODO: add support for dot expressions *)
+  | Identifier ident -> ([], Identifier ident)
   | BinaryOp(e1, op, e2) -> 
     let al1, n_e1 = exp_calls e1 in
     let al2, n_e2 = exp_calls e2 in
     (al1@al2, BinaryOp(n_e1, op, n_e2))
 
   | UnaryOp(op, e) -> let al, n_e = exp_calls e in (al, UnaryOp(op, n_e))
-  | Call (id, el) -> (* handle recursive case *)
+  | Call (e, el) -> (* handle recursive case *)
+    let al, n_e = exp_calls e in
     let als_nes = List.map ~f:exp_calls el in
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
-    let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
-    let name = var_num := !var_num + 1; "temp_call" ^ (Int.to_string !var_num) in
-    let _ = (match snd id with
-    | Some v -> Hashtbl.add temp_source ~key:name ~data:v
-    | None -> Hashtbl.add temp_source ~key:name ~data:name
-    ) in
-    let pos = fst id in 
-    let n_id = (pos, Some name) in
-    printf "%s\n" (Sourcemap.print_segment id);
-    (als@[Assign (Typ (NonTyp (Sourcemap.default_segment)), [Identifier n_id], [Call (id, n_el)])], Identifier n_id)
-
+    let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in begin
+      match e with
+      | Identifier ident -> begin
+        let name = var_num := !var_num + 1; "temp_call" ^ (Int.to_string !var_num) in
+        let _ = begin
+          match snd ident with 
+          | Some v -> Hashtbl.add temp_source ~key:name ~data:v
+          | None -> Hashtbl.add temp_source ~key:name ~data:name
+        end in
+        let pos = fst ident in 
+        let n_id = (pos, Some name) in
+        (al@als@[Assign (Typ (NonTyp (Sourcemap.default_segment)), [Identifier n_id], [Call (n_e, n_el)])], Identifier n_id)
+        end
+      | _ -> (al@als, Call (n_e, n_el))
+    end
   | Lst el -> 
     let als_nes = List.map ~f:exp_calls el in
     List.fold als_nes ~f:(

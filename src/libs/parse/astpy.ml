@@ -81,7 +81,7 @@ type exp =
   | BinaryOp of exp * binaryop * exp
   | UnaryOp of unaryop * exp
   | Literal of literal
-  | Call of identifier * exp list
+  | Call of exp * exp list
   | Lst of exp list
   | Array of exp list
   | Set of exp list

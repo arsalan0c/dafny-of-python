@@ -4,7 +4,7 @@ open Astpy
 let printf = Stdlib.Printf.printf
 
 let convert_typvar ident call = match ident, call with
-  | Identifier ident, Call (c_ident, (Literal (StringLit tv_v))::tv_rest) -> begin
+  | Identifier ident, Call (Identifier c_ident, (Literal (StringLit tv_v))::tv_rest) -> begin
     let ident_v = Sourcemap.segment_value ident in 
     let c_ident_v = Sourcemap.segment_value c_ident in
     match c_ident_v with 
@@ -18,7 +18,7 @@ let convert_typvar ident call = match ident, call with
 
 let generics = function
   |  Assign (t, il, el) -> begin
-    match el with | ((Call ((_, Some "TypeVar") , _))::_) -> begin
+    match el with | ((Call (Identifier (_, Some "TypeVar") , _))::_) -> begin
       match List.map2 ~f:convert_typvar il el with
       | Ok typ_vars -> let vs = List.filter_map ~f:(fun x -> x) typ_vars in (None, vs)
       | Unequal_lengths -> failwith "Number of left-hand identifiers in assignment must be equal to number of right-hand expressions"

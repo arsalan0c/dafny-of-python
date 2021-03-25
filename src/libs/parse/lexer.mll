@@ -95,6 +95,7 @@ rule main = parse
 | '}' { RBRACE }
 | '['  { LBRACK }
 | ']' { RBRACK }
+| '.' { DOT }
 | ':' { COLON }
 | ';' { SEMICOLON }
 | ',' { COMMA }

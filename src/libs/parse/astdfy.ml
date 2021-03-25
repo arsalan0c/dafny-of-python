@@ -59,7 +59,7 @@ type dExpr =
   | DStringLit of string
   | DBinary of dExpr * dOp * dExpr
   | DUnary of dOp * dExpr
-  | DCallExpr of dId * dExpr list
+  | DCallExpr of dExpr * dExpr list
   | DSeqExpr of dExpr list
   | DSetExpr of dExpr list
   (* | DSetComp of dId list * dExpr * dExpr list * dExpr variables, target, conditions, result *)
@@ -92,7 +92,7 @@ type dStmt =
   | DWhile of dSpec list * dExpr * dStmt list
   | DReturn of dExpr list
   | DBreak
-  | DCallStmt of dId * dExpr list
+  | DCallStmt of dExpr * dExpr list
   [@@deriving sexp]
 
 type dGeneric = string

@@ -9,7 +9,7 @@ menhir --list-errors
   let printf = Stdlib.Printf.printf
 %}
 
-%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
+%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK DOT COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
 %token <Sourcemap.segment> DEF IF ELIF ELSE WHILE FOR BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
@@ -187,7 +187,7 @@ power:
   ;
 
 primary:
-  | s=IDENTIFIER el=arguments { Call (s, el) } (* TODO: allow primaries as calls *)
+  | s=IDENTIFIER el=arguments { Call (Identifier s, el) } (* TODO: allow primaries as calls *)
   | e=primary; s=slice { Subscript (e, s) }
   | a=atom { a }
   ;

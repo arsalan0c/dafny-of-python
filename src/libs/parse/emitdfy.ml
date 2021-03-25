@@ -137,7 +137,7 @@ let print_type id t =
 (* (vars := (!curr_func, idd)::!vars); *)
 let print_param id = function
   | (i, t) -> 
-    let n = (newcolumn (indent id)) in 
+    let n = newcolumn (indent id) in 
     let idd = print_id 0 i in 
     let pt = match t with 
     | DVoid -> "" 
@@ -146,7 +146,7 @@ let print_param id = function
 
 let rec print_exp id = function
   | DIdentifier s -> print_id id s
-  | DBinary(e1, op, e2) -> let n = (newcolumn (indent id)) in 
+  | DBinary(e1, op, e2) -> let n = newcolumn (indent id) in 
     let ob = (newcolumn "(") in 
     let pe1 = (print_exp 0 e1) in
     let ps1 = newcolumn " " in
@@ -155,7 +155,7 @@ let rec print_exp id = function
     let pe2 = (print_exp 0 e2) in
     let cb = newcolumn ")" in
     String.concat [n; ob; pe1; ps1; pop; ps2; pe2; cb]
-  | DUnary(op, e) -> let n = (newcolumn (indent id)) in 
+  | DUnary(op, e) -> let n = newcolumn (indent id) in 
     let ob = newcolumn "(" in 
     let pop = (print_op 0 op) in 
     let pe = print_exp 0 e in 
@@ -179,28 +179,28 @@ let rec print_exp id = function
   (* | DThis -> newcolumn ((indent id) ^ "this")
   | DFresh -> newcolumn ((indent id) ^ "fresh")
    *)
-  | DCallExpr(e, el) -> let n = (newcolumn (indent id)) in 
-    let pe = (print_id 0 e) in 
-    let ob = (newcolumn "(") in 
-    let pel = (newcolumn_concat (print_exp 0) ", " el) in 
-    let cb = (newcolumn ")") in
+  | DCallExpr(e, el) -> let n = newcolumn (indent id) in 
+    let pe = print_exp 0 e in 
+    let ob = newcolumn "(" in 
+    let pel = newcolumn_concat (print_exp 0) ", " el in 
+    let cb = newcolumn ")" in
     String.concat [n; pe; ob; pel; cb]
-  | DSeqExpr el -> let n = (newcolumn (indent id)) in 
+  | DSeqExpr el -> let n = newcolumn (indent id) in 
     let ob = (newcolumn "[") in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
     let cb = (newcolumn "]") in 
     String.concat [n; ob; pel; cb]
-  | DArrayExpr el -> let n = (newcolumn (indent id)) in 
+  | DArrayExpr el -> let n = newcolumn (indent id) in 
     let ob = (newcolumn "[") in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
     let cb = (newcolumn "]") in 
     String.concat [n; ob; pel; cb] 
-  | DSetExpr el -> let n = (newcolumn (indent id)) in 
+  | DSetExpr el -> let n = newcolumn (indent id) in 
     let ob = (newcolumn "{") in 
     let pel = (newcolumn_concat (print_exp 0) ", " el) in 
     let cb = (newcolumn "}") in 
     String.concat [n; ob; pel; cb]
-  | DMapExpr eel -> let n = (newcolumn (indent id)) in
+  | DMapExpr eel -> let n = newcolumn (indent id) in
     let m = newcolumn "map[" in
     let peel = newcolumn_concat (
       fun (k,v) -> 
@@ -211,7 +211,7 @@ let rec print_exp id = function
       ) ", " eel in 
     let cb = (newcolumn "]") in 
     String.concat [n; m; peel; cb]
-  | DSubscript(e1, e2) -> let n = (newcolumn (indent id)) in
+  | DSubscript(e1, e2) -> let n = newcolumn (indent id) in
     let pe1 = (print_exp id e1) in 
     let pe2 = (print_exp 0 e2) in
     String.concat [n; pe1; pe2]
@@ -357,12 +357,12 @@ and print_stmt id = function
     let ps = newcolumn ";" in 
     String.concat [n; pre; pil; pt; prhs; ps]
   | DAssign _ -> failwith "unsupported assignment targets"
-  | DCallStmt(ident, el) -> let n = (newcolumn (indent id)) in 
-    let pident = print_id 0 ident in 
+  | DCallStmt(e, el) -> let n = newcolumn (indent id) in 
+    let pident = print_exp 0 e in 
     let ob = newcolumn "(" in 
-    let pel = (newcolumn_concat (print_exp 0) ", " el) in
-    let cb = (newcolumn ")") in 
-    let ps = (newcolumn ";") in
+    let pel = newcolumn_concat (print_exp 0) ", " el in
+    let cb = newcolumn ")" in 
+    let ps = newcolumn ";" in
     String.concat [n; pident; ob; pel; cb; ps]
   | DIf(e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
     let i = newcolumn "if " in 

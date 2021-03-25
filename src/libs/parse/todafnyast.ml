@@ -90,7 +90,7 @@ let rec exp_dfy = function
   | BinaryOp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
   | UnaryOp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l
-  | Call (id, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(id, d_args)
+  | Call (e, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(exp_dfy e, d_args)
   | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
   | Array el -> DArrayExpr (List.map ~f:exp_dfy el)
   | Set el -> DSetExpr (List.map ~f:exp_dfy el)
@@ -123,9 +123,9 @@ let param_dfy = function
   | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
 
 let rec stmt_dfy = function
-  | Exp(Call(id, el)) -> 
+  | Exp(Call(e, el)) -> 
     let d_el = List.map ~f:exp_dfy el in
-    DCallStmt (id, d_el)
+    DCallStmt (exp_dfy e, d_el)
   | Assign (t, il, el) -> begin match t with 
     | Typ t -> DAssign (typ_dfy t, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
