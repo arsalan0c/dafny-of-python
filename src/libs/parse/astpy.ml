@@ -78,6 +78,7 @@ type binaryop =
 
 type exp =
   | Identifier of identifier
+  | Dot of exp * identifier
   | BinaryOp of exp * binaryop * exp
   | UnaryOp of unaryop * exp
   | Literal of literal

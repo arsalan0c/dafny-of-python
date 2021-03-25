@@ -187,7 +187,8 @@ power:
   ;
 
 primary:
-  | s=IDENTIFIER el=arguments { Call (Identifier s, el) } (* TODO: allow primaries as calls *)
+  | e=primary DOT s=IDENTIFIER { Dot (e, s) }
+  | e=primary el=arguments { Call (e, el) } (* TODO: allow primaries as calls *)
   | e=primary; s=slice { Subscript (e, s) }
   | a=atom { a }
   ;

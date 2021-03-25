@@ -87,6 +87,7 @@ let binaryop_dfy = function
   
 let rec exp_dfy = function
   | Identifier s -> DIdentifier s
+  | Dot (e, ident) -> DDot (exp_dfy e, ident)
   | BinaryOp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
   | UnaryOp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l

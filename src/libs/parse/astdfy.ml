@@ -48,7 +48,8 @@ type dParam = dId * dTyp (* name: type *)
 [@@deriving sexp]
 
 type dExpr = 
-  | DIdentifier of segment
+  | DIdentifier of dId
+  | DDot of dExpr * dId
   | DNull
   | DThis
   | DFresh

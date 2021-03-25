@@ -63,7 +63,7 @@ let newcolumn_h id s =
   let n = newcolumn (indent id) in 
   String.concat [nl; n; s]
 
-let print_id id seg =
+let print_ident id seg =
   let n = newcolumn (indent id) in 
   let s = Sourcemap.segment_value seg in
   let source_name = begin
@@ -138,24 +138,31 @@ let print_type id t =
 let print_param id = function
   | (i, t) -> 
     let n = newcolumn (indent id) in 
-    let idd = print_id 0 i in 
+    let idd = print_ident 0 i in 
     let pt = match t with 
     | DVoid -> "" 
     | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt] in
     String.concat [n; idd; pt]
 
 let rec print_exp id = function
-  | DIdentifier s -> print_id id s
-  | DBinary(e1, op, e2) -> let n = newcolumn (indent id) in 
-    let ob = (newcolumn "(") in 
-    let pe1 = (print_exp 0 e1) in
+  | DIdentifier s -> let n = newcolumn (indent id) in 
+    let pid = print_ident 0 s in
+    String.concat [n; pid]
+  | DDot (e, ident) -> let n = newcolumn (indent id) in 
+    let pe = print_exp 0 e in 
+    let dot = newcolumn "." in
+    let pid = print_ident 0 ident in
+    String.concat [n; pe; dot; pid]
+  | DBinary (e1, op, e2) -> let n = newcolumn (indent id) in 
+    let ob = newcolumn "(" in 
+    let pe1 = print_exp 0 e1 in
     let ps1 = newcolumn " " in
-    let pop = (print_op 0 op) in
+    let pop = print_op 0 op in
     let ps2 = newcolumn " " in 
-    let pe2 = (print_exp 0 e2) in
+    let pe2 = print_exp 0 e2 in
     let cb = newcolumn ")" in
     String.concat [n; ob; pe1; ps1; pop; ps2; pe2; cb]
-  | DUnary(op, e) -> let n = newcolumn (indent id) in 
+  | DUnary (op, e) -> let n = newcolumn (indent id) in 
     let ob = newcolumn "(" in 
     let pop = (print_op 0 op) in 
     let pe = print_exp 0 e in 
@@ -179,7 +186,7 @@ let rec print_exp id = function
   (* | DThis -> newcolumn ((indent id) ^ "this")
   | DFresh -> newcolumn ((indent id) ^ "fresh")
    *)
-  | DCallExpr(e, el) -> let n = newcolumn (indent id) in 
+  | DCallExpr (e, el) -> let n = newcolumn (indent id) in 
     let pe = print_exp 0 e in 
     let ob = newcolumn "(" in 
     let pel = newcolumn_concat (print_exp 0) ", " el in 
@@ -233,13 +240,13 @@ let rec print_exp id = function
     String.concat [n; ob; res; cb]
   | DForall(il, e) -> let n = newcolumn (indent id) in 
     let f = (newcolumn "forall ") in 
-    let pil = (newcolumn_concat (print_id 0) ", " il) in 
+    let pil = (newcolumn_concat (print_ident 0) ", " il) in 
     let pd = (newcolumn " :: ") in
     let pe = (print_exp 0 e) in
     String.concat [n; f; pil; pd; pe]
   | DExists(il, e) -> let n = newcolumn (indent id) in
     let ex = (newcolumn "exists") in 
-    let pil = (newcolumn_concat (print_id 0) ", " il) in
+    let pil = (newcolumn_concat (print_ident 0) ", " il) in
     let pc = (newcolumn " :: ") in 
     let pe = (print_exp 0 e) in
     String.concat [n; ex; pil; pc; pe]
@@ -423,7 +430,7 @@ let print_toplevel id = function
   | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
     let n = newcolumn (indent id) in 
     let m = newcolumn "method" in
-    let pident = print_id 1 ident in
+    let pident = print_ident 1 ident in
     let pgl = match gl with | [] -> "" | gl -> begin
       let ob = newcolumn "<" in
       let pvs = newcolumn_concat (fun s -> s) ", " gl in
@@ -453,7 +460,7 @@ let print_toplevel id = function
   | DFuncMeth (speclst, ident, gl, pl, t, e) -> (curr_func := Sourcemap.segment_value ident);
     let n = newcolumn (indent id) in 
     let m = newcolumn "function method" in
-    let pident = print_id 1 ident in
+    let pident = print_ident 1 ident in
     let pgl = match gl with | [] -> "" | gl -> begin
       let ob = newcolumn "<" in
       let pvs = newcolumn_concat (fun s -> s) ", " gl in
@@ -484,7 +491,7 @@ let print_toplevel id = function
 
   | DTypSynonym (ident, otyp) -> let n = newcolumn (indent id) in
     let t = newcolumn "type" in
-    let pident = print_id 1 ident in
+    let pident = print_ident 1 ident in
     let pet = match otyp with | None -> "" 
       | Some typ -> let eq = newcolumn " = " in let pt = print_type 0 typ in
       String.concat [eq; pt] in
