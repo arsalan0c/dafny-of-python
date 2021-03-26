@@ -109,6 +109,7 @@ type spec =
   | Post of exp 
   | Invariant of exp
   | Decreases of exp
+  | Reads of exp
   [@@deriving sexp]
 
 type stmt =

@@ -81,6 +81,7 @@ and dSpec =
   | DEnsures of dExpr
   | DInvariant of dExpr
   | DDecreases of dExpr
+  | DReads of dExpr
   (* | DFresh of dExpr *)
   (* | DOld of dExpr *)
   [@@deriving sexp]

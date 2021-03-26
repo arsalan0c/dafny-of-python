@@ -120,6 +120,7 @@ let spec_dfy = function
   | Post c -> DEnsures (exp_dfy c)
   | Invariant e -> DInvariant (exp_dfy e)
   | Decreases d -> DDecreases (exp_dfy d)
+  | Reads e -> DReads (exp_dfy e)
 
 let param_dfy = function
   | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
@@ -165,10 +166,6 @@ let convert_typsyn ident rhs =
   | _ -> None
 
 let toplevel_dfy generics = function
-  | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
-  | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in
     [DMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
   | Assign (_, il, el) -> begin
@@ -178,14 +175,28 @@ let toplevel_dfy generics = function
     end
   | _ -> []
 
+let func_dfy generics = function
+  | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+  | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+  | _ -> []  
+
+let is_func = function
+  | Function (_, _, _, _, (Return _)::[]) -> true
+  | Function (_, _, _, _, (Exp _)::[]) -> true
+  | _ -> false
+
 let prog_dfy p =
   let (n_p, gens) = Convertgeneric.prog p in
-  let list_rewritten = Convertlist.prog n_p in
-  let calls_rewritten = Convertcall.prog list_rewritten in
+  let (Program sl) = Convertlist.prog n_p in
+  let d_funcs = List.fold ~f:(fun so_far s -> so_far@(func_dfy gens s)) ~init:[] sl in
+  let non_funcs = List.filter ~f:(fun x -> not (is_func x)) sl in
+  let calls_rewritten = Convertcall.prog (Program non_funcs) in
   let (Program sl) = Convertfor.prog calls_rewritten in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
   let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
   let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), [], [], [], d_non_toplevel_stmts) in
-  DProg ("daffodil", d_toplevel_stmts@[main])
+  DProg ("daffodil", d_funcs@d_toplevel_stmts@[main])

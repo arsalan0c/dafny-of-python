@@ -5,6 +5,12 @@ let printf = Stdlib.Printf.printf
 let var_num : int ref = ref 0
 let list_constructor = "newList"
 
+(* 
+1. converts lists
+2. converts subscripts
+3. converts length
+*)
+
 let rec exp_lst = function
   | Literal l -> ([], Literal l)
   | Identifier ident -> ([], Identifier ident)
@@ -37,7 +43,9 @@ let rec exp_lst = function
         | _ -> (al1, lel)
         end
     )  ~init:([], Tuple [])
-  | Len (s, e) -> let al, n_e = exp_lst e in (al, Len (s, n_e))
+  | Len (s, e) -> 
+    let al, n_e = exp_lst e in
+    (al, Call (Dot (n_e, (fst s, Some "len")), []))
   | Old (s, e) -> let al, n_e = exp_lst e in (al, Old (s, n_e))
   | Forall (sl, e) -> let al, n_e = exp_lst e in (al, Forall (sl, n_e))
   | Exists (sl, e) -> let al, n_e = exp_lst e in (al, Exists (sl, n_e))
@@ -80,13 +88,14 @@ let rec exp_lst = function
     (al1@al2@al3, IfElseExp (n_e1, n_c, n_e2))
   | e -> ([], e)   
 
-let spec_calls = function
+let spec_lst = function
   | Pre e -> let al, n_e = exp_lst e in (al, Pre n_e)
   | Post e -> let al, n_e = exp_lst e in (al, Post n_e)
   | Invariant e -> let al, n_e = exp_lst e in (al, Invariant n_e)
   | Decreases e -> let al, n_e = exp_lst e in (al, Decreases n_e)
+  | Reads e -> let al, n_e = exp_lst e in (al, Reads n_e)
 
-let rec stmt_calls s = 
+let rec stmt_lst s = 
   match s with
   | Pass -> [s]
   | Break -> [s]
@@ -99,11 +108,11 @@ let rec stmt_calls s =
     als@[Assign (t, il, n_el)]
   | IfElse (e, sl1, esl, sl3) -> 
     let al, n_e = exp_lst e in
-    let n_sl1 = List.fold sl1 ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
-    let res = List.map esl ~f:(fun (e, s) -> (exp_lst e, List.fold s ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[])) in (* fold here to flatten list *)
+    let n_sl1 = List.fold sl1 ~f:(fun so_far s -> so_far@(stmt_lst s)) ~init:[] in
+    let res = List.map esl ~f:(fun (e, s) -> (exp_lst e, List.fold s ~f:(fun so_far s -> so_far@(stmt_lst s)) ~init:[])) in (* fold here to flatten list *)
     let als = List.fold res ~f:(fun so_far ((al,_), _) -> so_far@al) ~init:[] in
     let n_esl = List.fold res ~f:(fun so_far ((_, n_e), s) -> so_far@[(n_e, s)]) ~init:[] in
-    let n_sl3 = List.fold sl3 ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
+    let n_sl3 = List.fold sl3 ~f:(fun so_far s -> so_far@(stmt_lst s)) ~init:[] in
     al@als@[IfElse (n_e, n_sl1, n_esl, n_sl3)]
   | Return e -> 
     let al, n_e = exp_lst e in
@@ -111,16 +120,19 @@ let rec stmt_calls s =
   | Assert e -> let al, n_e = exp_lst e in al@[Assert n_e]
   | While (specl, e, sl) ->
     let al, n_e = exp_lst e in
-    let als_nspecl = List.map specl ~f:spec_calls in
+    let als_nspecl = List.map specl ~f:spec_lst in
     let n_specl = List.fold als_nspecl ~f:(fun so_far (_, n_spec) -> so_far@[n_spec]) ~init:[] in
     let als = List.fold als_nspecl ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
-    let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
+    let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_lst s)) ~init:[] in
     let aug_n_sl = n_sl@als in
     al@als@[While (n_specl, n_e, aug_n_sl)]
   | Function (specl, i, pl, t, sl) ->
-    let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
-    [Function (specl, i, pl, t, n_sl)]
+    let als_nspecl = List.map specl ~f:spec_lst in
+    let n_specl = List.fold als_nspecl ~f:(fun so_far (_, n_spec) -> so_far@[n_spec]) ~init:[] in
+    let als = List.fold als_nspecl ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
+    let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_lst s)) ~init:[] in
+    als@[Function (n_specl, i, pl, t, n_sl)]
   | For _ -> [s]
 
 let prog = function 
-  | Program sl -> Program (List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[])
+  | Program sl -> Program (List.fold sl ~f:(fun so_far s -> so_far@(stmt_lst s)) ~init:[])

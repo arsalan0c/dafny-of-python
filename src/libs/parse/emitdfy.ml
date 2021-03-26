@@ -305,6 +305,10 @@ and print_spec id = function
     let s = newcolumn "decreases" in 
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe]
+  | DReads e -> let n  = newcolumn (indent id) in 
+    let s = newcolumn "reads" in 
+    let pe = (print_exp 1 e) in
+    String.concat [n; s; pe]
 
 let rec print_rets id = function
   | [] -> ""

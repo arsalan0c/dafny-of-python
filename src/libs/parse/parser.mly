@@ -18,7 +18,7 @@ menhir --list-errors
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
 %token <float> FLOAT
-%token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
+%token PRE POST INVARIANT FORALL EXISTS DECREASES READS DOUBLECOLON
 %token <Sourcemap.segment> LEN OLD
 
 %left BIIMPL IMPLIES EXPLIES 
@@ -262,6 +262,7 @@ spec:
   | POST; e=spec_rem { Post e }
   | DECREASES; e=spec_rem { Decreases e }
   | INVARIANT; e=spec_rem { Invariant e }
+  | READS; e=spec_rem { Reads e }
   ;
 
 spec_rem:

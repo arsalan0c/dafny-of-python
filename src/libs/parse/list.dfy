@@ -14,7 +14,10 @@ method test() returns (res: list<int>) {
     return a;
 }
 
-method newList<T>(s: seq<T>) returns (l: list<T>) {
+method newList<T>(s: seq<T>) returns (l: list<T>) 
+    ensures fresh(l)
+    ensures l.lst == s
+{
     return new list<T>(s);
 }
 
@@ -28,7 +31,9 @@ class list<T(==)> {
     // a[0] => a.index(0)
     // a[0..10] => a.range(0, 10)
     // a = [1, 2, 3] => a = new list<int>([1, 2, 3]);
-    constructor(l: seq<T>) {
+    constructor(l: seq<T>)
+        ensures lst == l
+    {
         lst := l;
     }
 
@@ -135,11 +140,19 @@ class list<T(==)> {
         }
     }
 
-    method atIndex(idx: int) returns (e: T)
+    function method atIndex(idx: int): (e: T)
+        reads this
         requires 0 <= idx < |lst|
         ensures e == lst[idx]
     {
-        return lst[idx];
+        lst[idx]
+    }
+
+    function method len(): (l: int) 
+        reads this
+        ensures l == |lst|
+    {
+        |lst|
     }
 
     method count(e: T) returns (res: int)
