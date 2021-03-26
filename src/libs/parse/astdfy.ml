@@ -29,7 +29,7 @@ type dOp =
   [@@deriving sexp]
 
 type dTyp = 
-  | DIdentTyp of segment
+  | DIdentTyp of segment * dTyp option (* generic parameter *)
   | DInt of segment
   | DReal of segment 
   | DBool of segment  
@@ -67,6 +67,7 @@ type dExpr =
   | DMapExpr of (dExpr * dExpr) list
   | DArrayExpr of dExpr list
   | DSubscript of dExpr * dExpr (* value, slice *)
+  | DIndex of dExpr
   | DSlice of dExpr option * dExpr option (* lower, upper *)
   | DForall of dId list * dExpr
   | DExists of dId list * dExpr

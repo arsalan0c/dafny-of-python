@@ -17,7 +17,7 @@ let check_exp_typ = function
 
 let rec typ_dfy = function 
   | Void -> DVoid
-  | IdentTyp s -> DIdentTyp s
+  | IdentTyp s -> DIdentTyp (s, None)
   | Int s -> DInt s
   | Float s -> DReal s 
   | Bool s -> DBool s
@@ -25,7 +25,7 @@ let rec typ_dfy = function
   | NonTyp _ -> DVoid
   | LstTyp (s, ot) -> begin
     match ot with
-    | Some t -> let r = typ_dfy t in DSeq(s, r)
+    | Some t -> let r = typ_dfy t in DIdentTyp (s, Some r)
     | None -> failwith "Please specify the exact sequence type"
     end
   | Set(s, ot) -> begin
@@ -99,6 +99,7 @@ let rec exp_dfy = function
   | Dict eel -> DMapExpr (List.map ~f:(fun (k,v) -> (exp_dfy k, exp_dfy v)) eel)
   | Tuple el -> DSeqExpr (List.map ~f:exp_dfy el)  
   | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
+  | Index e -> DIndex (exp_dfy e)
   | Slice (e1, e2) -> begin
     match e1, e2 with
     | Some r1, Some r2 -> DSlice (Some (exp_dfy r1), Some (exp_dfy r2))
@@ -166,6 +167,8 @@ let convert_typsyn ident rhs =
 let toplevel_dfy generics = function
   | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+  | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in
     [DMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
   | Assign (_, il, el) -> begin
@@ -177,7 +180,8 @@ let toplevel_dfy generics = function
 
 let prog_dfy p =
   let (n_p, gens) = Convertgeneric.prog p in
-  let calls_rewritten = Convertcall.prog n_p in
+  let list_rewritten = Convertlist.prog n_p in
+  let calls_rewritten = Convertcall.prog list_rewritten in
   let (Program sl) = Convertfor.prog calls_rewritten in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in

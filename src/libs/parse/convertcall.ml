@@ -2,47 +2,43 @@ open Base
 open Astpy
 
 let temp_source = Hashtbl.create (module String)
-
 let printf = Stdlib.Printf.printf
-
 let var_num : int ref = ref 0
-let curr_block : stmt list ref = ref []
 
-let update_block = fun () -> let res = !curr_block in curr_block := []; res
+let replace e call =
+  let pos, v = begin 
+    match e with
+    | Identifier ident -> ident
+    | Dot (_, ident) -> ident
+    | Call _ -> Sourcemap.default_segment
+    | Subscript _ -> Sourcemap.default_segment
+    | IfElseExp _ -> Sourcemap.default_segment
+    | _ -> failwith "primary of call can only be an identifier or dot expression" (* TODO: add segments other primaries *)
+    end in
+  let name = var_num := !var_num + 1; "tempcall_" ^ (Int.to_string !var_num) in
+  let _ = begin
+    match v with 
+    | Some v -> Hashtbl.add temp_source ~key:name ~data:v
+    | None -> Hashtbl.add temp_source ~key:name ~data:name
+  end in
+  let a_ident = (pos, Some name) in
+  (Assign (Typ (NonTyp Sourcemap.default_segment), [Identifier a_ident], [call]), Identifier a_ident)
 
-let olst = function
-  | Some l -> l
-  | None -> []
-
-let concat_olst sl = List.concat (List.map ~f:olst sl)
-
-let rec exp_calls = function (* TODO: add support for dot expressions *)
+let rec exp_calls = function
   | Identifier ident -> ([], Identifier ident)
-  | BinaryOp(e1, op, e2) -> 
+  | Dot (e, ident) -> let al, n_e = exp_calls e in (al, Dot (n_e, ident))
+  | BinaryOp (e1, op, e2) -> 
     let al1, n_e1 = exp_calls e1 in
     let al2, n_e2 = exp_calls e2 in
-    (al1@al2, BinaryOp(n_e1, op, n_e2))
-
-  | UnaryOp(op, e) -> let al, n_e = exp_calls e in (al, UnaryOp(op, n_e))
+    (al1@al2, BinaryOp (n_e1, op, n_e2))
+  | UnaryOp(op, e) -> let al, n_e = exp_calls e in (al, UnaryOp (op, n_e))
   | Call (e, el) -> (* handle recursive case *)
     let al, n_e = exp_calls e in
     let als_nes = List.map ~f:exp_calls el in
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
-    let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in begin
-      match e with
-      | Identifier ident -> begin
-        let name = var_num := !var_num + 1; "temp_call" ^ (Int.to_string !var_num) in
-        let _ = begin
-          match snd ident with 
-          | Some v -> Hashtbl.add temp_source ~key:name ~data:v
-          | None -> Hashtbl.add temp_source ~key:name ~data:name
-        end in
-        let pos = fst ident in 
-        let n_id = (pos, Some name) in
-        (al@als@[Assign (Typ (NonTyp (Sourcemap.default_segment)), [Identifier n_id], [Call (n_e, n_el)])], Identifier n_id)
-        end
-      | _ -> (al@als, Call (n_e, n_el))
-    end
+    let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
+    let a, a_ident = replace e (Call (n_e, n_el)) in 
+    (al@als@[a], a_ident)
   | Lst el -> 
     let als_nes = List.map ~f:exp_calls el in
     List.fold als_nes ~f:(
@@ -52,17 +48,27 @@ let rec exp_calls = function (* TODO: add support for dot expressions *)
         | _ -> (al1, lel)
         end
     )  ~init:([], Lst [])
-
-  (* | Subscript(e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
-  | Slice(e1, e2) -> begin
-    match e1, e2 with
-    | Some r1, Some r2 -> DSlice(Some (exp_dfy r1), Some (exp_dfy r2))
-    | Some r1, None -> DSlice(Some (exp_dfy r1), None)
-    | None, Some r2 -> DSlice(None, Some (exp_dfy r2))
-    | None, None -> DSlice (None, None)
-    end *)
-  (* | Forall(s, e) -> DForall(s, exp_dfy e)
-  | Exists(s, e) -> DExists(s, exp_dfy e) *)
+  | Forall (sl, e) -> let al, n_e = exp_calls e in (al, Forall (sl, n_e))
+  | Exists (sl, e) -> let al, n_e = exp_calls e in (al, Exists (sl, n_e))
+  | Subscript (e1, e2) -> 
+    let al1, n_e1 = exp_calls e1 in
+    let al2, n_e2 = exp_calls e2 in
+    (al1@al2, Subscript (n_e1, n_e2))
+  | Index e -> let al, n_e = exp_calls e in (al, Index n_e)
+  | Slice (e1, e2) -> begin
+      match e1, e2 with
+      | Some r1, Some r2 -> 
+        let al1, n_r1 = exp_calls r1 in
+        let al2, n_r2 = exp_calls r2 in
+        (al1@al2, Slice (Some n_r1, Some n_r2))
+      | Some r1, None ->
+        let al1, n_r1 = exp_calls r1 in
+        (al1, Slice (Some n_r1, None))
+      | None, Some r2 -> 
+        let al2, n_r2 = exp_calls r2 in
+        (al2, Slice (None, Some n_r2))
+      | None, None -> ([], Slice (None, None))
+    end
   | Len (s, e) -> let al, n_e = exp_calls e in (al, Len (s, n_e))
   | Old (s, e) -> let al, n_e = exp_calls e in (al, Old (s, n_e))
   | e -> ([], e)   
@@ -76,9 +82,9 @@ let spec_calls = function
 let rec stmt_calls s = 
   match s with
   | Pass -> [s]
-  | Exp _ -> [s] 
   | Break -> [s]
   | Continue -> [s]
+  | Exp e -> let al, n_e = exp_calls e in al@[Exp n_e]
   | Assign (t, il, el) -> 
     let als_nes = List.map ~f:exp_calls el in
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
@@ -108,7 +114,7 @@ let rec stmt_calls s =
     (* List.iter specl ~f:(fun spec -> let al, _ = spec_calls spec in if List.length al > 0 then failwith "Calls are not allowed in function specifications"); *)
     let n_sl = List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[] in
     [Function (specl, i, pl, t, n_sl)]
-  | s -> [s]
+  | For _ -> [s]
 
 let prog = function 
   | Program sl -> Program (List.fold sl ~f:(fun so_far s -> so_far@(stmt_calls s)) ~init:[])

@@ -12,9 +12,10 @@ type result = Success of string | Fail of string
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
 
+let list_dfy = "./src/libs/parse/list.dfy"
 let prelude_f = "./src/libs/parse/prelude.dfy" 
 let dafny_f = "program.dfy"
-let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f; prelude_f]
+let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f; prelude_f; list_dfy]
 let python_f = "program.py"
 let mypy_command = String.concat ~sep:" " ["mypy"; python_f]
 

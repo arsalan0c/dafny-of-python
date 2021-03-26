@@ -188,13 +188,13 @@ power:
 
 primary:
   | e=primary DOT s=IDENTIFIER { Dot (e, s) }
-  | e=primary el=arguments { Call (e, el) } (* TODO: allow primaries as calls *)
-  | e=primary; s=slice { Subscript (e, s) }
+  | e=primary LPAREN el=arguments RPAREN { Call (e, el) }
+  | e=primary s=slice { Subscript (e, s) }
   | a=atom { a }
   ;
 
 arguments:
-  | LPAREN; el=exp_star; RPAREN { el } (* TODO: allow default arguments *)
+  |  el=exp_star { el } (* TODO: allow default arguments *)
   ;
 
 atom:
@@ -223,12 +223,12 @@ strings:
   ;
 
 slice: 
-  | LBRACK; e=exp; o=slice_h { Slice (Some e, o) } 
+  | LBRACK; e1=exp; COLON; e2=exp; RBRACK { Slice (Some e1, Some e2) } 
+  | LBRACK; e=exp; COLON; RBRACK { Slice (Some e, None) } 
+  | LBRACK; COLON; e=exp  RBRACK { Slice (None, Some e) }
+  | LBRACK; COLON; RBRACK { Slice (None, None) }  
+  | LBRACK; e=exp; RBRACK { Index e }
   ; 
-slice_h:
-  | RBRACK { None }
-  | COLON; e=exp; RBRACK { Some e }
-  ;
 
 lst_exp:
   | LBRACK; el=exp_star; RBRACK { Lst el }

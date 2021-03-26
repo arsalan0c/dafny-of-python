@@ -63,14 +63,20 @@ let newcolumn_h id s =
   let n = newcolumn (indent id) in 
   String.concat [nl; n; s]
 
+(* if this is a temporary name, retrieve its name in the original source to store in the sourcemap *)
+let source_from_temp name =
+  match Base.Hashtbl.find Convertcall.temp_source name with 
+  | Some v -> v
+  | None -> begin 
+    match Base.Hashtbl.find Convertcall.temp_source name with 
+    | Some v -> v
+    | None -> name
+  end
+
 let print_ident id seg =
   let n = newcolumn (indent id) in 
   let s = Sourcemap.segment_value seg in
-  let source_name = begin
-    match Base.Hashtbl.find Convertcall.temp_source s with
-    | Some v -> v
-    | None -> s
-  end in
+  let source_name = source_from_temp s in
   let n_seg = (fst seg, Some source_name) in
   add_sm !curr_line !curr_column n_seg;
   let ps = newcolumn s in
@@ -105,7 +111,8 @@ let print_op id = function
 
 let print_type id t = 
   let rec get_v t = match t with
-    | DIdentTyp s -> Sourcemap.segment_value s
+    | DIdentTyp (s, Some t) -> (Sourcemap.segment_value s) ^ "<" ^ (get_v t) ^ ">"
+    | DIdentTyp (s, None) -> Sourcemap.segment_value s
     | DInt _ -> "int"
     | DReal _ -> "real"
     | DBool _ -> "bool"
@@ -120,7 +127,7 @@ let print_type id t =
   in   
   let get_s t = 
     match t with
-    | DIdentTyp s -> s
+    | DIdentTyp (s, _) -> s
     | DInt s -> s
     | DReal s -> s
     | DBool s -> s
@@ -218,11 +225,14 @@ let rec print_exp id = function
       ) ", " eel in 
     let cb = (newcolumn "]") in 
     String.concat [n; m; peel; cb]
-  | DSubscript(e1, e2) -> let n = newcolumn (indent id) in
-    let pe1 = (print_exp id e1) in 
-    let pe2 = (print_exp 0 e2) in
+  | DSubscript (e1, e2) -> let n = newcolumn (indent id) in
+    let pe1 = print_exp id e1 in 
+    let pe2 = print_exp 0 e2 in
     String.concat [n; pe1; pe2]
-  | DSlice(e1, e2) ->
+  | DIndex e -> let n = newcolumn (indent id) in
+    let pe = print_exp id e in 
+    String.concat [n; pe]
+  | DSlice (e1, e2) ->
     let n = newcolumn (indent id) in 
     let ob = (newcolumn "[") in
     let res = begin

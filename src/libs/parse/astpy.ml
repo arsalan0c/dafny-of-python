@@ -77,11 +77,11 @@ type binaryop =
   [@@deriving sexp]
 
 type exp =
+  | Literal of literal
   | Identifier of identifier
   | Dot of exp * identifier
   | BinaryOp of exp * binaryop * exp
   | UnaryOp of unaryop * exp
-  | Literal of literal
   | Call of exp * exp list
   | Lst of exp list
   | Array of exp list
@@ -90,6 +90,7 @@ type exp =
   | Dict of (exp * exp) list
   | Tuple of exp list
   | Subscript of exp * exp (* value, slice *)
+  | Index of exp
   | Slice of exp option * exp option (* lower, upper *)
   | Forall of identifier list * exp
   | Exists of identifier list * exp
