@@ -25,13 +25,14 @@ let replace e call =
   (Assign (Typ (NonTyp Sourcemap.default_segment), [Identifier a_ident], [call]), Identifier a_ident)
 
 let rec exp_calls = function
+  | Literal l -> ([], Literal l)
   | Identifier ident -> ([], Identifier ident)
   | Dot (e, ident) -> let al, n_e = exp_calls e in (al, Dot (n_e, ident))
   | BinaryOp (e1, op, e2) -> 
     let al1, n_e1 = exp_calls e1 in
     let al2, n_e2 = exp_calls e2 in
     (al1@al2, BinaryOp (n_e1, op, n_e2))
-  | UnaryOp(op, e) -> let al, n_e = exp_calls e in (al, UnaryOp (op, n_e))
+  | UnaryOp (op, e) -> let al, n_e = exp_calls e in (al, UnaryOp (op, n_e))
   | Call (e, el) -> (* handle recursive case *)
     let al, n_e = exp_calls e in
     let als_nes = List.map ~f:exp_calls el in
@@ -48,6 +49,15 @@ let rec exp_calls = function
         | _ -> (al1, lel)
         end
     )  ~init:([], Lst [])
+  | Tuple el -> 
+    let als_nes = List.map ~f:exp_calls el in
+    List.fold als_nes ~f:(
+      fun (al1, lel) (al2, e) -> begin
+        match lel with
+        | Tuple el -> (al1@al2, Tuple (el@[e]))
+        | _ -> (al1, lel)
+        end
+    )  ~init:([], Tuple [])
   | Forall (sl, e) -> let al, n_e = exp_calls e in (al, Forall (sl, n_e))
   | Exists (sl, e) -> let al, n_e = exp_calls e in (al, Exists (sl, n_e))
   | Subscript (e1, e2) -> 
@@ -71,6 +81,11 @@ let rec exp_calls = function
     end
   | Len (s, e) -> let al, n_e = exp_calls e in (al, Len (s, n_e))
   | Old (s, e) -> let al, n_e = exp_calls e in (al, Old (s, n_e))
+  | IfElseExp (e1, c, e2) -> 
+    let al1, n_e1 = exp_calls e1 in
+    let al2, n_c = exp_calls c in
+    let al3, n_e2 = exp_calls e2 in
+    (al1@al2@al3, IfElseExp (n_e1, n_c, n_e2))
   | e -> ([], e)   
 
 let spec_calls = function

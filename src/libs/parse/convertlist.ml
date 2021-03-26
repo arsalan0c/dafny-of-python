@@ -28,6 +28,15 @@ let rec exp_lst = function
     let n_ident = (Sourcemap.default_pos, Some name) in
     let new_list_call = Call (Identifier (Sourcemap.default_pos, Some list_constructor), [Lst n_el]) in
     (als@[Assign (Typ (NonTyp Sourcemap.default_segment), [Identifier n_ident], [new_list_call])], Identifier n_ident)
+  | Tuple el -> 
+    let als_nes = List.map ~f:exp_lst el in
+    List.fold als_nes ~f:(
+      fun (al1, lel) (al2, e) -> begin
+        match lel with
+        | Tuple el -> (al1@al2, Tuple (el@[e]))
+        | _ -> (al1, lel)
+        end
+    )  ~init:([], Tuple [])
   | Len (s, e) -> let al, n_e = exp_lst e in (al, Len (s, n_e))
   | Old (s, e) -> let al, n_e = exp_lst e in (al, Old (s, n_e))
   | Forall (sl, e) -> let al, n_e = exp_lst e in (al, Forall (sl, n_e))
@@ -64,6 +73,11 @@ let rec exp_lst = function
       (al2, Slice (None, Some n_r2))
     | None, None -> ([], Slice (None, None))
     end 
+  | IfElseExp (e1, c, e2) -> 
+    let al1, n_e1 = exp_lst e1 in
+    let al2, n_c = exp_lst c in
+    let al3, n_e2 = exp_lst e2 in
+    (al1@al2@al3, IfElseExp (n_e1, n_c, n_e2))
   | e -> ([], e)   
 
 let spec_calls = function
