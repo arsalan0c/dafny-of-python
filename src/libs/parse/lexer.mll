@@ -18,7 +18,6 @@
 
   let emit_segment lb v = 
     let s = Lexing.lexeme_start_p lb in
-    (* printf "Seg: %s, %s\n" (Sourcemap.print_pos s) (pring v); *)
     (s, v)
 
   let next_line (lb: Lexing.lexbuf) cols =
