@@ -6,9 +6,9 @@ let var_num : int ref = ref 0
 let list_constructor = "newList"
 
 (* 
-1. converts lists
-2. converts subscripts
-3. converts length
+  1. converts lists
+  2. converts subscripts
+  3. converts length
 *)
 
 let rec exp_lst = function
@@ -63,16 +63,31 @@ let rec exp_lst = function
     let al1, n_e1 = exp_lst e1 in
     let al2, n_e2 = exp_lst e2 in
     let n_e = begin match n_e2 with
-      | Slice (Some _, Some _) -> failwith ""
-      | Slice (Some _, None) -> failwith ""
-      | Slice (None, Some _) -> failwith ""
-      | Slice (None, None) -> failwith ""
+      | Slice (Some l, Some h) -> Call (
+        Dot (
+          n_e1,
+          (Sourcemap.default_pos, Some "range")
+        ), [l; h])
+      | Slice (Some l, None) -> Call (
+        Dot (
+          n_e1,
+          (Sourcemap.default_pos, Some "rangeLower")
+        ), [l])
+      | Slice (None, Some h) -> Call (
+        Dot (
+          n_e1,
+          (Sourcemap.default_pos, Some "rangeUpper")
+        ), [h])
+      | Slice (None, None) -> Call (
+        Dot (
+          n_e1,
+          (Sourcemap.default_pos, Some "rangeNone")
+        ), [])
       | Index i -> Call (
         Dot (
           n_e1,
           (Sourcemap.default_pos, Some "atIndex")
-        ), 
-        [i])
+        ), [i])
       | _ -> failwith "Second argument of subscript must be a slice or index"
     end in
     (al1@al2, n_e)

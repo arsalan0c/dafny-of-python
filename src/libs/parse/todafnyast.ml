@@ -182,11 +182,17 @@ let func_dfy generics = function
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+  | Function (speclst, i, pl, te, Pass::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
+  | Function (speclst, i, pl, te, []) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
   | _ -> []  
 
 let is_func = function
   | Function (_, _, _, _, (Return _)::[]) -> true
   | Function (_, _, _, _, (Exp _)::[]) -> true
+  | Function (_, _, _, _, Pass::[]) -> true
+  | Function (_, _, _, _, []) -> true
   | _ -> false
 
 let prog_dfy p =

@@ -190,9 +190,10 @@ let rec print_exp id = function
   | DNull -> let n = newcolumn (indent id) in 
     let pn = newcolumn "null" in
     String.concat [n; pn]
-  (* | DThis -> newcolumn ((indent id) ^ "this")
-  | DFresh -> newcolumn ((indent id) ^ "fresh")
-   *)
+  | DEmptyExpr -> newcolumn (indent id)
+  | DThis -> let n = newcolumn (indent id) in 
+    let pt = newcolumn "this" in
+    String.concat [n; pt]
   | DCallExpr (e, el) -> let n = newcolumn (indent id) in 
     let pe = print_exp 0 e in 
     let ob = newcolumn "(" in 

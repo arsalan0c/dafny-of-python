@@ -50,6 +50,7 @@ type dParam = dId * dTyp (* name: type *)
 type dExpr = 
   | DIdentifier of dId
   | DDot of dExpr * dId
+  | DEmptyExpr
   | DNull
   | DThis
   | DIntLit of int

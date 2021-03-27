@@ -1,19 +1,5 @@
 /* imperative implementation, based on Python's list: https://docs.python.org/3/tutorial/datastructures.html */
 
-method test() returns (res: list<int>) {
-    // var d := [1, 2, 3];
-    // var a1 := new List(d);
-    // var a := new List([a1]);
-    // // assert 2 in d;
-    // // var r := l.index(2);
-    // // assert r == 1;
-    // take(a1);
-    // var b := [new List([1])];
-    // return new List([1]);
-    var a := newList([1, 2, 3]);
-    return a;
-}
-
 method newList<T>(s: seq<T>) returns (l: list<T>) 
     ensures fresh(l)
     ensures l.lst == s
@@ -24,13 +10,6 @@ method newList<T>(s: seq<T>) returns (l: list<T>)
 class list<T(==)> {
     var lst: seq<T>
 
-    // lst[|lst| - 1]
-    // lst[1..]
-    // lst[0 := 2]
-
-    // a[0] => a.index(0)
-    // a[0..10] => a.range(0, 10)
-    // a = [1, 2, 3] => a = new list<int>([1, 2, 3]);
     constructor(l: seq<T>)
         ensures lst == l
     {
@@ -39,9 +18,7 @@ class list<T(==)> {
 
     method append(e: T) 
         modifies this
-        // ensures |lst| == |old(lst)| + 1
-        // ensures forall i :: 0 <= i < |lst| - 1 ==> lst[i] == old(lst)[i]
-        // ensures lst[|lst| - 1] == e
+
         ensures lst == old(lst) + [e]
     {
         lst := lst + [e];
@@ -53,12 +30,8 @@ class list<T(==)> {
         ensures |lst| == |old(lst)| + 1
         ensures e in lst
         ensures idx < |lst| ==> lst == old(lst)[0..idx] + [e] + old(lst)[idx..]
-        // ensures idx < |lst| ==> lst[idx] == e
-        // ensures idx < |lst| ==> forall i :: 0 <= i < idx ==> lst[i] == old(lst)[i]
-        // ensures idx < |lst| ==> forall i :: idx < i < |lst| ==> lst[i] == old(lst)[i-1]
         ensures idx >= |lst| ==> lst == old(lst) + [e]
-        // ensures idx >= |lst| ==> lst[|lst| - 1] == e
-        // ensures idx >= |lst| ==> forall i :: 0 <= i < |lst| - 1 ==> lst[i] == old(lst)[i]
+       
     {
         if idx >= |lst| {
             lst := lst + [e];
@@ -148,6 +121,37 @@ class list<T(==)> {
         lst[idx]
     }
 
+    method range(low: int, high: int) returns (l: list<T>)
+        requires 0 <= low <= high <= |lst|
+        ensures fresh(l)
+        ensures l.lst == lst[low..high]
+    {
+        return new list(lst[low..high]);
+    }
+
+    method rangeLower(low: int) returns (l: list<T>)
+        requires 0 <= low < |lst|
+        ensures fresh(l)
+        ensures l.lst == lst[low..]
+    {
+        return new list(lst[low..]);
+    }
+
+    method rangeUpper(upper: int) returns (l: list<T>)
+        requires 0 <= upper <= |lst|
+        ensures fresh(l)
+        ensures l.lst == lst[..upper]
+    {
+        return new list(lst[..upper]);
+    }
+
+    method rangeNone() returns (l: list<T>)
+        ensures fresh(l)
+        ensures l.lst == lst
+    {
+        return new list(lst);
+    }
+
     function method len(): (l: int) 
         reads this
         ensures l == |lst|
@@ -155,10 +159,11 @@ class list<T(==)> {
         |lst|
     }
 
-    method count(e: T) returns (res: int)
+    function method count(e: T): (res: int)
+        reads this
         ensures res == multiset(lst)[e]
     {
-        return multiset(lst)[e];
+        multiset(lst)[e]
     }
 
     method reverse() 
@@ -185,6 +190,10 @@ class list<T(==)> {
     // }
 
     // method sort()
+    //     modifies this
+    //     ensures sorted(lst)
+    //     ensures |lst| == |old(lst)|
+    //     ensures forall i :: 0 <= i < |lst| ==> count(lst[i]) == old(this).count(lst[i])
     // {
 
     // }

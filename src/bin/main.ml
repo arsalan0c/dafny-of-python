@@ -1,12 +1,6 @@
 open Core
 (* open Sexplib *)
 
-(* let parse lexbuf = try Success (Pyparse.Translate.prog_str (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)) with
-  | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"]) *)
-(* 
-let parse_dfyast prelude lexbuf = try Success (prelude ^ "" ^ (Pyparse.Emitdfy.print_prog (Pyparse.Todafnyast.prog_dfy (Pyparse.Convertcall.prog (Pyparse.Parser.f Pyparse.Indenter.f lexbuf))))) with
-  | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"]) *)
-
 type result = Success of string | Fail of string
 
 let printf = Stdlib.Printf.printf
