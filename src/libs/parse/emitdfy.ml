@@ -270,6 +270,11 @@ let rec print_exp id = function
     let pe = print_exp 0 e in
     let cb = newcolumn ")" in
     String.concat [n; old; pe; cb]
+  | DFresh (_, e) -> let n = newcolumn (indent id) in 
+    let fresh = newcolumn "fresh(" in 
+    let pe = print_exp 0 e in
+    let cb = newcolumn ")" in
+    String.concat [n; fresh; pe; cb]
   | DLambda (fl, sl, e) -> let n = newcolumn (indent id) in
     let ob = newcolumn "(" in
     let pfl = newcolumn_concat (print_param 0) ", " fl in
@@ -305,9 +310,13 @@ and print_spec id = function
     let s = newcolumn "decreases" in 
     let pe = (print_exp 1 e) in
     String.concat [n; s; pe]
-  | DReads e -> let n  = newcolumn (indent id) in 
+  | DReads e -> let n = newcolumn (indent id) in 
     let s = newcolumn "reads" in 
     let pe = (print_exp 1 e) in
+    String.concat [n; s; pe]
+  | DModifies e -> let n = newcolumn (indent id) in 
+    let s = newcolumn "modifies" in 
+    let pe = print_exp 1 e in
     String.concat [n; s; pe]
 
 let rec print_rets id = function

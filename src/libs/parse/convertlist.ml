@@ -42,11 +42,21 @@ let rec exp_lst = function
         | Tuple el -> (al1@al2, Tuple (el@[e]))
         | _ -> (al1, lel)
         end
-    )  ~init:([], Tuple [])
+    ) ~init:([], Tuple [])
+  | Array el -> 
+    let als_nes = List.map ~f:exp_lst el in
+    List.fold als_nes ~f:(
+      fun (al1, lel) (al2, e) -> begin
+        match lel with
+        | Tuple el -> (al1@al2, Array (el@[e]))
+        | _ -> (al1, lel)
+        end
+    ) ~init:([], Array [])
   | Len (s, e) -> 
     let al, n_e = exp_lst e in
     (al, Call (Dot (n_e, (fst s, Some "len")), []))
   | Old (s, e) -> let al, n_e = exp_lst e in (al, Old (s, n_e))
+  | Fresh (s, e) -> let al, n_e = exp_lst e in (al, Fresh (s, n_e))
   | Forall (sl, e) -> let al, n_e = exp_lst e in (al, Forall (sl, n_e))
   | Exists (sl, e) -> let al, n_e = exp_lst e in (al, Exists (sl, n_e))
   | Subscript (e1, e2) -> 
@@ -94,6 +104,7 @@ let spec_lst = function
   | Invariant e -> let al, n_e = exp_lst e in (al, Invariant n_e)
   | Decreases e -> let al, n_e = exp_lst e in (al, Decreases n_e)
   | Reads e -> let al, n_e = exp_lst e in (al, Reads n_e)
+  | Modifies e -> let al, n_e = exp_lst e in (al, Modifies n_e)
 
 let rec stmt_lst s = 
   match s with

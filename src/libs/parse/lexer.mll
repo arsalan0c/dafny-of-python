@@ -63,6 +63,7 @@ let post = '#' [' ' '\t']* "post"
 let invariant = '#' [' ' '\t']* "invariant"
 let decreases = '#' [' ' '\t']* "decreases"
 let reads = '#' [' ' '\t']* "reads"
+let modifies = '#' [' ' '\t']* "modifies"
 
 rule main = parse
 | eof { EOF }
@@ -85,6 +86,7 @@ rule main = parse
 | invariant { INVARIANT }
 | decreases { DECREASES }
 | reads { READS }
+| modifies { MODIFIES }
 | "forall" { FORALL }
 | "exists" { EXISTS }
 | "<==>" { BIIMPL (emit_segment lexbuf (Some "<==>" )) }

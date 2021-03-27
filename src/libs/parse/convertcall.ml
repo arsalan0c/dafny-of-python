@@ -81,6 +81,7 @@ let rec exp_calls = function
     end
   | Len (s, e) -> let al, n_e = exp_calls e in (al, Len (s, n_e))
   | Old (s, e) -> let al, n_e = exp_calls e in (al, Old (s, n_e))
+  | Fresh (s, e) -> let al, n_e = exp_calls e in (al, Old (s, n_e))
   | IfElseExp (e1, c, e2) -> 
     let al1, n_e1 = exp_calls e1 in
     let al2, n_c = exp_calls c in
@@ -108,6 +109,7 @@ let spec_calls = function
     (al, al_invs@[Invariant n_e])
   | Decreases e -> let al, n_e = exp_calls e in (al, [Decreases n_e])
   | Reads e -> let al, n_e = exp_calls e in (al, [Reads n_e])
+  | Modifies e -> let al, n_e = exp_calls e in (al, [Modifies n_e])
 
 let rec stmt_calls s = 
   match s with

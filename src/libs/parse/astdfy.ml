@@ -52,8 +52,6 @@ type dExpr =
   | DDot of dExpr * dId
   | DNull
   | DThis
-  | DFresh
-  | DOld of segment * dExpr
   | DIntLit of int
   | DRealLit of float
   | DBoolLit of bool
@@ -72,6 +70,8 @@ type dExpr =
   | DForall of dId list * dExpr
   | DExists of dId list * dExpr
   | DLen of segment * dExpr
+  | DOld of segment * dExpr
+  | DFresh of segment * dExpr
   | DLambda of dParam list * dSpec list * dExpr
   | DIfElseExpr of dExpr * dExpr * dExpr
   | DTupleExpr of dExpr list
@@ -82,8 +82,7 @@ and dSpec =
   | DInvariant of dExpr
   | DDecreases of dExpr
   | DReads of dExpr
-  (* | DFresh of dExpr *)
-  (* | DOld of dExpr *)
+  | DModifies of dExpr
   [@@deriving sexp]
 
 type dStmt = 

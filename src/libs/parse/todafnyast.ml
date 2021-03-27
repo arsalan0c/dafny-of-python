@@ -111,6 +111,7 @@ let rec exp_dfy = function
   | Exists (s, e) -> DExists (s, exp_dfy e)
   | Len (s, e) -> DLen (s, exp_dfy e)
   | Old (s, e) -> DOld (s, exp_dfy e)
+  | Fresh (s, e) -> DFresh (s, exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
   | Lambda (fl, e) -> let dfl = List.map ~f:(fun x -> (x, DVoid)) fl in DLambda (dfl, [], exp_dfy e)
   | IfElseExp (e1, c, e2) -> DIfElseExpr (exp_dfy c, exp_dfy e1, exp_dfy e2)
@@ -121,12 +122,13 @@ let spec_dfy = function
   | Invariant e -> DInvariant (exp_dfy e)
   | Decreases d -> DDecreases (exp_dfy d)
   | Reads e -> DReads (exp_dfy e)
+  | Modifies e -> DModifies (exp_dfy e)
 
 let param_dfy = function
   | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
 
 let rec stmt_dfy = function
-  | Exp(Call(e, el)) -> 
+  | Exp (Call (e, el)) -> 
     let d_el = List.map ~f:exp_dfy el in
     DCallStmt (exp_dfy e, d_el)
   | Assign (t, il, el) -> begin match t with 
@@ -192,8 +194,8 @@ let prog_dfy p =
   let (Program sl) = Convertlist.prog n_p in
   let d_funcs = List.fold ~f:(fun so_far s -> so_far@(func_dfy gens s)) ~init:[] sl in
   let non_funcs = List.filter ~f:(fun x -> not (is_func x)) sl in
-  let calls_rewritten = Convertcall.prog (Program non_funcs) in
-  let (Program sl) = Convertfor.prog calls_rewritten in
+  (* let calls_rewritten = Convertcall.prog (Program non_funcs) in *)
+  let (Program sl) = Convertfor.prog (Program non_funcs) in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in

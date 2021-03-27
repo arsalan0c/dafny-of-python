@@ -18,8 +18,8 @@ menhir --list-errors
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
 %token <float> FLOAT
-%token PRE POST INVARIANT FORALL EXISTS DECREASES READS DOUBLECOLON
-%token <Sourcemap.segment> LEN OLD
+%token PRE POST INVARIANT FORALL EXISTS DECREASES READS MODIFIES DOUBLECOLON 
+%token <Sourcemap.segment> LEN OLD FRESH 
 
 %left BIIMPL IMPLIES EXPLIES 
 %left OR 
@@ -214,6 +214,7 @@ atom:
   | d=dict_exp { d }
   | s=LEN; LPAREN; e=star_exps; RPAREN; { Len (s, e) }
   | s=OLD; LPAREN; e=star_exps; RPAREN; { Old (s, e) }
+  | s=FRESH; LPAREN; e=star_exps; RPAREN; { Fresh (s, e) }
   (* TODO: add comprehensions *)
   ;
 
@@ -263,6 +264,7 @@ spec:
   | DECREASES; e=spec_rem { Decreases e }
   | INVARIANT; e=spec_rem { Invariant e }
   | READS; e=spec_rem { Reads e }
+  | MODIFIES; e=spec_rem { Modifies e }
   ;
 
 spec_rem:

@@ -96,6 +96,7 @@ type exp =
   | Exists of identifier list * exp
   | Len of segment * exp
   | Old of segment * exp
+  | Fresh of segment * exp
   | Typ of pytype
   | Lambda of identifier list * exp
   | IfElseExp of exp * exp * exp
@@ -110,6 +111,7 @@ type spec =
   | Invariant of exp
   | Decreases of exp
   | Reads of exp
+  | Modifies of exp
   [@@deriving sexp]
 
 type stmt =
