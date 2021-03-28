@@ -1,5 +1,5 @@
 {
-  open Parser
+  open Menhir_parser
 
   exception LexError of string
   let printf = Stdlib.Printf.printf
@@ -66,7 +66,7 @@ let modifies = '#' [' ' '\t']* "modifies"
 let forall = '#' [' ' '\t']* "forall"
 let exists = '#' [' ' '\t']* "exists"
 
-rule main = parse
+rule next_token = parse
 | eof { EOF }
 | int_typ as t { INT_TYP (emit_segment lexbuf (Some t)) }
 | float_typ as t { FLOAT_TYP (emit_segment lexbuf (Some t)) }
@@ -151,10 +151,10 @@ rule main = parse
 | float as f { FLOAT (float_of_string f) }
 | identifier as i { IDENTIFIER (emit_segment lexbuf (Some i)) }
 | stringliteral as s { STRING (strip_quotes s) }
-| whitespace { main lexbuf }
+| whitespace { next_token lexbuf }
 | comment { comment lexbuf }
 | _ as c { illegal c }
 
 and comment = parse
-| indent as s { (next_line lexbuf (String.length s - 1); main lexbuf) } 
+| indent as s { (next_line lexbuf (String.length s - 1); next_token lexbuf) } 
 | _ { comment lexbuf }
