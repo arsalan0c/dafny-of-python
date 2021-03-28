@@ -22,7 +22,7 @@ let rec typ_dfy = function
   | Float s -> DReal s 
   | Bool s -> DBool s
   | Str s -> DString s
-  | NonTyp _ -> DVoid
+  | NoneTyp _ -> DVoid
   | LstTyp (s, ot) -> begin
     match ot with
     | Some t -> let r = typ_dfy t in DIdentTyp (s, Some r)
@@ -44,7 +44,7 @@ let rec typ_dfy = function
     match olt with
     | Some (ft::lt) -> 
     (* TODO: add postcondition to check number of args match number returned *)
-      List.iter ~f:(fun t -> if (not (pytype_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt;
+      List.iter ~f:(fun t -> if (not (typ_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt;
       DSeq (s, typ_dfy ft) (* translate to sequence type instead of tuple *)
     | Some [] -> failwith "Please specify the exact tuple type"
     | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)

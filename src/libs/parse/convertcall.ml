@@ -22,7 +22,7 @@ let replace e call =
     | None -> Hashtbl.add temp_source ~key:name ~data:name
   end in
   let a_ident = (pos, Some name) in
-  (Assign (Typ (NonTyp Sourcemap.default_segment), [Identifier a_ident], [call]), Identifier a_ident)
+  (Assign (Typ (NoneTyp Sourcemap.default_segment), [Identifier a_ident], [call]), Identifier a_ident)
 
 let rec exp_calls = function
   | Literal l -> ([], Literal l)

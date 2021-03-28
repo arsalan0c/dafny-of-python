@@ -306,7 +306,7 @@ base_typ:
   | t=INT_TYP { Int t }
   | t=FLOAT_TYP { Float t }
   | t=BOOL_TYP { Bool t }
-  | t=NONE_TYP { NonTyp t }
+  | t=NONE_TYP { NoneTyp t }
   ;
 
 data_typ:

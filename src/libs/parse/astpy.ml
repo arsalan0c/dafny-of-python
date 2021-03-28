@@ -8,25 +8,25 @@ let[@inline] failwith msg = raise (PyAstError msg)
 type literal = BoolLit of bool | IntLit of int | FloatLit of float | StringLit of string | NonLit
 [@@deriving sexp]
 
-type pytype =
+type typ =
   | Void
   | IdentTyp of segment
   | Int of segment
   | Float of segment 
   | Bool of segment 
   | Str of segment  
-  | NonTyp of segment
-  | LstTyp of segment * pytype option
-  | Dict of segment * pytype option * pytype option
-  | Set of segment * pytype option
-  | Tuple of segment * (pytype list) option
-  | Callable of segment * (pytype list) * pytype (* args, return *)
-  (* | Union of segment * pytype list *)
+  | NoneTyp of segment
+  | LstTyp of segment * typ option
+  | Dict of segment * typ option * typ option
+  | Set of segment * typ option
+  | Tuple of segment * (typ list) option
+  | Callable of segment * (typ list) * typ (* args, return *)
+  (* | Union of segment * typ list *)
   [@@deriving sexp]
 
-let rec pytype_compare pt1 pt2 = 
+let rec typ_compare pt1 pt2 = 
   let o_compare ot1 ot2 = match ot1, ot2 with
-  | Some t1, Some t2 -> pytype_compare t1 t2
+  | Some t1, Some t2 -> typ_compare t1 t2
   | None, None -> 0
   | _, _ -> -1
   in 
@@ -37,13 +37,13 @@ let rec pytype_compare pt1 pt2 =
   | Float f1, Float f2 -> segment_values_compare f1 f2
   | Bool b1, Bool b2 -> segment_values_compare b1 b2
   | Str s1, Str s2 -> segment_values_compare s1 s2
-  | NonTyp _, NonTyp _ -> 0
+  | NoneTyp _, NoneTyp _ -> 0
   | LstTyp (_, ot1), LstTyp (_, ot2) -> o_compare ot1 ot2
   | Dict (_, ot1, ot3), Dict (_, ot2, ot4) -> (o_compare ot1 ot2) + (o_compare ot3 ot4)
   | Set (_, ot1), Set (_, ot2) -> o_compare ot1 ot2
   | Tuple (_, otl1), Tuple (_, otl2) -> begin
     match otl1, otl2 with
-    | Some tl1, Some tl2 -> List.compare pytype_compare tl1 tl2
+    | Some tl1, Some tl2 -> List.compare typ_compare tl1 tl2
     | None, None -> 0
     | _, _ -> -1
     end
@@ -97,7 +97,7 @@ type exp =
   | Len of segment * exp
   | Old of segment * exp
   | Fresh of segment * exp
-  | Typ of pytype
+  | Typ of typ
   | Lambda of identifier list * exp
   | IfElseExp of exp * exp * exp
   [@@deriving sexp]
