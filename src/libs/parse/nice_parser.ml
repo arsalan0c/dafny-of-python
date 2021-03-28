@@ -56,15 +56,15 @@ module Make (P : RAW_PARSER) : NICE_PARSER with
     ref None
 
   let next_token lexbuf =
-    let token = P.next_token lexbuf in
+    let token = P.indent lexbuf in
     curr_token := Some token;
     token
 
-  let parse ?(file="") indent lexbuf =
+  let parse ?(file="") lexbuf =
     Location.input_name := file;
     Location.input_lexbuf := Some lexbuf;
     try 
-      P.parse (indent (next_token lexbuf))
+      P.parse next_token lexbuf
     with
     | P.LexError msg ->
       reraise (LexError { msg; loc = Location.curr lexbuf })
@@ -74,14 +74,13 @@ module Make (P : RAW_PARSER) : NICE_PARSER with
 
   let parse_string ?(pos : Lexing.position option) s =
     match pos with
-    | None -> parse P.indent (Lexing.from_string s)
+    | None -> parse (Lexing.from_string s)
     | Some ({pos_fname=file; _} as p) ->
       parse ~file Lexing.{(from_string s) with lex_start_p=p; lex_curr_p=p}
 
   let parse_chan ?(pos : Lexing.position option) chan =
     match pos with
-    | None ->
-      parse (Lexing.from_channel chan)
+    | None -> parse (Lexing.from_channel chan)
     | Some ({pos_fname=file; _} as p) ->
       parse ~file Lexing.{(from_channel chan) with lex_start_p=p; lex_curr_p=p}
 
