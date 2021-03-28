@@ -77,6 +77,7 @@ type binaryop =
   [@@deriving sexp]
 
 type exp =
+  | Typ of typ
   | Literal of literal
   | Identifier of identifier
   | Dot of exp * identifier
@@ -97,7 +98,6 @@ type exp =
   | Len of segment * exp
   | Old of segment * exp
   | Fresh of segment * exp
-  | Typ of typ
   | Lambda of identifier list * exp
   | IfElseExp of exp * exp * exp
   [@@deriving sexp]

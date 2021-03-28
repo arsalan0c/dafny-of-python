@@ -1,21 +1,19 @@
-module Option = struct
-  type 'a t = 'a option
+type 'a t = 'a option
 
-  let map f = function
-    | None -> None
-    | Some x -> Some (f x)
+let fail = None
 
+let map f = function
+  | None -> None
+  | Some x -> Some (f x)
 
-  let return x = Some x 
+let return x = Some x 
 
-  let fail = None
+let (>>=) m f = 
+  match m with
+  | None -> None
+  | Some x -> f x
 
-  let (>>=) m f = 
-    match m with
-    | None -> None
-    | Some x -> f x
-
-   let fold some none = function
-     | None -> none
-     | Some x -> some x  
-end
+let fold some none = function
+  | None -> none
+  | Some x -> some x
+  

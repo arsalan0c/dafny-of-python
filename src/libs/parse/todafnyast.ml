@@ -2,6 +2,8 @@ open Base
 
 open Astpy
 open Astdfy
+open Typing
+open Sourcemap
 
 let printf = Stdlib.Printf.printf
 
@@ -85,7 +87,9 @@ let binaryop_dfy = function
   | Implies s -> DImplies s
   | Explies s -> DExplies s
   
-let rec exp_dfy = function
+let rec exp_dfy e =
+  (* (match check e (Bool default_segment) [] with | Some (_, ctx) -> print ctx | None -> ()); *)
+  match e with
   | Identifier s -> DIdentifier s
   | Dot (e, ident) -> DDot (exp_dfy e, ident)
   | BinaryOp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
@@ -154,11 +158,11 @@ let is_toplevel = function
   | _ -> false
 
 let convert_typsyn ident rhs =
-  match ident with | Identifier ident -> let ident_v = Sourcemap.segment_value ident in begin
+  match ident with | Identifier ident -> let ident_v = segment_value ident in begin
     match rhs with 
     | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
     | Identifier typ_ident -> begin 
-        let s_typ = Sourcemap.segment_value typ_ident in
+        let s_typ = segment_value typ_ident in
         match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
         | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp typ_ident))))
         | None -> None
