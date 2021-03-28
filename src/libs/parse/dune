@@ -1,14 +1,17 @@
 (menhir
-  (modules parser)
+  (modules menhir_parser)
   (flags ("--dump" "--explain")))
 (ocamllex lexer)
 (library
   (name pyparse)
   (libraries
+    stdio
+    compiler-libs.common
     core
     sexplib
     re2
   )
   (preprocess (pps ppx_jane -allow-unannotated-ignores))
+  (inline_tests)
   (flags (:standard -w -14))
 )
