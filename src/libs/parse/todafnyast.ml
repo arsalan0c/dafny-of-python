@@ -14,35 +14,35 @@ let typ_idents = Hash_set.create (module String)
 
 let check_exp_typ = function
   | Typ t -> t
-  | Identifier s -> IdentTyp s
+  | Identifier s -> TIdent s
   | _ -> failwith "Invalid type"
 
 let rec typ_dfy = function 
-  | Void -> DVoid
-  | IdentTyp s -> DIdentTyp (s, None)
-  | Int s -> DInt s
-  | Float s -> DReal s 
-  | Bool s -> DBool s
-  | Str s -> DString s
-  | NoneTyp _ -> DVoid
-  | LstTyp (s, ot) -> begin
+  | TVoid -> DVoid
+  | TIdent s -> DIdentTyp (s, None)
+  | TInt s -> DInt s
+  | TFloat s -> DReal s 
+  | TBool s -> DBool s
+  | TStr s -> DString s
+  | TNone _ -> DVoid
+  | TLst (s, ot) -> begin
     match ot with
     | Some t -> let r = typ_dfy t in DIdentTyp (s, Some r)
     | None -> failwith "Please specify the exact sequence type"
     end
-  | Set(s, ot) -> begin
+  | TSet(s, ot) -> begin
     match ot with
     | Some t -> let r = typ_dfy t in DSet(s, r)
     | None -> failwith "Please specify the exact set type"
     end
-  | Dict(s, ot1, ot2) -> begin
+  | TDict(s, ot1, ot2) -> begin
     match ot1, ot2 with
     | Some t1, Some t2 -> let r1 = typ_dfy t1 in let r2 = typ_dfy t2 in DMap (s, r1, r2)
     | None, _ -> failwith "Please specify the exact map type"
     | _, None -> failwith "Please specify the exact map type"
 
     end
-  | Tuple (s, olt) -> begin
+  | TTuple (s, olt) -> begin
     match olt with
     | Some (ft::lt) -> 
     (* TODO: add postcondition to check number of args match number returned *)
@@ -51,7 +51,7 @@ let rec typ_dfy = function
     | Some [] -> failwith "Please specify the exact tuple type"
     | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)
     end
-  | Callable (s, tl, t) -> DFunTyp (s, List.map ~f:typ_dfy tl, typ_dfy t)
+  | TCallable (s, tl, t) -> DFunTyp (s, List.map ~f:typ_dfy tl, typ_dfy t)
 
 let ident_dfy = function
   | s -> s
@@ -92,8 +92,8 @@ let rec exp_dfy e =
   match e with
   | Identifier s -> DIdentifier s
   | Dot (e, ident) -> DDot (exp_dfy e, ident)
-  | BinaryOp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
-  | UnaryOp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
+  | BinaryExp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
+  | UnaryExp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l
   | Call (e, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(exp_dfy e, d_args)
   | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
@@ -164,7 +164,7 @@ let convert_typsyn ident rhs =
     | Identifier typ_ident -> begin 
         let s_typ = segment_value typ_ident in
         match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
-        | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp typ_ident))))
+        | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (TIdent typ_ident))))
         | None -> None
       end
     | _ -> None

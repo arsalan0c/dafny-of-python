@@ -81,11 +81,11 @@ compound_stmt:
 
 assignment:
   | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (t, [Identifier id], [e2]) }
-  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Typ Void, [Identifier id], [e2]) } (* used for type aliasing and variable updates *)
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Typ Void, [Identifier s1], [BinaryOp (Identifier s1, Divide s2, e2)]) }
+  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Typ TVoid, [Identifier id], [e2]) } (* used for type aliasing and variable updates *)
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Divide s2, e2)]) }
   ;
 
 elif_star:
@@ -130,55 +130,55 @@ exp:
   ;
 
 implication:
-  | bim=implication; s=BIIMPL; d=disjunction { BinaryOp (bim, BiImpl s, d) }
-  | im=implication; s=IMPLIES; d=disjunction { BinaryOp (im, Implies s, d) }
-  | im=implication; s=EXPLIES; d=disjunction { BinaryOp (im, Explies s, d) }
+  | bim=implication; s=BIIMPL; d=disjunction { BinaryExp (bim, BiImpl s, d) }
+  | im=implication; s=IMPLIES; d=disjunction { BinaryExp (im, Implies s, d) }
+  | im=implication; s=EXPLIES; d=disjunction { BinaryExp (im, Explies s, d) }
   | d=disjunction; { d }
   ;
 
 disjunction:
-  | d=disjunction; s=OR; c=conjunction { BinaryOp (d, Or s, c) }
+  | d=disjunction; s=OR; c=conjunction { BinaryExp (d, Or s, c) }
   | c=conjunction { c }
   ;
 
 conjunction:
-  | ir=conjunction; s=AND; i=inversion { BinaryOp (ir, And s, i) }
+  | ir=conjunction; s=AND; i=inversion { BinaryExp (ir, And s, i) }
   | i=inversion { i }
   ;
 
 inversion:
-  | s=NOT; i=inversion { UnaryOp(Not s, i) }
+  | s=NOT; i=inversion { UnaryExp (Not s, i) }
   | c=comparison { c }
   ;
 
 comparison:
-  | c=comparison; s=EQEQ; e=sum { BinaryOp (c, EqEq s, e) }
-  | c=comparison; s=NEQ; e=sum { BinaryOp (c, NEq s, e) }
-  | c=comparison; s=LTE; e=sum { BinaryOp (c, LEq s, e) }
-  | c=comparison; s=LT; e=sum { BinaryOp (c, Lt s, e) }
-  | c=comparison; s=GTE; e=sum { BinaryOp (c, GEq s, e) }
-  | c=comparison; s=GT; e=sum { BinaryOp (c, Gt s, e) }
-  | c=comparison; s=NOT_IN; e=sum { BinaryOp (c, NotIn s, e) }
-  | c=comparison; s=IN; e=sum { BinaryOp (c, In s, e) }
+  | c=comparison; s=EQEQ; e=sum { BinaryExp (c, EqEq s, e) }
+  | c=comparison; s=NEQ; e=sum { BinaryExp (c, NEq s, e) }
+  | c=comparison; s=LTE; e=sum { BinaryExp (c, LEq s, e) }
+  | c=comparison; s=LT; e=sum { BinaryExp (c, Lt s, e) }
+  | c=comparison; s=GTE; e=sum { BinaryExp (c, GEq s, e) }
+  | c=comparison; s=GT; e=sum { BinaryExp (c, Gt s, e) }
+  | c=comparison; s=NOT_IN; e=sum { BinaryExp (c, NotIn s, e) }
+  | c=comparison; s=IN; e=sum { BinaryExp (c, In s, e) }
   | s=sum { s }
   ;
 
 sum:
-  | e=sum; s=PLUS; t=term { BinaryOp (e, Plus s, t) }
-  | e=sum; s=MINUS; t=term { BinaryOp (e, Minus s, t) }
+  | e=sum; s=PLUS; t=term { BinaryExp (e, Plus s, t) }
+  | e=sum; s=MINUS; t=term { BinaryExp (e, Minus s, t) }
   | t=term { t }
   ; 
 
 term:
-  | t=term; s=TIMES; f=factor { BinaryOp (t, Times s, f) }
-  | t=term; s=DIVIDE; f=factor { BinaryOp (t, Divide s, f) }
-  | t=term; s=MOD; f=factor { BinaryOp (t, Mod s, f) }
+  | t=term; s=TIMES; f=factor { BinaryExp (t, Times s, f) }
+  | t=term; s=DIVIDE; f=factor { BinaryExp (t, Divide s, f) }
+  | t=term; s=MOD; f=factor { BinaryExp (t, Mod s, f) }
   | f=factor { f }
   ;
 
 factor:
   | PLUS; f=factor { f }
-  | s=MINUS; f=factor { UnaryOp (UMinus s, f) }
+  | s=MINUS; f=factor { UnaryExp (UMinus s, f) }
   | p=power { p }
   ;
 
@@ -288,7 +288,7 @@ dedent_plus:
 
 typ_id:
   | t=typ { t }
-  | t=IDENTIFIER { IdentTyp t }
+  | t=IDENTIFIER { TIdent t }
   ;
 
 typ:
@@ -302,23 +302,23 @@ typ_plus:
   ;
 
 base_typ:
-  | t=STRING_TYP { Str t }
-  | t=INT_TYP { Int t }
-  | t=FLOAT_TYP { Float t }
-  | t=BOOL_TYP { Bool t }
-  | t=NONE_TYP { NoneTyp t }
+  | t=STRING_TYP { TStr t }
+  | t=INT_TYP { TInt t }
+  | t=FLOAT_TYP { TFloat t }
+  | t=BOOL_TYP { TBool t }
+  | t=NONE_TYP { TNone t }
   ;
 
 data_typ:
-  | l=LIST_TYP LBRACK t=typ_id RBRACK { LstTyp (l, Some t) }
-  | l=LIST_TYP { LstTyp (l, None) }
-  | d=DICT_TYP LBRACK t1=typ_id COMMA t2=typ_id RBRACK { Dict (d, Some t1, Some t2) }
-  | d=DICT_TYP { Dict (d, None, None) }
-  | s=SET_TYP LBRACK t=typ_id RBRACK { Set (s, Some t) }
-  | s=SET_TYP { Set (s, None) }
-  | tt=TUPLE_TYP LBRACK tl=typ_plus; RBRACK { Tuple (tt, Some tl) }
-  | t=TUPLE_TYP { Tuple (t, None) }
-  | ct=CALLABLE_TYP LBRACK LBRACK tl=typ_plus RBRACK COMMA t=typ_id RBRACK { Callable (ct, tl, t)  }
+  | l=LIST_TYP LBRACK t=typ_id RBRACK { TLst (l, Some t) }
+  | l=LIST_TYP { TLst (l, None) }
+  | d=DICT_TYP LBRACK t1=typ_id COMMA t2=typ_id RBRACK { TDict (d, Some t1, Some t2) }
+  | d=DICT_TYP { TDict (d, None, None) }
+  | s=SET_TYP LBRACK t=typ_id RBRACK { TSet (s, Some t) }
+  | s=SET_TYP { TSet (s, None) }
+  | tt=TUPLE_TYP LBRACK tl=typ_plus; RBRACK { TTuple (tt, Some tl) }
+  | t=TUPLE_TYP { TTuple (t, None) }
+  | ct=CALLABLE_TYP LBRACK LBRACK tl=typ_plus RBRACK COMMA t=typ_id RBRACK { TCallable (ct, tl, t)  }
   /* | u=UNION_TYP LBRACK tl=typ_plus; RBRACK { Union (u, tl) } */
   ;
 

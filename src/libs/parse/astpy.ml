@@ -9,18 +9,18 @@ type literal = BoolLit of bool | IntLit of int | FloatLit of float | StringLit o
 [@@deriving sexp]
 
 type typ =
-  | Void
-  | IdentTyp of segment
-  | Int of segment
-  | Float of segment 
-  | Bool of segment 
-  | Str of segment  
-  | NoneTyp of segment
-  | LstTyp of segment * typ option
-  | Dict of segment * typ option * typ option
-  | Set of segment * typ option
-  | Tuple of segment * (typ list) option
-  | Callable of segment * (typ list) * typ (* args, return *)
+  | TVoid
+  | TIdent of segment
+  | TInt of segment
+  | TFloat of segment 
+  | TBool of segment 
+  | TStr of segment  
+  | TNone of segment
+  | TLst of segment * typ option
+  | TDict of segment * typ option * typ option
+  | TSet of segment * typ option
+  | TTuple of segment * (typ list) option
+  | TCallable of segment * (typ list) * typ (* args, return *)
   (* | Union of segment * typ list *)
   [@@deriving sexp]
 
@@ -31,17 +31,17 @@ let rec typ_compare pt1 pt2 =
   | _, _ -> -1
   in 
   match pt1, pt2 with
-  | Void, Void -> 0
-  | IdentTyp id1, IdentTyp id2 -> segment_values_compare id1 id2
-  | Int i1, Int i2 -> segment_values_compare i1 i2
-  | Float f1, Float f2 -> segment_values_compare f1 f2
-  | Bool b1, Bool b2 -> segment_values_compare b1 b2
-  | Str s1, Str s2 -> segment_values_compare s1 s2
-  | NoneTyp _, NoneTyp _ -> 0
-  | LstTyp (_, ot1), LstTyp (_, ot2) -> o_compare ot1 ot2
-  | Dict (_, ot1, ot3), Dict (_, ot2, ot4) -> (o_compare ot1 ot2) + (o_compare ot3 ot4)
-  | Set (_, ot1), Set (_, ot2) -> o_compare ot1 ot2
-  | Tuple (_, otl1), Tuple (_, otl2) -> begin
+  | TVoid, TVoid -> 0
+  | TIdent id1, TIdent id2 -> segment_values_compare id1 id2
+  | TInt i1, TInt i2 -> segment_values_compare i1 i2
+  | TFloat f1, TFloat f2 -> segment_values_compare f1 f2
+  | TBool b1, TBool b2 -> segment_values_compare b1 b2
+  | TStr s1, TStr s2 -> segment_values_compare s1 s2
+  | TNone _, TNone _ -> 0
+  | TLst (_, ot1), TLst (_, ot2) -> o_compare ot1 ot2
+  | TDict (_, ot1, ot3), TDict (_, ot2, ot4) -> (o_compare ot1 ot2) + (o_compare ot3 ot4)
+  | TSet (_, ot1), TSet (_, ot2) -> o_compare ot1 ot2
+  | TTuple (_, otl1), TTuple (_, otl2) -> begin
     match otl1, otl2 with
     | Some tl1, Some tl2 -> List.compare typ_compare tl1 tl2
     | None, None -> 0
@@ -81,8 +81,8 @@ type exp =
   | Literal of literal
   | Identifier of identifier
   | Dot of exp * identifier
-  | BinaryOp of exp * binaryop * exp
-  | UnaryOp of unaryop * exp
+  | BinaryExp of exp * binaryop * exp
+  | UnaryExp of unaryop * exp
   | Call of exp * exp list
   | Lst of exp list
   | Array of exp list

@@ -1,4 +1,4 @@
-open Base
+(* open Base
 open Astpy
 open Sourcemap
 open Sexplib
@@ -93,4 +93,4 @@ and check (e: exp) (tp: typ) : unit t = match e with
     end
   | e -> synth e >>= typ_eq tp (* TODO: replace with subtyping *)
 
-end
+end *)
