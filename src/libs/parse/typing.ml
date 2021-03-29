@@ -70,26 +70,27 @@ let with_var (type a) (x: var) (m: a t) : a t = fun ctx ->
   | (_, (y, None)::_) when String.compare x y = 0 -> failwith "" (* type of variable should have been set *)
   | _ -> assert false
 
-
+(* use *)
 let rec synth e = match e with
   | Typ tp -> return tp
   | Identifier ident -> lookup (segment_value ident) ctx
   | Literal BoolLit _ -> return (Bool default_segment)
   | UnaryOp (Not, _) -> return (Bool default_segment)
-  | UnaryOp (Not, e) -> return (Bool default_segment)
   (* | BinaryOp (e1, op, e2) -> synth e1 >>= fun tp1 -> synth e2 >>= fun tp2 -> return () *)
   | _ -> failwith "unsupported synth"
 
-let rec check (e: exp) (tp: typ) ctx : unit t = match e with
+(* construct *)  
+and check (e: exp) (tp: typ) : unit t = match e with
   (* | Identifier ident -> check_var (segment_value ident) tp *)
+  | BinaryOp (e1, op, e2) -> 
+    match op with
+    | Plus _ -> match check e1 tp, check e2 tp2 with | Some
+    | And _ ->  match check e1 tp, check e2 tp2 with | Some
   | IfElseExp (e1, c, e2) -> begin 
-    match check c (Bool default_segment) ctx, check e1 tp ctx, check e2 tp ctx with 
-    | Some (Bool _), Some _, Some _ -> if typ_compare y z = 0 then Some y else None 
+    match check c (Bool default_segment), check e1 tp, check e2 tp with 
+    | Some (Bool _), Some _, Some _ -> return tp
     | _ -> None
     end
-  | e -> begin match synth e ctx with
-    | Some tp' -> if typ_compare tp tp' then Some tp else None
-    | None -> Options.fail
-    end
+  | e -> synth e >>= typ_eq tp (* TODO: replace with subtyping *)
 
-(* end *)
+end
