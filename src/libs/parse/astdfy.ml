@@ -29,6 +29,7 @@ type dOp =
   [@@deriving sexp]
 
 type dTyp = 
+  | DVoid
   | DIdentTyp of segment * dTyp option (* generic parameter *)
   | DInt of segment
   | DReal of segment 
@@ -39,7 +40,6 @@ type dTyp =
   | DSet of segment * dTyp
   | DMap of segment * dTyp * dTyp
   | DArray of segment * dTyp
-  | DVoid
   | DTuple of segment * dTyp list
   | DFunTyp of segment * dTyp list * dTyp
   [@@deriving sexp]
@@ -90,7 +90,7 @@ type dStmt =
   | DEmptyStmt
   | DAssume of dExpr
   | DAssert of dExpr
-  | DAssign of dTyp * dExpr list * dExpr list
+  | DAssign of dTyp option * dExpr list * dExpr list
   | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
   | DWhile of dSpec list * dExpr * dStmt list
   | DReturn of dExpr list

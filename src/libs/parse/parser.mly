@@ -80,12 +80,12 @@ compound_stmt:
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (t, [Identifier id], [e2]) }
-  | id=IDENTIFIER; EQ; e2=star_exps { Assign (Typ TVoid, [Identifier id], [e2]) } (* used for type aliasing and variable updates *)
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (Typ TVoid, [Identifier s1], [BinaryExp (Identifier s1, Divide s2, e2)]) }
+  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (Some t, [Identifier id], [e2]) }
+  | id=IDENTIFIER; EQ; e2=star_exps { Assign (None, [Identifier id], [e2]) } (* used for type aliasing and variable updates *)
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Divide s2, e2)]) }
   ;
 
 elif_star:

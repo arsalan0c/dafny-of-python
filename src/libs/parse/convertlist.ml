@@ -33,7 +33,7 @@ let rec exp_lst = function
     let name = var_num := !var_num + 1; "templist_" ^ (Int.to_string !var_num) in
     let n_ident = (Sourcemap.default_pos, Some name) in
     let new_list_call = Call (Identifier (Sourcemap.default_pos, Some list_constructor), [Lst n_el]) in
-    (als@[Assign (Typ (TNone Sourcemap.default_segment), [Identifier n_ident], [new_list_call])], Identifier n_ident)
+    (als@[Assign (None, [Identifier n_ident], [new_list_call])], Identifier n_ident) (* TODO: use type of rhs *)
   | Tuple el -> 
     let als_nes = List.map ~f:exp_lst el in
     List.fold als_nes ~f:(

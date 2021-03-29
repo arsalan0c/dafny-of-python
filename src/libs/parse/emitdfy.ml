@@ -352,32 +352,32 @@ and print_stmt id = function
     let b = newcolumn "break" in 
     let ps = (newcolumn ";") in
     String.concat [n; b; ps]
-  | DAssign(_, [], _) -> ""
-  | DAssign(t, (DTupleExpr ((DIdentifier first)::rest))::_, el) -> let n = newcolumn (indent id) in
+  | DAssign (_, [], _) -> ""
+  | DAssign (ot, (DTupleExpr ((DIdentifier first)::rest))::_, el) -> let n = newcolumn (indent id) in
     let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
     let pre = if exists then "" else begin
       vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
       newcolumn "var "
     end in
     let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
-    let pt = begin match t with 
-    | DVoid -> "" 
-    | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
+    let pt = begin match ot with 
+    | None -> "" 
+    | Some t -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
     end in
     let pa = newcolumn " := " in
     let pel = newcolumn_concat (print_exp 0) ", " el in
     let ps = newcolumn ";" in 
     String.concat [n; pre; pil; pt; pa; pel; ps] 
-  | DAssign(t, (DIdentifier first)::rest, el) -> let n = newcolumn (indent id) in
+  | DAssign(ot, (DIdentifier first)::rest, el) -> let n = newcolumn (indent id) in
     let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
     let pre = if exists then "" else begin
       vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
       newcolumn "var "
     end in
     let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
-    let pt = begin match t with 
-    | DVoid -> "" 
-    | _ -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
+    let pt = begin match ot with 
+    | None -> "" 
+    | Some t -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
     end in
     let prhs = match el with 
       | [] -> "" | el -> begin
@@ -388,14 +388,14 @@ and print_stmt id = function
     let ps = newcolumn ";" in 
     String.concat [n; pre; pil; pt; prhs; ps]
   | DAssign _ -> failwith "unsupported assignment targets"
-  | DCallStmt(e, el) -> let n = newcolumn (indent id) in 
+  | DCallStmt (e, el) -> let n = newcolumn (indent id) in 
     let pident = print_exp 0 e in 
     let ob = newcolumn "(" in 
     let pel = newcolumn_concat (print_exp 0) ", " el in
     let cb = newcolumn ")" in 
     let ps = newcolumn ";" in
     String.concat [n; pident; ob; pel; cb; ps]
-  | DIf(e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
+  | DIf (e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
     let i = newcolumn "if " in 
     let pe = print_exp 0 e in
     let ob = newcolumn " {" in 
@@ -429,7 +429,7 @@ and print_stmt id = function
       String.concat [pecb; nl; pst; n; nl2; n2; cb]
     end in
     String.concat [n; i; pe; ob; nl; pst; nl2; n2; cb; pelif; pelse]
-  | DWhile(speclst, e, sl) -> let n = newcolumn (indent id) in
+  | DWhile (speclst, e, sl) -> let n = newcolumn (indent id) in
     let w = newcolumn "while" in 
     let pe = print_exp 1 e in 
     let nl = newline () in 
@@ -448,7 +448,7 @@ and print_stmt id = function
     String.concat [n; r; pel; ps]
 
 let print_declaration id = function
-  | (i, t) -> print_stmt id (DAssign (t, [DIdentifier i], [DIdentifier i]))
+  | (i, t) -> print_stmt id (DAssign (Some t, [DIdentifier i], [DIdentifier i]))
 
 let print_toplevel id = function
   | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
@@ -474,13 +474,15 @@ let print_toplevel id = function
     let n2 = newcolumn (indent id) in 
     let ob2 = newcolumn "{" in
     let nl3 = newline () in
-    let ppl = (newline_concat (print_declaration (id+2)) pl) in 
+    let ppl = newline_concat (print_declaration (id+2)) pl in 
     let nl4 = newline () in
     let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
     let n3 = newcolumn (indent id) in
     let cb2 = newcolumn "}" in 
     let nl5 = newline () in 
-    String.concat [n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5]
+    String.concat [
+      n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5
+    ]
   | DFuncMeth (speclst, ident, gl, pl, t, e) -> (curr_func := Sourcemap.segment_value ident);
     let n = newcolumn (indent id) in 
     let m = newcolumn "function method" in

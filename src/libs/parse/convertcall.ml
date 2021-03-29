@@ -21,8 +21,8 @@ let replace e call =
     | Some v -> Hashtbl.add temp_source ~key:name ~data:v
     | None -> Hashtbl.add temp_source ~key:name ~data:name
   end in
-  let a_ident = (pos, Some name) in
-  (Assign (Typ (TNone Sourcemap.default_segment), [Identifier a_ident], [call]), Identifier a_ident)
+  let a_ident = (pos, Some name) in 
+  (Assign (None, [Identifier a_ident], [call]), Identifier a_ident) (* TODO: use type of call *)
 
 let rec exp_calls = function
   | Literal l -> ([], Literal l)

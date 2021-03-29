@@ -18,7 +18,6 @@ let check_exp_typ = function
   | _ -> failwith "Invalid type"
 
 let rec typ_dfy = function 
-  | TVoid -> DVoid
   | TIdent s -> DIdentTyp (s, None)
   | TInt s -> DInt s
   | TFloat s -> DReal s 
@@ -30,12 +29,12 @@ let rec typ_dfy = function
     | Some t -> let r = typ_dfy t in DIdentTyp (s, Some r)
     | None -> failwith "Please specify the exact sequence type"
     end
-  | TSet(s, ot) -> begin
+  | TSet (s, ot) -> begin
     match ot with
     | Some t -> let r = typ_dfy t in DSet(s, r)
     | None -> failwith "Please specify the exact set type"
     end
-  | TDict(s, ot1, ot2) -> begin
+  | TDict (s, ot1, ot2) -> begin
     match ot1, ot2 with
     | Some t1, Some t2 -> let r1 = typ_dfy t1 in let r2 = typ_dfy t2 in DMap (s, r1, r2)
     | None, _ -> failwith "Please specify the exact map type"
@@ -136,7 +135,8 @@ let rec stmt_dfy = function
     let d_el = List.map ~f:exp_dfy el in
     DCallStmt (exp_dfy e, d_el)
   | Assign (t, il, el) -> begin match t with 
-    | Typ t -> DAssign (typ_dfy t, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
+    | Some (Typ t) -> DAssign (Some (typ_dfy t), List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
+    | None -> DAssign (None, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
     end
   | IfElse (e, sl1, esl, sl3) -> let d_esl = List.map ~f:(fun (e,sl) -> let d_e = exp_dfy e in (d_e, (List.map ~f:stmt_dfy sl))) esl in DIf(exp_dfy e, (List.map ~f:stmt_dfy sl1), d_esl, (List.map ~f:stmt_dfy sl3))

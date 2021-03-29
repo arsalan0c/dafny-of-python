@@ -9,7 +9,6 @@ type literal = BoolLit of bool | IntLit of int | FloatLit of float | StringLit o
 [@@deriving sexp]
 
 type typ =
-  | TVoid
   | TIdent of segment
   | TInt of segment
   | TFloat of segment 
@@ -31,7 +30,6 @@ let rec typ_compare pt1 pt2 =
   | _, _ -> -1
   in 
   match pt1, pt2 with
-  | TVoid, TVoid -> 0
   | TIdent id1, TIdent id2 -> segment_values_compare id1 id2
   | TInt i1, TInt i2 -> segment_values_compare i1 i2
   | TFloat f1, TFloat f2 -> segment_values_compare f1 f2
@@ -118,7 +116,7 @@ type stmt =
   | IfElse of exp * stmt list * (exp * stmt list) list * stmt list
   | For of spec list * exp list * exp * stmt list
   | While of spec list * exp * stmt list
-  | Assign of exp * exp list * exp list
+  | Assign of exp option * exp list * exp list
   | Function of spec list * identifier * param list * exp * stmt list (* spec, name, params, return type, body *)
   | Return of exp
   | Assert of exp
