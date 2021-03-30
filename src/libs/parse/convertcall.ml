@@ -1,5 +1,6 @@
 open Base
 open Astpy
+open Sourcemap
 
 let temp_source = Hashtbl.create (module String)
 let printf = Stdlib.Printf.printf
@@ -10,9 +11,9 @@ let replace e call =
     match e with
     | Identifier ident -> ident
     | Dot (_, ident) -> ident
-    | Call _ -> Sourcemap.default_segment
-    | Subscript _ -> Sourcemap.default_segment
-    | IfElseExp _ -> Sourcemap.default_segment
+    | Call _ -> def_seg
+    | Subscript _ -> def_seg
+    | IfElseExp _ -> def_seg
     | _ -> failwith "primary of call can only be an identifier or dot expression" (* TODO: add segments other primaries *)
     end in
   let name = var_num := !var_num + 1; "tempcall_" ^ (Int.to_string !var_num) in
@@ -93,7 +94,7 @@ let assign_to_inv = function
   | (Assign (_, il, el)) -> 
     let res = begin
       List.map2 il el ~f:(fun e1 e2 ->
-      Invariant (BinaryExp (e1, EqEq Sourcemap.default_segment, e2)))
+      Invariant (BinaryExp (e1, EqEq def_seg, e2)))
     end in
     begin match res with
     | Ok invl -> invl

@@ -30,11 +30,11 @@ let rec typ_compare pt1 pt2 =
   | _, _ -> -1
   in 
   match pt1, pt2 with
-  | TIdent id1, TIdent id2 -> segment_values_compare id1 id2
-  | TInt i1, TInt i2 -> segment_values_compare i1 i2
-  | TFloat f1, TFloat f2 -> segment_values_compare f1 f2
-  | TBool b1, TBool b2 -> segment_values_compare b1 b2
-  | TStr s1, TStr s2 -> segment_values_compare s1 s2
+  | TIdent id1, TIdent id2 -> seg_val_compare id1 id2
+  | TInt i1, TInt i2 -> seg_val_compare i1 i2
+  | TFloat f1, TFloat f2 -> seg_val_compare f1 f2
+  | TBool b1, TBool b2 -> seg_val_compare b1 b2
+  | TStr s1, TStr s2 -> seg_val_compare s1 s2
   | TNone _, TNone _ -> 0
   | TLst (_, ot1), TLst (_, ot2) -> o_compare ot1 ot2
   | TDict (_, ot1, ot3), TDict (_, ot2, ot4) -> (o_compare ot1 ot2) + (o_compare ot3 ot4)

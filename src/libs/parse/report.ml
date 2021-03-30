@@ -1,4 +1,5 @@
 open Base
+open Sourcemap
 
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
@@ -18,7 +19,7 @@ let replace_num p =
     | None -> 0
     end in
   let seg = Emitdfy.nearest_seg (!Emitdfy.sm) line column in
-  let seg_str = Sourcemap.print_segment seg in seg_str
+  let seg_str = print_seg seg in seg_str
 
 let verification_errors out =
   try begin

@@ -1,12 +1,13 @@
 open Base
 open Astpy
+open Sourcemap
 
 let printf = Stdlib.Printf.printf
 
 let convert_typvar ident call = match ident, call with
   | Identifier ident, Call (Identifier c_ident, (Literal (StringLit tv_v))::tv_rest) -> begin
-    let ident_v = Sourcemap.segment_value ident in 
-    let c_ident_v = Sourcemap.segment_value c_ident in
+    let ident_v = seg_val ident in 
+    let c_ident_v = seg_val c_ident in
     match c_ident_v with 
     | "TypeVar" -> begin match tv_rest with 
       | [] -> if String.compare ident_v tv_v = 0 then Some tv_v else failwith "Argument to TypeVar must match declared variable"

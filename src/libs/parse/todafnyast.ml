@@ -158,11 +158,11 @@ let is_toplevel = function
   | _ -> false
 
 let convert_typsyn ident rhs =
-  match ident with | Identifier ident -> let ident_v = segment_value ident in begin
+  match ident with | Identifier ident -> let ident_v = seg_val ident in begin
     match rhs with 
     | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
     | Identifier typ_ident -> begin 
-        let s_typ = segment_value typ_ident in
+        let s_typ = seg_val typ_ident in
         match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
         | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (TIdent typ_ident))))
         | None -> None

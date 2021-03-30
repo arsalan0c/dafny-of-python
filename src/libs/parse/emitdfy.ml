@@ -1,14 +1,10 @@
 open Base
-open Sexplib.Std
+(* open Sexplib.Std *)
 
 open Astdfy
+open Sourcemap
 
 let printf = Stdlib.Printf.printf
-
-type pos = Pos of int * int (* line, column *)
-[@@deriving sexp]
-type sourcemap = (pos * Sourcemap.segment) list ref
-[@@deriving sexp]
 
 let sm = ref []
 let add_sm k v s = sm := ((k, v), s)::!sm 
@@ -46,7 +42,7 @@ let ret_param_counter : int ref = ref 0
 let ret_param_reset = fun () -> ret_param_counter := 0
 let ret_param_name = fun () ->
   ret_param_counter := !ret_param_counter + 1;
-  "res" ^ Int.to_string (!ret_param_counter)
+  "res" (* ^ Int.to_string (!ret_param_counter)*)
 
 type declarations = (string * string) list ref
 let vars: declarations = ref []
@@ -75,7 +71,7 @@ let source_from_temp name =
 
 let print_ident id seg =
   let n = newcolumn (indent id) in 
-  let s = Sourcemap.segment_value seg in
+  let s = seg_val seg in
   let source_name = source_from_temp s in
   let n_seg = (fst seg, Some source_name) in
   add_sm !curr_line !curr_column n_seg;
@@ -111,8 +107,8 @@ let print_op id = function
 
 let print_type id t = 
   let rec get_v t = match t with
-    | DIdentTyp (s, Some t) -> (Sourcemap.segment_value s) ^ "<" ^ (get_v t) ^ ">"
-    | DIdentTyp (s, None) -> Sourcemap.segment_value s
+    | DIdentTyp (s, Some t) -> (seg_val s) ^ "<" ^ (get_v t) ^ ">"
+    | DIdentTyp (s, None) -> seg_val s
     | DInt _ -> "int"
     | DReal _ -> "real"
     | DBool _ -> "bool"
@@ -138,7 +134,7 @@ let print_type id t =
     | DMap(s, _,  _) -> s
     | DTuple(s, _) -> s 
     | DFunTyp (s, _, _) -> s
-    | _ -> Sourcemap.default_segment
+    | _ -> def_seg
   in add_op id (get_s t) (get_v t)
 
 (* (vars := (!curr_func, idd)::!vars); *)
@@ -354,9 +350,9 @@ and print_stmt id = function
     String.concat [n; b; ps]
   | DAssign (_, [], _) -> ""
   | DAssign (ot, (DTupleExpr ((DIdentifier first)::rest))::_, el) -> let n = newcolumn (indent id) in
-    let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
+    let exists = (lookup (!curr_func) (seg_val first) !vars) in
     let pre = if exists then "" else begin
-      vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
+      vars := (!curr_func, seg_val first)::!vars; (* Add to variable store *)
       newcolumn "var "
     end in
     let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
@@ -369,9 +365,9 @@ and print_stmt id = function
     let ps = newcolumn ";" in 
     String.concat [n; pre; pil; pt; pa; pel; ps] 
   | DAssign(ot, (DIdentifier first)::rest, el) -> let n = newcolumn (indent id) in
-    let exists = (lookup (!curr_func) (Sourcemap.segment_value first) !vars) in
+    let exists = (lookup (!curr_func) (seg_val first) !vars) in
     let pre = if exists then "" else begin
-      vars := (!curr_func, Sourcemap.segment_value first)::!vars; (* Add to variable store *)
+      vars := (!curr_func, seg_val first)::!vars; (* Add to variable store *)
       newcolumn "var "
     end in
     let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
@@ -451,7 +447,7 @@ let print_declaration id = function
   | (i, t) -> print_stmt id (DAssign (Some t, [DIdentifier i], [DIdentifier i]))
 
 let print_toplevel id = function
-  | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := Sourcemap.segment_value ident); 
+  | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := seg_val ident); 
     let n = newcolumn (indent id) in 
     let m = newcolumn "method" in
     let pident = print_ident 1 ident in
@@ -483,7 +479,7 @@ let print_toplevel id = function
     String.concat [
       n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5
     ]
-  | DFuncMeth (speclst, ident, gl, pl, t, e) -> (curr_func := Sourcemap.segment_value ident);
+  | DFuncMeth (speclst, ident, gl, pl, t, e) -> (curr_func := seg_val ident);
     let n = newcolumn (indent id) in 
     let m = newcolumn "function method" in
     let pident = print_ident 1 ident in
@@ -553,9 +549,9 @@ let rec nearest_seg_helper sm line column nearest =
 (* finds the nearest dafny segment, then returns its corresponding python segment *)
 let nearest_seg sm line column = 
     (* printf "%d\n" line; *)
-    let res = nearest_seg_helper sm line column ((Int.max_value, Int.max_value), Sourcemap.default_segment) in
+    let res = nearest_seg_helper sm line column ((Int.max_value, Int.max_value), def_seg) in
     snd res
 
 let print_pos p = String.concat ["("; (Int.to_string (fst p)); ", "; (Int.to_string (snd p)); "): "]
 
-let print_sourcemap sm = String.concat ~sep:"\n" (List.map ~f:(fun e -> String.concat [(print_pos (fst e)); " "; (Sourcemap.print_segment (snd e))]) sm)
+let print_sourcemap sm = String.concat ~sep:"\n" (List.map ~f:(fun e -> String.concat [(print_pos (fst e)); " "; (print_seg (snd e))]) sm)

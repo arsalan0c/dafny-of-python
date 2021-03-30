@@ -1,5 +1,6 @@
 open Base
 open Astpy
+open Sourcemap
 
 let printf = Stdlib.Printf.printf
 let var_num : int ref = ref 0
@@ -31,8 +32,8 @@ let rec exp_lst = function
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
     let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
     let name = var_num := !var_num + 1; "templist_" ^ (Int.to_string !var_num) in
-    let n_ident = (Sourcemap.default_pos, Some name) in
-    let new_list_call = Call (Identifier (Sourcemap.default_pos, Some list_constructor), [Lst n_el]) in
+    let n_ident = (def_pos, Some name) in
+    let new_list_call = Call (Identifier (def_pos, Some list_constructor), [Lst n_el]) in
     (als@[Assign (None, [Identifier n_ident], [new_list_call])], Identifier n_ident) (* TODO: use type of rhs *)
   | Tuple el -> 
     let als_nes = List.map ~f:exp_lst el in
@@ -66,27 +67,27 @@ let rec exp_lst = function
       | Slice (Some l, Some h) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "range")
+          (def_pos, Some "range")
         ), [l; h])
       | Slice (Some l, None) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "rangeLower")
+          (def_pos, Some "rangeLower")
         ), [l])
       | Slice (None, Some h) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "rangeUpper")
+          (def_pos, Some "rangeUpper")
         ), [h])
       | Slice (None, None) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "rangeNone")
+          (def_pos, Some "rangeNone")
         ), [])
       | Index i -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "atIndex")
+          (def_pos, Some "atIndex")
         ), [i])
       | _ -> failwith "Second argument of subscript must be a slice or index"
     end in
