@@ -90,7 +90,7 @@ type dStmt =
   | DEmptyStmt
   | DAssume of dExpr
   | DAssert of dExpr
-  | DAssign of dTyp option * dExpr list * dExpr list
+  | DAssign of dTyp option * dId list * dExpr list
   | DIf of dExpr * dStmt list * (dExpr * dStmt list) list * dStmt list
   | DWhile of dSpec list * dExpr * dStmt list
   | DReturn of dExpr list

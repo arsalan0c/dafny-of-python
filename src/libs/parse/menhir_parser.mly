@@ -75,17 +75,17 @@ compound_stmt:
   | specl=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=exp; COLON; sl=block { Function (specl, id, fl, t, sl) }
   | IF; e=exp; COLON; s1=block; el=elif_star; ELSE; COLON; s2=block { IfElse (e, s1, el, s2) }
   | IF; e=exp; COLON; s=block; el=elif_star; { IfElse (e, s, el, []) }
-  | specl=list(spec); FOR; t=star_targets; IN; e=star_exps; COLON; b=block { For (specl, t, e, b) }
+  | specl=list(spec); FOR; il=star_targets; IN; e=star_exps; COLON; b=block { For (specl, il, e, b) }
   | specl=list(spec); WHILE; e=exp; COLON; s=block; { While (specl, e, s) }
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (Some t, [Identifier id], [e2]) }
-  | id=IDENTIFIER; EQ; e2=star_exps { Assign (None, [Identifier id], [e2]) } (* used for type aliasing and variable updates *)
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (None, [Identifier s1], [BinaryExp (Identifier s1, Divide s2, e2)]) }
+  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (Some t, [id], [e2]) }
+  | id=IDENTIFIER; EQ; e2=star_exps { Assign (None, [id], [e2]) } (* used for type aliasing and variable updates *)
+  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Plus s2, e2)]) }
+  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Minus s2, e2)]) }
+  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Times s2, e2)]) }
+  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Divide s2, e2)]) }
   ;
 
 elif_star:
@@ -106,20 +106,20 @@ star_exps_rest:
   ;
 
 star_targets:
-  | st=star_target; str=star_targets_rest; COMMA; { [st]@str }
-  | st=star_target; str=star_targets_rest { [st]@str }
-  | st=star_target { [st] }
+  | st=star_target; str=star_targets_rest; COMMA; { st@str }
+  | st=star_target; str=star_targets_rest { st@str }
+  | st=star_target { st }
   ;
 
 star_targets_rest:
-  | str=star_targets_rest; COMMA; st=star_target; { str@[st] }
-  | COMMA; st=star_target; { [st] }
+  | str=star_targets_rest; COMMA; st=star_target; { str@st }
+  | COMMA; st=star_target; { st }
   ;
 
 star_target:
-  | id=IDENTIFIER { Identifier id }
-  | LPAREN st=star_targets RPAREN { Tuple st } 
-  | LBRACK st=star_targets RBRACK { Lst st } 
+  | id=IDENTIFIER { [id] }
+  | LPAREN st=star_targets RPAREN { st } 
+  | LBRACK st=star_targets RBRACK { st } 
   ;
 
 exp:

@@ -44,15 +44,17 @@ let ret_param_name = fun () ->
   ret_param_counter := !ret_param_counter + 1;
   "res" (* ^ Int.to_string (!ret_param_counter)*)
 
+let curr_func : string ref = ref ""
+
 type declarations = (string * string) list ref
 let vars: declarations = ref []
+let add_vars vl = List.iter vl ~f:(fun v -> vars := (!curr_func, seg_val v)::!vars)
 
 let rec lookup fn v = function
   | [] -> false
   | (f2, v2)::_ when (String.equal fn f2) && (String.equal v v2) -> true
   | _::tl -> lookup fn v tl
 
-let curr_func : string ref = ref ""
 
 let newcolumn_h id s = 
   let nl = newline () in 
@@ -349,32 +351,11 @@ and print_stmt id = function
     let ps = (newcolumn ";") in
     String.concat [n; b; ps]
   | DAssign (_, [], _) -> ""
-  | DAssign (ot, (DTupleExpr ((DIdentifier first)::rest))::_, el) -> let n = newcolumn (indent id) in
+  | DAssign (None, first::rest, el) -> let n = newcolumn (indent id) in
     let exists = (lookup (!curr_func) (seg_val first) !vars) in
-    let pre = if exists then "" else begin
-      vars := (!curr_func, seg_val first)::!vars; (* Add to variable store *)
-      newcolumn "var "
-    end in
-    let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
-    let pt = begin match ot with 
-    | None -> "" 
-    | Some t -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
-    end in
-    let pa = newcolumn " := " in
-    let pel = newcolumn_concat (print_exp 0) ", " el in
-    let ps = newcolumn ";" in 
-    String.concat [n; pre; pil; pt; pa; pel; ps] 
-  | DAssign(ot, (DIdentifier first)::rest, el) -> let n = newcolumn (indent id) in
-    let exists = (lookup (!curr_func) (seg_val first) !vars) in
-    let pre = if exists then "" else begin
-      vars := (!curr_func, seg_val first)::!vars; (* Add to variable store *)
-      newcolumn "var "
-    end in
-    let pil = newcolumn_concat (print_exp 0) ", " ((DIdentifier first)::rest) in
-    let pt = begin match ot with 
-    | None -> "" 
-    | Some t -> let c = newcolumn ":" in let pt = print_type 1 t in String.concat [c; pt]
-    end in
+    let pre = if exists then "" else (add_vars (first::rest); newcolumn "var ") in
+    let pil = newcolumn_concat (print_ident 0) ", " (first::rest) in
+    let pt = "" in
     let prhs = match el with 
       | [] -> "" | el -> begin
         let pa = newcolumn " := " in
@@ -383,7 +364,20 @@ and print_stmt id = function
       end in
     let ps = newcolumn ";" in 
     String.concat [n; pre; pil; pt; prhs; ps]
-  | DAssign _ -> failwith "unsupported assignment targets"
+  | DAssign (Some tp, il, el) -> let n = newcolumn (indent id) in
+    let pre = add_vars il; newcolumn "var " in
+    let pil = newcolumn_concat (print_ident 0) ", " il in
+    let pt = 
+      let c = newcolumn ":" in let pt = print_type 1 tp in String.concat [c; pt]
+    in
+    let prhs = match el with 
+      | [] -> "" | el -> begin
+        let pa = newcolumn " := " in
+        let pel = newcolumn_concat (print_exp 0) ", " el in
+        String.concat[pa; pel]
+      end in
+    let ps = newcolumn ";" in 
+    String.concat [n; pre; pil; pt; prhs; ps]
   | DCallStmt (e, el) -> let n = newcolumn (indent id) in 
     let pident = print_exp 0 e in 
     let ob = newcolumn "(" in 
@@ -444,7 +438,7 @@ and print_stmt id = function
     String.concat [n; r; pel; ps]
 
 let print_declaration id = function
-  | (i, t) -> print_stmt id (DAssign (Some t, [DIdentifier i], [DIdentifier i]))
+  | (i, t) -> print_stmt id (DAssign (Some t, [i], [DIdentifier i]))
 
 let print_toplevel id = function
   | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := seg_val ident); 

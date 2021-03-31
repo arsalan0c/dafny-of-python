@@ -115,9 +115,9 @@ type spec =
 
 type stmt =
   | IfElse of exp * stmt list * (exp * stmt list) list * stmt list
-  | For of spec list * exp list * exp * stmt list
+  | For of spec list * identifier list * exp * stmt list
   | While of spec list * exp * stmt list
-  | Assign of exp option * exp list * exp list
+  | Assign of exp option * identifier list * exp list
   | Function of spec list * identifier * param list * exp * stmt list (* spec, name, params, return type, body *)
   | Return of exp
   | Assert of exp

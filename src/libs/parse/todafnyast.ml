@@ -135,8 +135,8 @@ let rec stmt_dfy = function
     let d_el = List.map ~f:exp_dfy el in
     DCallStmt (exp_dfy e, d_el)
   | Assign (t, il, el) -> begin match t with 
-    | Some (Typ t) -> DAssign (Some (typ_dfy t), List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
-    | None -> DAssign (None, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
+    | Some (Typ t) -> DAssign (Some (typ_dfy t), List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
+    | None -> DAssign (None, List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
     end
   | IfElse (e, sl1, esl, sl3) -> let d_esl = List.map ~f:(fun (e,sl) -> let d_e = exp_dfy e in (d_e, (List.map ~f:stmt_dfy sl))) esl in DIf(exp_dfy e, (List.map ~f:stmt_dfy sl1), d_esl, (List.map ~f:stmt_dfy sl3))
@@ -158,7 +158,7 @@ let is_toplevel = function
   | _ -> false
 
 let convert_typsyn ident rhs =
-  match ident with | Identifier ident -> let ident_v = seg_val ident in begin
+  let ident_v = seg_val ident in begin
     match rhs with 
     | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
     | Identifier typ_ident -> begin 
@@ -169,7 +169,6 @@ let convert_typsyn ident rhs =
       end
     | _ -> None
     end
-  | _ -> None
 
 let toplevel_dfy generics = function
   | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in
@@ -195,6 +194,7 @@ let func_dfy generics = function
 let is_func = function
   | Function (_, _, _, _, (Return _)::[]) -> true
   | Function (_, _, _, _, (Exp _)::[]) -> true
+  (* | Function (_, _, _, _, (IfElse (c))::[]) -> true *)
   (* | Function (_, _, _, _, Pass::[]) -> true
   | Function (_, _, _, _, []) -> true *)
   | _ -> false

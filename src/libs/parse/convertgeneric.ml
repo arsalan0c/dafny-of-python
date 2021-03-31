@@ -4,8 +4,8 @@ open Sourcemap
 
 let printf = Stdlib.Printf.printf
 
-let convert_typvar ident call = match ident, call with
-  | Identifier ident, Call (Identifier c_ident, (Literal (StringLit tv_v))::tv_rest) -> begin
+let convert_typvar ident call = match call with
+  | Call (Identifier c_ident, (Literal (StringLit tv_v))::tv_rest) -> begin
     let ident_v = seg_val ident in 
     let c_ident_v = seg_val c_ident in
     match c_ident_v with 
@@ -15,7 +15,7 @@ let convert_typvar ident call = match ident, call with
       end
     | _ ->  None
     end
-  | _, _ -> None
+  | _ -> None
 
 let generics = function
   |  Assign (t, il, el) -> begin
