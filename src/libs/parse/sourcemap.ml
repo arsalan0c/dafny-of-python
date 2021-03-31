@@ -48,7 +48,8 @@ type segment = pos * (string option) (* turn this into a record *)
 
 (* let sexp_of_segment = (string, ) *)
 
-let default_segment = (Lexing.dummy_pos, None)
+let default_pos = Lexing.dummy_pos
+let default_segment = (default_pos, None)
 
 let print_pos (p: pos) = 
   let ln = Int.to_string p.pos_lnum in

@@ -1,6 +1,6 @@
 (* Source: https://gist.github.com/zehnpaard/124a9c6df632839d01b4fede8684ddd8 *)
 
-open Parser
+open Menhir_parser
 
 let convert_space_to_indent width f =
 	let indent = ref 0 in
@@ -28,4 +28,4 @@ let flatten f =
 			| x::xs' -> xs := xs'; x
 			| [] -> failwith "Lexer did not return EOF token")
 
-let f = Lexer.main |> convert_space_to_indent 2 |> flatten
+let f = Lexer.next_token |> convert_space_to_indent 2 |> flatten

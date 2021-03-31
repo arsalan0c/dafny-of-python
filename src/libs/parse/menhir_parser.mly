@@ -9,7 +9,7 @@ menhir --list-errors
   let printf = Stdlib.Printf.printf
 %}
 
-%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
+%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK DOT COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
 %token <Sourcemap.segment> DEF IF ELIF ELSE WHILE FOR BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
@@ -18,11 +18,10 @@ menhir --list-errors
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
 %token <float> FLOAT
-%token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
-%token <Sourcemap.segment> LEN OLD
+%token PRE POST INVARIANT FORALL EXISTS DECREASES READS MODIFIES DOUBLECOLON 
+%token <Sourcemap.segment> LEN OLD FRESH 
 
-%left COLON
-%left IMPLIES EXPLIES BIIMPL
+%left BIIMPL IMPLIES EXPLIES 
 %left OR 
 %left AND
 %left EQEQ NEQ
@@ -124,24 +123,22 @@ star_target:
   ;
 
 exp:
-  | FORALL; il=id_star; DOUBLECOLON; e=implication { Forall (il, e) }
-  | EXISTS; il=id_star; DOUBLECOLON; e=implication { Exists (il, e) }
-  | LAMBDA; il=id_star; COLON; e=implication { Lambda (il, e) }
+  | d1=implication; IF; d2=implication; ELSE; im=exp { IfElseExp (d1, d2, im) }
+  | LAMBDA; il=id_star; COLON; e=exp { Lambda (il, e) }
+  | e=implication { e }
   | e=typ { Typ e }
-  | e=implication; { e }
   ;
 
 implication:
-  | d1=disjunction; IF; d2=disjunction; ELSE; im=implication { IfElseExp (d1, d2, im) }
-  | im=implication; s=BIIMPL; d=disjunction { BinaryOp (im, BiImpl s, d) }
+  | bim=implication; s=BIIMPL; d=disjunction { BinaryOp (bim, BiImpl s, d) }
   | im=implication; s=IMPLIES; d=disjunction { BinaryOp (im, Implies s, d) }
   | im=implication; s=EXPLIES; d=disjunction { BinaryOp (im, Explies s, d) }
   | d=disjunction; { d }
   ;
 
 disjunction:
-  | c=conjunction { c }
   | d=disjunction; s=OR; c=conjunction { BinaryOp (d, Or s, c) }
+  | c=conjunction { c }
   ;
 
 conjunction:
@@ -155,7 +152,6 @@ inversion:
   ;
 
 comparison:
-  | s=sum { s }
   | c=comparison; s=EQEQ; e=sum { BinaryOp (c, EqEq s, e) }
   | c=comparison; s=NEQ; e=sum { BinaryOp (c, NEq s, e) }
   | c=comparison; s=LTE; e=sum { BinaryOp (c, LEq s, e) }
@@ -164,6 +160,7 @@ comparison:
   | c=comparison; s=GT; e=sum { BinaryOp (c, Gt s, e) }
   | c=comparison; s=NOT_IN; e=sum { BinaryOp (c, NotIn s, e) }
   | c=comparison; s=IN; e=sum { BinaryOp (c, In s, e) }
+  | s=sum { s }
   ;
 
 sum:
@@ -190,13 +187,14 @@ power:
   ;
 
 primary:
-  | s=IDENTIFIER; el=arguments { Call (s, el) } (* TODO: allow primaries as calls *)
-  | e=primary; s=slice { Subscript (e, s) }
+  | e=primary DOT s=IDENTIFIER { Dot (e, s) }
+  | e=primary LPAREN el=arguments RPAREN { Call (e, el) }
+  | e=primary s=slice { Subscript (e, s) }
   | a=atom { a }
   ;
 
 arguments:
-  | LPAREN; el=exp_star; RPAREN { el } (* TODO: allow default arguments *)
+  |  el=exp_star { el } (* TODO: allow default arguments *)
   ;
 
 atom:
@@ -207,6 +205,8 @@ atom:
   | i=FLOAT { Literal (FloatLit i) }
   | s=strings { Literal (StringLit s) }
   | NONE { Literal (NonLit) }
+  | FORALL; il=id_star; DOUBLECOLON; e=exp { Forall (il, e) }
+  | EXISTS; il=id_star; DOUBLECOLON; e=exp { Exists (il, e) }
   | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
   | LPAREN; e=exp; RPAREN; { e }
   | l=lst_exp { l }
@@ -214,6 +214,7 @@ atom:
   | d=dict_exp { d }
   | s=LEN; LPAREN; e=star_exps; RPAREN; { Len (s, e) }
   | s=OLD; LPAREN; e=star_exps; RPAREN; { Old (s, e) }
+  | s=FRESH; LPAREN; e=star_exps; RPAREN; { Fresh (s, e) }
   (* TODO: add comprehensions *)
   ;
 
@@ -223,12 +224,12 @@ strings:
   ;
 
 slice: 
-  | LBRACK; e=exp; o=slice_h { Slice (Some e, o) } 
+  | LBRACK; e1=exp; COLON; e2=exp; RBRACK { Slice (Some e1, Some e2) } 
+  | LBRACK; e=exp; COLON; RBRACK { Slice (Some e, None) } 
+  | LBRACK; COLON; e=exp  RBRACK { Slice (None, Some e) }
+  | LBRACK; COLON; RBRACK { Slice (None, None) }  
+  | LBRACK; e=exp; RBRACK { Index e }
   ; 
-slice_h:
-  | RBRACK { None }
-  | COLON; e=exp; RBRACK { Some e }
-  ;
 
 lst_exp:
   | LBRACK; el=exp_star; RBRACK { Lst el }
@@ -262,6 +263,8 @@ spec:
   | POST; e=spec_rem { Post e }
   | DECREASES; e=spec_rem { Decreases e }
   | INVARIANT; e=spec_rem { Invariant e }
+  | READS; e=spec_rem { Reads e }
+  | MODIFIES; e=spec_rem { Modifies e }
   ;
 
 spec_rem:
