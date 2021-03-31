@@ -185,18 +185,11 @@ let func_dfy generics = function
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
-  (* | Function (speclst, i, pl, te, Pass::[]) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
-  | Function (speclst, i, pl, te, []) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)] *)
   | _ -> []  
 
 let is_func = function
   | Function (_, _, _, _, (Return _)::[]) -> true
   | Function (_, _, _, _, (Exp _)::[]) -> true
-  (* | Function (_, _, _, _, (IfElse (c))::[]) -> true *)
-  (* | Function (_, _, _, _, Pass::[]) -> true
-  | Function (_, _, _, _, []) -> true *)
   | _ -> false
 
 let prog_dfy p =
@@ -204,8 +197,8 @@ let prog_dfy p =
   let (Program sl) = Convertlist.prog n_p in
   let d_funcs = List.fold ~f:(fun so_far s -> so_far@(func_dfy gens s)) ~init:[] sl in
   let non_funcs = List.filter ~f:(fun x -> not (is_func x)) sl in
-  (* let calls_rewritten = Convertcall.prog (Program non_funcs) in *)
-  let (Program sl) = Convertfor.prog (Program non_funcs) in
+  let calls_rewritten = Convertcall.prog (Program non_funcs) in
+  let (Program sl) = Convertfor.prog calls_rewritten in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
