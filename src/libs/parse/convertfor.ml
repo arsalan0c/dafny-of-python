@@ -15,7 +15,7 @@ let rec stmt_for s =
   | Return _ -> [s]
   | Assert _ -> [s]
   | For (specl, el, e, sl) ->
-    let counter_name = counter_num := !counter_num + 1; "tempforcounter_" ^ (Int.to_string !counter_num) in
+    let counter_name = counter_num := !counter_num + 1; "tempfor_" ^ (Int.to_string !counter_num) in
     let counter_ident = Identifier (Sourcemap.new_segment 0 0 (Some counter_name)) in 
     let assign_counter = Assign (Typ Void, [counter_ident], [Literal (IntLit 0)]) in
     let declare_target_vars = Assign (Typ Void, el, []) in

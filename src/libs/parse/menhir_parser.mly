@@ -9,7 +9,7 @@ menhir --list-errors
   let printf = Stdlib.Printf.printf
 %}
 
-%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
+%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK DOT COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
 %token <int> SPACE
 %token <Sourcemap.segment> DEF IF ELIF ELSE WHILE FOR BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
@@ -18,8 +18,8 @@ menhir --list-errors
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
 %token <int> INT
 %token <float> FLOAT
-%token PRE POST INVARIANT FORALL EXISTS DECREASES DOUBLECOLON
-%token <Sourcemap.segment> LEN OLD
+%token PRE POST INVARIANT FORALL EXISTS DECREASES READS MODIFIES DOUBLECOLON 
+%token <Sourcemap.segment> LEN OLD FRESH 
 
 %left BIIMPL IMPLIES EXPLIES 
 %left OR 
@@ -187,13 +187,14 @@ power:
   ;
 
 primary:
-  | s=IDENTIFIER el=arguments { Call (s, el) } (* TODO: allow primaries as calls *)
-  | e=primary; s=slice { Subscript (e, s) }
+  | e=primary DOT s=IDENTIFIER { Dot (e, s) }
+  | e=primary LPAREN el=arguments RPAREN { Call (e, el) }
+  | e=primary s=slice { Subscript (e, s) }
   | a=atom { a }
   ;
 
 arguments:
-  | LPAREN; el=exp_star; RPAREN { el } (* TODO: allow default arguments *)
+  |  el=exp_star { el } (* TODO: allow default arguments *)
   ;
 
 atom:
@@ -213,6 +214,7 @@ atom:
   | d=dict_exp { d }
   | s=LEN; LPAREN; e=star_exps; RPAREN; { Len (s, e) }
   | s=OLD; LPAREN; e=star_exps; RPAREN; { Old (s, e) }
+  | s=FRESH; LPAREN; e=star_exps; RPAREN; { Fresh (s, e) }
   (* TODO: add comprehensions *)
   ;
 
@@ -222,12 +224,12 @@ strings:
   ;
 
 slice: 
-  | LBRACK; e=exp; o=slice_h { Slice (Some e, o) } 
+  | LBRACK; e1=exp; COLON; e2=exp; RBRACK { Slice (Some e1, Some e2) } 
+  | LBRACK; e=exp; COLON; RBRACK { Slice (Some e, None) } 
+  | LBRACK; COLON; e=exp  RBRACK { Slice (None, Some e) }
+  | LBRACK; COLON; RBRACK { Slice (None, None) }  
+  | LBRACK; e=exp; RBRACK { Index e }
   ; 
-slice_h:
-  | RBRACK { None }
-  | COLON; e=exp; RBRACK { Some e }
-  ;
 
 lst_exp:
   | LBRACK; el=exp_star; RBRACK { Lst el }
@@ -261,6 +263,8 @@ spec:
   | POST; e=spec_rem { Post e }
   | DECREASES; e=spec_rem { Decreases e }
   | INVARIANT; e=spec_rem { Invariant e }
+  | READS; e=spec_rem { Reads e }
+  | MODIFIES; e=spec_rem { Modifies e }
   ;
 
 spec_rem:

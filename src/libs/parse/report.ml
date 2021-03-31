@@ -36,7 +36,7 @@ let verification_errors out =
 
 let verification_summary out =
   try begin
-    let line_rgx = Re2.create_exn ("verifier finished with [0-9]* verified, [0-9]* error" ^ "s") in 
+    let line_rgx = Re2.create_exn ("verifier finished with [0-9]* verified, [0-9]* error" ^ "s") in (* TODO: substract prelude from verified count *)
     let line = Re2.find_first_exn line_rgx out in
     printf "%s\n" line
   end with

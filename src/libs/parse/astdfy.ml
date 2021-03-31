@@ -29,7 +29,7 @@ type dOp =
   [@@deriving sexp]
 
 type dTyp = 
-  | DIdentTyp of segment
+  | DIdentTyp of segment * dTyp option (* generic parameter *)
   | DInt of segment
   | DReal of segment 
   | DBool of segment  
@@ -48,28 +48,31 @@ type dParam = dId * dTyp (* name: type *)
 [@@deriving sexp]
 
 type dExpr = 
-  | DIdentifier of segment
+  | DIdentifier of dId
+  | DDot of dExpr * dId
+  | DEmptyExpr
   | DNull
   | DThis
-  | DFresh
-  | DOld of segment * dExpr
   | DIntLit of int
   | DRealLit of float
   | DBoolLit of bool
   | DStringLit of string
   | DBinary of dExpr * dOp * dExpr
   | DUnary of dOp * dExpr
-  | DCallExpr of dId * dExpr list
+  | DCallExpr of dExpr * dExpr list
   | DSeqExpr of dExpr list
   | DSetExpr of dExpr list
   (* | DSetComp of dId list * dExpr * dExpr list * dExpr variables, target, conditions, result *)
   | DMapExpr of (dExpr * dExpr) list
   | DArrayExpr of dExpr list
   | DSubscript of dExpr * dExpr (* value, slice *)
+  | DIndex of dExpr
   | DSlice of dExpr option * dExpr option (* lower, upper *)
   | DForall of dId list * dExpr
   | DExists of dId list * dExpr
   | DLen of segment * dExpr
+  | DOld of segment * dExpr
+  | DFresh of segment * dExpr
   | DLambda of dParam list * dSpec list * dExpr
   | DIfElseExpr of dExpr * dExpr * dExpr
   | DTupleExpr of dExpr list
@@ -79,8 +82,8 @@ and dSpec =
   | DEnsures of dExpr
   | DInvariant of dExpr
   | DDecreases of dExpr
-  (* | DFresh of dExpr *)
-  (* | DOld of dExpr *)
+  | DReads of dExpr
+  | DModifies of dExpr
   [@@deriving sexp]
 
 type dStmt = 
@@ -92,7 +95,7 @@ type dStmt =
   | DWhile of dSpec list * dExpr * dStmt list
   | DReturn of dExpr list
   | DBreak
-  | DCallStmt of dId * dExpr list
+  | DCallStmt of dExpr * dExpr list
   [@@deriving sexp]
 
 type dGeneric = string

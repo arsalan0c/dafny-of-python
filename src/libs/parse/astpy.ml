@@ -77,11 +77,12 @@ type binaryop =
   [@@deriving sexp]
 
 type exp =
+  | Literal of literal
   | Identifier of identifier
+  | Dot of exp * identifier
   | BinaryOp of exp * binaryop * exp
   | UnaryOp of unaryop * exp
-  | Literal of literal
-  | Call of identifier * exp list
+  | Call of exp * exp list
   | Lst of exp list
   | Array of exp list
   | Set of exp list
@@ -89,11 +90,13 @@ type exp =
   | Dict of (exp * exp) list
   | Tuple of exp list
   | Subscript of exp * exp (* value, slice *)
+  | Index of exp
   | Slice of exp option * exp option (* lower, upper *)
   | Forall of identifier list * exp
   | Exists of identifier list * exp
   | Len of segment * exp
   | Old of segment * exp
+  | Fresh of segment * exp
   | Typ of pytype
   | Lambda of identifier list * exp
   | IfElseExp of exp * exp * exp
@@ -107,6 +110,8 @@ type spec =
   | Post of exp 
   | Invariant of exp
   | Decreases of exp
+  | Reads of exp
+  | Modifies of exp
   [@@deriving sexp]
 
 type stmt =

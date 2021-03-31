@@ -1,20 +1,15 @@
 open Core
 (* open Sexplib *)
 
-(* let parse lexbuf = try Success (Pyparse.Translate.prog_str (Pyparse.Parser.f Pyparse.Indenter.f lexbuf)) with
-  | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"]) *)
-(* 
-let parse_dfyast prelude lexbuf = try Success (prelude ^ "" ^ (Pyparse.Emitdfy.print_prog (Pyparse.Todafnyast.prog_dfy (Pyparse.Convertcall.prog (Pyparse.Parser.f Pyparse.Indenter.f lexbuf))))) with
-  | Pyparse.Parser.Error -> Fail(String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexbuf)); Lexing.lexeme lexbuf; "\n"]) *)
-
 type result = Success of string | Fail of string
 
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
 
+let list_dfy = "./src/libs/parse/list.dfy"
 let prelude_f = "./src/libs/parse/prelude.dfy" 
 let dafny_f = "program.dfy"
-let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f; prelude_f]
+let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f; prelude_f; list_dfy]
 let python_f = "program.py"
 let mypy_command = String.concat ~sep:" " ["mypy"; python_f]
 
@@ -31,20 +26,18 @@ let typcheck s =
   | Some _ -> prerr ("\nTypechecking failed:\n" ^ tc_out ^ "\n")
   | None -> ()
 
-let run =
+let () = begin
+  Pyparse.Parser.pp_exceptions ();
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   typcheck inp;
-  let lexed = Lexing.from_string inp in
-  let parsed = try Pyparse.Parser.program Pyparse.Indenter.f lexed with 
-    | Pyparse.Parser.Error -> failwith "Parser error"
-  in
+  let parsed = Pyparse.Parser.parse_string inp in
   let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
   printf "\n%s\n" dafny_source; 
   Out_channel.write_all dafny_f ~data:dafny_source;
   let verification_out = system dafny_command in
   Pyparse.Report.report verification_out
-
+end
 (* 
 let main2 =
   printf "\nParsing\n\"%s\"\n\r" inp;

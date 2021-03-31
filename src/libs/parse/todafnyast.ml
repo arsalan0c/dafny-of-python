@@ -17,7 +17,7 @@ let check_exp_typ = function
 
 let rec typ_dfy = function 
   | Void -> DVoid
-  | IdentTyp s -> DIdentTyp s
+  | IdentTyp s -> DIdentTyp (s, None)
   | Int s -> DInt s
   | Float s -> DReal s 
   | Bool s -> DBool s
@@ -25,7 +25,7 @@ let rec typ_dfy = function
   | NonTyp _ -> DVoid
   | LstTyp (s, ot) -> begin
     match ot with
-    | Some t -> let r = typ_dfy t in DSeq(s, r)
+    | Some t -> let r = typ_dfy t in DIdentTyp (s, Some r)
     | None -> failwith "Please specify the exact sequence type"
     end
   | Set(s, ot) -> begin
@@ -87,10 +87,11 @@ let binaryop_dfy = function
   
 let rec exp_dfy = function
   | Identifier s -> DIdentifier s
+  | Dot (e, ident) -> DDot (exp_dfy e, ident)
   | BinaryOp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
   | UnaryOp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l
-  | Call (id, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(id, d_args)
+  | Call (e, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(exp_dfy e, d_args)
   | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
   | Array el -> DArrayExpr (List.map ~f:exp_dfy el)
   | Set el -> DSetExpr (List.map ~f:exp_dfy el)
@@ -98,6 +99,7 @@ let rec exp_dfy = function
   | Dict eel -> DMapExpr (List.map ~f:(fun (k,v) -> (exp_dfy k, exp_dfy v)) eel)
   | Tuple el -> DSeqExpr (List.map ~f:exp_dfy el)  
   | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
+  | Index e -> DIndex (exp_dfy e)
   | Slice (e1, e2) -> begin
     match e1, e2 with
     | Some r1, Some r2 -> DSlice (Some (exp_dfy r1), Some (exp_dfy r2))
@@ -109,6 +111,7 @@ let rec exp_dfy = function
   | Exists (s, e) -> DExists (s, exp_dfy e)
   | Len (s, e) -> DLen (s, exp_dfy e)
   | Old (s, e) -> DOld (s, exp_dfy e)
+  | Fresh (s, e) -> DFresh (s, exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
   | Lambda (fl, e) -> let dfl = List.map ~f:(fun x -> (x, DVoid)) fl in DLambda (dfl, [], exp_dfy e)
   | IfElseExp (e1, c, e2) -> DIfElseExpr (exp_dfy c, exp_dfy e1, exp_dfy e2)
@@ -118,14 +121,16 @@ let spec_dfy = function
   | Post c -> DEnsures (exp_dfy c)
   | Invariant e -> DInvariant (exp_dfy e)
   | Decreases d -> DDecreases (exp_dfy d)
+  | Reads e -> DReads (exp_dfy e)
+  | Modifies e -> DModifies (exp_dfy e)
 
 let param_dfy = function
   | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
 
 let rec stmt_dfy = function
-  | Exp(Call(id, el)) -> 
+  | Exp (Call (e, el)) -> 
     let d_el = List.map ~f:exp_dfy el in
-    DCallStmt (id, d_el)
+    DCallStmt (exp_dfy e, d_el)
   | Assign (t, il, el) -> begin match t with 
     | Typ t -> DAssign (typ_dfy t, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
@@ -163,8 +168,6 @@ let convert_typsyn ident rhs =
   | _ -> None
 
 let toplevel_dfy generics = function
-  | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in
     [DMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
   | Assign (_, il, el) -> begin
@@ -174,13 +177,34 @@ let toplevel_dfy generics = function
     end
   | _ -> []
 
+let func_dfy generics = function
+  | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+  | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+  | Function (speclst, i, pl, te, Pass::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
+  | Function (speclst, i, pl, te, []) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
+  | _ -> []  
+
+let is_func = function
+  | Function (_, _, _, _, (Return _)::[]) -> true
+  | Function (_, _, _, _, (Exp _)::[]) -> true
+  | Function (_, _, _, _, Pass::[]) -> true
+  | Function (_, _, _, _, []) -> true
+  | _ -> false
+
 let prog_dfy p =
   let (n_p, gens) = Convertgeneric.prog p in
-  let calls_rewritten = Convertcall.prog n_p in
-  let (Program sl) = Convertfor.prog calls_rewritten in
+  let (Program sl) = Convertlist.prog n_p in
+  let d_funcs = List.fold ~f:(fun so_far s -> so_far@(func_dfy gens s)) ~init:[] sl in
+  let non_funcs = List.filter ~f:(fun x -> not (is_func x)) sl in
+  (* let calls_rewritten = Convertcall.prog (Program non_funcs) in *)
+  let (Program sl) = Convertfor.prog (Program non_funcs) in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
   let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
   let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), [], [], [], d_non_toplevel_stmts) in
-  DProg ("daffodil", d_toplevel_stmts@[main])
+  DProg ("daffodil", d_funcs@d_toplevel_stmts@[main])
