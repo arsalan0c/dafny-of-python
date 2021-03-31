@@ -41,7 +41,7 @@ let (>>=) m f = fun ctx ->
 
 let fail = fun _ -> None
 
-let typ_eq tp1 tp2 = if typ_compare tp1 tp2 = 0 then return () else fail
+let typ_eq tp1 tp2 = if (subtype tp1 tp2 = 0) && (subtype tp2 tp1 = 0) then return () else fail
 
 let rec check_var (x: var) (tp: typ) : unit t = fun ctx ->
   let open Options in
@@ -88,13 +88,25 @@ let rec synth_exp e = match e with
   | UnaryExp (UMinus _, e) -> let tp = TFloat def_seg in check_exp e tp >>= fun () -> return tp
   | BinaryExp (e1, op, e2) -> begin
     match op with
-    (* | Plus _ -> check e1 tp >>= check e2 tp2 with | Some tp *)
-    | Lt _ -> let tp = TFloat def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
-    (* | And _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
-    | Or _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp *)
-    | _ -> failwith "tc: unsupported binaryop"
+    | Plus _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
+    | Minus _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
+    | Times _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
+    | Divide _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
+    | Mod _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
+    | EqEq _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
+    | NEq _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
+    | Lt _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
+    | LEq _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
+    | Gt _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
+    | GEq _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
+    | And _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
+    | Or _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
+    | In _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
+    | NotIn _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
+    | BiImpl _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
+    | Implies _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
+    | Explies _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
     end
-  (* | BinaryOp (e1, op, e2) -> synth e1 >>= fun tp1 -> synth e2 >>= fun tp2 -> return () *)
   | _ -> failwith "unsupported synth"
 
 (* construct -  return context *)  
@@ -133,13 +145,20 @@ and check_stmt s = match s with
 
 (* synth pl, extend context with type of function, typecheck body with params introduced *)
 (* types of all functions should be available in context *)
+(* priority is inference for rewriting, rather than checking *)
 
-
+(* 
 let map f m ctx =
   let open Options in
   m ctx >>= fun (x, ctx) -> 
-    return (f x, ctx)
+    return (f x, ctx) *)
+
+let rec map f sl init =
+  match sl with
+  | [] -> init
+  | s::rest -> init >>= fun () -> map f rest (f s)
+  
   
 let check_prog (Program sl) = match sl with
-  | s1::[] -> begin match check_stmt s1 [] with | Some ((), ctx) -> print ctx | None -> failwith "program untyped" end
-  | _ -> failwith ""
+  (* | sl -> let _ = map check_stmt sl (fun ctx -> (Some ((), ctx))) [] in [] *)
+  | sl -> begin match map check_stmt sl (fun ctx -> (Some ((), ctx))) [] with | Some ((), ctx) -> print ctx | None -> failwith "program untyped" end

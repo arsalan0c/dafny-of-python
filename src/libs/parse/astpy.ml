@@ -23,9 +23,9 @@ type typ =
   (* | Union of segment * typ list *)
   [@@deriving sexp]
 
-let rec typ_compare pt1 pt2 = 
+let rec subtype pt1 pt2 = 
   let o_compare ot1 ot2 = match ot1, ot2 with
-  | Some t1, Some t2 -> typ_compare t1 t2
+  | Some t1, Some t2 -> subtype t1 t2
   | None, None -> 0
   | _, _ -> -1
   in 
@@ -33,6 +33,7 @@ let rec typ_compare pt1 pt2 =
   | TIdent id1, TIdent id2 -> seg_val_compare id1 id2
   | TInt _, TInt _ -> 0
   | TFloat _, TFloat _ -> 0
+  | TInt _, TFloat _ -> 0
   | TBool _, TBool _ -> 0
   | TStr _, TStr _ -> 0
   | TNone _, TNone _ -> 0
@@ -41,7 +42,7 @@ let rec typ_compare pt1 pt2 =
   | TSet (_, ot1), TSet (_, ot2) -> o_compare ot1 ot2
   | TTuple (_, otl1), TTuple (_, otl2) -> begin
     match otl1, otl2 with
-    | Some tl1, Some tl2 -> List.compare typ_compare tl1 tl2
+    | Some tl1, Some tl2 -> List.compare subtype tl1 tl2
     | None, None -> 0
     | _, _ -> -1
     end
@@ -54,8 +55,6 @@ type unaryop = Not of segment | UMinus of segment
 [@@deriving sexp]
 
 type binaryop = 
-  | NotIn of segment
-  | In of segment
   | Plus of segment 
   | Minus of segment
   | Times of segment
@@ -69,6 +68,8 @@ type binaryop =
   | GEq of segment
   | And of segment
   | Or of segment
+  | NotIn of segment
+  | In of segment
   | BiImpl of segment
   | Implies of segment
   | Explies of segment
