@@ -1,15 +1,15 @@
-(* open Base
+open Base
 open Astpy
 open Sourcemap
 open Sexplib
 
 (* module type TYPING = sig
   type var = string
-  type ctx = (var * typ Options) list
-  type 'a t = ctx -> ('a * ctx) Options
+  type ctx = (var * typ option) list
+  type 'a t = ctx -> ('a * ctx) option
 
   val map : ('a -> 'b) -> 'a t -> 'b t
-  val return : 'a -> 'b -> ('a * 'b) Options
+  val return : 'a -> 'b -> ('a * 'b) option
   val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
 
   val synth : exp -> typ t
@@ -34,11 +34,6 @@ let print (ctx: ctx) : unit =
   let printf = Stdlib.Printf.printf in
   printf "%s\n" ("context: [" ^ (String.concat ~sep:", " (List.map ctx ~f:f)) ^ "]")
 
-let map f m ctx =
-  let open Options in
-  m ctx >>= fun (x, ctx) -> 
-    return (f x, ctx)
-
 let return x = fun ctx -> Some (x, ctx)
 let (>>=) m f = fun ctx -> 
   let open Options in
@@ -56,13 +51,23 @@ let rec check_var (x: var) (tp: typ) : unit t = fun ctx ->
   | (y, Some _)::_ when String.compare x y = 0 -> failwith "" (* variables should be single-use *)
   | h::rest -> check_var x tp rest >>= fun ((), rest') -> 
     return ((), h::rest')
+(* 
+let rec synth_var (x: var) (tp: typ) : unit t = fun ctx ->
+    let open Options in
+    match ctx with
+    | [] -> failwith "" (* out-of-scope variable reference *)
+    | (y, None)::rest when String.compare x y = 0 -> return ((), (y, Some tp)::rest)
+    | (y, Some _)::_ when String.compare x y = 0 -> failwith "" (* variables should be single-use *)
+    | h::rest -> check_var x tp rest >>= fun ((), rest') -> 
+      return ((), h::rest') *)
 
 let lookup x = fun (ctx: ctx) ->
   match List.Assoc.find ctx ~equal:(fun x y -> String.compare x y = 0) x with
   | None -> Options.fail
   | Some None -> Options.fail
-  | Some (Some tp) -> Some tp (* Options.return (tp, ctx) *)
+  | Some (Some tp) -> Options.return (tp, ctx)
 
+(* when we want to run m with a variable, m gives the variable its type *)
 let with_var (type a) (x: var) (m: a t) : a t = fun ctx -> 
   let open Options in
   m ((x, None)::ctx) >>= function
@@ -70,27 +75,71 @@ let with_var (type a) (x: var) (m: a t) : a t = fun ctx ->
   | (_, (y, None)::_) when String.compare x y = 0 -> failwith "" (* type of variable should have been set *)
   | _ -> assert false
 
-(* use *)
-let rec synth e = match e with
+(* use - return type, context *)
+let rec synth_exp e = match e with
+  | Identifier ident -> lookup (seg_val ident)
   | Typ tp -> return tp
-  | Identifier ident -> lookup (segment_value ident) ctx
-  | Literal BoolLit _ -> return (Bool default_segment)
-  | UnaryOp (Not, _) -> return (Bool default_segment)
+  | Literal BoolLit _ -> return (TBool def_seg)
+  | Literal IntLit _ -> return (TInt def_seg)
+  | Literal FloatLit _ -> return (TFloat def_seg)
+  | Literal StringLit _ -> return (TStr def_seg)
+  | Literal NoneLit -> return (TNone def_seg)
+  | UnaryExp (Not _, e) -> let tp = TBool def_seg in check_exp e tp >>= fun () -> return tp
+  | UnaryExp (UMinus _, e) -> let tp = TFloat def_seg in check_exp e tp >>= fun () -> return tp
+  | BinaryExp (e1, op, e2) -> begin
+    match op with
+    (* | Plus _ -> check e1 tp >>= check e2 tp2 with | Some tp *)
+    | Lt _ -> let tp = TFloat def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
+    (* | And _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
+    | Or _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp *)
+    | _ -> failwith "tc: unsupported binaryop"
+    end
   (* | BinaryOp (e1, op, e2) -> synth e1 >>= fun tp1 -> synth e2 >>= fun tp2 -> return () *)
   | _ -> failwith "unsupported synth"
 
-(* construct *)  
-and check (e: exp) (tp: typ) : unit t = match e with
-  (* | Identifier ident -> check_var (segment_value ident) tp *)
-  | BinaryOp (e1, op, e2) -> 
-    match op with
-    | Plus _ -> match check e1 tp, check e2 tp2 with | Some
-    | And _ ->  match check e1 tp, check e2 tp2 with | Some
-  | IfElseExp (e1, c, e2) -> begin 
-    match check c (Bool default_segment), check e1 tp, check e2 tp with 
-    | Some (Bool _), Some _, Some _ -> return tp
-    | _ -> None
-    end
-  | e -> synth e >>= typ_eq tp (* TODO: replace with subtyping *)
+(* construct -  return context *)  
+and check_exp (e: exp) (tp: typ) : unit t = match e with
+  | IfElseExp (e1, c, e2) -> check_exp c (TBool def_seg) >>= 
+    fun () -> check_exp e1 tp >>= fun () -> check_exp e2 tp
+  | Lst [] -> return ()
+  | Lst (e::rest) -> check_exp e tp >>= fun () -> check_exp (Lst rest) tp
+  | e -> synth_exp e >>= typ_eq tp (* TODO: replace with subtyping *)
 
-end *)
+and synth_params pl = match pl with (* return list of types *)
+  | [] -> return []
+  | (_, Typ tp)::rest -> synth_params rest >>= fun tp_args -> return (tp::tp_args)
+  | _ -> assert false
+
+and synth_stmt s = match s with
+  | Return e -> synth_exp e
+  | Exp e -> synth_exp e
+  | _ -> failwith "unsupported synth stmt"
+
+and synth_stmt_lst sl = match sl with
+  | [] -> return (TNone def_seg)
+  | (Return e)::_ -> synth_exp e
+  | s::rest -> check_stmt s >>= fun () -> synth_stmt_lst rest
+
+and check_stmt s = match s with
+  | Assign (Some (Typ tp), _::[], e::[]) -> check_exp e tp
+  (* | Assign (None, _::[], e::[]) -> synth_exp e if exists, check. else use rhs. extend context. *)
+  | Function (_, _, pl, Typ tp, sl) -> synth_params pl >>= fun _ -> synth_stmt_lst sl >>= fun sltp -> typ_eq tp sltp
+  | Assert e -> check_exp e (TBool def_seg)
+  | Break -> return ()
+  | Continue -> return ()
+  | Pass -> return ()
+  (* | s -> synth_stmt s >>= typ_eq *)
+  | _ -> failwith "unsupported check stmt"
+
+(* synth pl, extend context with type of function, typecheck body with params introduced *)
+(* types of all functions should be available in context *)
+
+
+let map f m ctx =
+  let open Options in
+  m ctx >>= fun (x, ctx) -> 
+    return (f x, ctx)
+  
+let check_prog (Program sl) = match sl with
+  | s1::[] -> begin match check_stmt s1 [] with | Some ((), ctx) -> print ctx | None -> failwith "program untyped" end
+  | _ -> failwith ""

@@ -60,7 +60,7 @@ let literal_dfy = function
   | IntLit i -> DIntLit i
   | FloatLit f -> DRealLit f
   | StringLit s -> DStringLit s
-  | NonLit -> DNull
+  | NoneLit -> DNull
 
 let unaryop_dfy = function
   | Not s -> DNot s
@@ -128,7 +128,7 @@ let spec_dfy = function
   | Modifies e -> DModifies (exp_dfy e)
 
 let param_dfy = function
-  | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
+  | (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
 
 let rec stmt_dfy = function
   | Exp (Call (e, el)) -> 

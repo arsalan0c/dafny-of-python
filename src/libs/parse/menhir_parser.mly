@@ -204,7 +204,7 @@ atom:
   | i=INT { Literal (IntLit i) }
   | i=FLOAT { Literal (FloatLit i) }
   | s=strings { Literal (StringLit s) }
-  | NONE { Literal (NonLit) }
+  | NONE { Literal (NoneLit) }
   | FORALL; il=id_star; DOUBLECOLON; e=exp { Forall (il, e) }
   | EXISTS; il=id_star; DOUBLECOLON; e=exp { Exists (il, e) }
   | LPAREN; e=exp; COMMA; el=exp_star; RPAREN { Tuple (e::el) }
@@ -334,7 +334,7 @@ param_rest:
   ;
 
 param:
-  | id=IDENTIFIER; COLON; t=exp { Param (id, t) }
+  | id=IDENTIFIER; COLON; t=exp { (id, t) }
   ;
 
 id_star:
