@@ -196,7 +196,7 @@ let is_func = function
   | _ -> false
 
 let prog_dfy p =
-  let (n_p, gens) = Convertgeneric.prog p in
+  let (n_p, gens) = Generics.prog p in
   let (Program sl) = Convertlist.prog n_p in
   let d_funcs = List.fold ~f:(fun so_far s -> so_far@(func_dfy gens s)) ~init:[] sl in
   let non_funcs = List.filter ~f:(fun x -> not (is_func x)) sl in
