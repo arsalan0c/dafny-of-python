@@ -399,7 +399,7 @@ and print_stmt id = function
     let cb = newcolumn ")" in 
     let ps = newcolumn ";" in
     String.concat [n; pident; ob; pel; cb; ps]
-  | DIf(e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
+  | DIf (e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
     let i = newcolumn "if " in 
     let pe = print_exp 0 e in
     let ob = newcolumn " {" in 
