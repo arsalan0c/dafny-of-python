@@ -249,13 +249,13 @@ let rec print_exp id = function
     in 
     let cb =  (newcolumn "]") in
     String.concat [n; ob; res; cb]
-  | DForall(il, e) -> let n = newcolumn (indent id) in 
+  | DForall (il, e) -> let n = newcolumn (indent id) in 
     let f = (newcolumn "forall ") in 
     let pil = (newcolumn_concat (print_ident 0) ", " il) in 
     let pd = (newcolumn " :: ") in
     let pe = (print_exp 0 e) in
     String.concat [n; f; pil; pd; pe]
-  | DExists(il, e) -> let n = newcolumn (indent id) in
+  | DExists (il, e) -> let n = newcolumn (indent id) in
     let ex = (newcolumn "exists") in 
     let pil = (newcolumn_concat (print_ident 0) ", " il) in
     let pc = (newcolumn " :: ") in 
