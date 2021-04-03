@@ -42,11 +42,10 @@ let rec typ_dfy = function
     end
   | Tuple (s, olt) -> begin
     match olt with
-    | Some (ft::lt) -> 
+    | Some tpl -> 
     (* TODO: add postcondition to check number of args match number returned *)
-      List.iter ~f:(fun t -> if (not (pytype_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt;
-      DSeq (s, typ_dfy ft) (* translate to sequence type instead of tuple *)
-    | Some [] -> failwith "Please specify the exact tuple type"
+      (* List.iter ~f:(fun t -> if (not (pytype_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt; *)
+      DTuple (s, List.map ~f:typ_dfy tpl) (* translate to sequence type instead of tuple *)
     | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)
     end
   | Callable (s, tl, t) -> DFunTyp (s, List.map ~f:typ_dfy tl, typ_dfy t)
@@ -97,7 +96,8 @@ let rec exp_dfy = function
   | Set el -> DSetExpr (List.map ~f:exp_dfy el)
   (* | SetComp el -> DSetCompExpr (List.map ~f:exp_dfy el) *)
   | Dict eel -> DMapExpr (List.map ~f:(fun (k,v) -> (exp_dfy k, exp_dfy v)) eel)
-  | Tuple el -> DSeqExpr (List.map ~f:exp_dfy el)  
+  | Tuple (e::[]) -> exp_dfy e
+  | Tuple el -> DTupleExpr (List.map ~f:exp_dfy el)  
   | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
   | Index e -> DIndex (exp_dfy e)
   | Slice (e1, e2) -> begin

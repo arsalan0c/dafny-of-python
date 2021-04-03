@@ -292,7 +292,11 @@ let rec print_exp id = function
     let el = newcolumn " else" in
     let pe2 = print_exp 1 e2 in
     String.concat [n; i; pc; t; pe1; el; pe2]
-  | _ -> failwith "unsupported expr node"
+  | DTupleExpr el -> let n = newcolumn (indent id) in
+    let ob = newcolumn "(" in
+    let pel = newcolumn_concat (print_exp 0) ", " el in
+    let cb = newcolumn ")" in
+    String.concat [n; ob; pel; cb]
 
 and print_spec id = function
   | DRequires e -> let n  = newcolumn (indent id) in 
