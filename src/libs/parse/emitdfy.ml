@@ -133,10 +133,10 @@ let print_type id t =
     | DBool s -> s
     | DString s -> s
     | DChar s -> s
-    | DSeq(s, _) -> s
-    | DSet(s, _) -> s
-    | DMap(s, _,  _) -> s
-    | DTuple(s, _) -> s 
+    | DSeq (s, _) -> s
+    | DSet (s, _) -> s
+    | DMap (s, _,  _) -> s
+    | DTuple (s, _) -> s 
     | DFunTyp (s, _, _) -> s
     | _ -> Sourcemap.default_segment
   in add_op id (get_s t) (get_v t)
