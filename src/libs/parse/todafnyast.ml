@@ -96,7 +96,7 @@ let rec exp_dfy = function
   | Set el -> DSetExpr (List.map ~f:exp_dfy el)
   (* | SetComp el -> DSetCompExpr (List.map ~f:exp_dfy el) *)
   | Dict eel -> DMapExpr (List.map ~f:(fun (k,v) -> (exp_dfy k, exp_dfy v)) eel)
-  | Tuple (e::[]) -> exp_dfy e
+  | Tuple (e::[]) -> exp_dfy e (* Dafny does not have 1-tuples *)
   | Tuple el -> DTupleExpr (List.map ~f:exp_dfy el)  
   | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
   | Index e -> DIndex (exp_dfy e)
