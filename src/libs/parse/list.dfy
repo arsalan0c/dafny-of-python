@@ -12,13 +12,13 @@ class list<T(==)> {
 
     constructor(l: seq<T>)
         ensures lst == l
+        ensures fresh(this)
     {
         lst := l;
     }
 
     method append(e: T) 
         modifies this
-
         ensures lst == old(lst) + [e]
     {
         lst := lst + [e];
@@ -79,9 +79,8 @@ class list<T(==)> {
     method pop() returns (popped: T)
         requires |lst| > 0
         modifies this
-        ensures |lst| == |old(lst)| - 1
+        ensures lst == old(lst)[0..|old(lst)| - 1]
         ensures popped == old(lst)[|old(lst)| - 1]
-        ensures forall i :: 0 <= i < |lst| ==> lst[i] == old(lst)[i]
     {
         popped := lst[|lst| - 1];
         lst := lst[0..|lst| - 1];
@@ -184,6 +183,25 @@ class list<T(==)> {
         lst := newLst;
     }
 
+    method contains(e: T) returns (res: bool) 
+        ensures e in lst <==> res
+    {
+        return e in lst;
+    }
+
+    method equals(l2: list<T>) returns (res: bool)
+        ensures res <==> lst == l2.lst
+    {
+        return lst == l2.lst;
+    }
+
+    method concat(l2: list<T>) returns (res: list<T>) 
+        ensures fresh(res)
+        ensures res.lst == lst + l2.lst
+    {
+        return new list<T>(lst + l2.lst);
+    }
+
     // predicate sorted(s: seq<T>)
     // {
     //     forall i,j :: 0 <= i < j < |s| ==> s[i] <= s[j]
@@ -198,4 +216,3 @@ class list<T(==)> {
 
     // }
 }
-

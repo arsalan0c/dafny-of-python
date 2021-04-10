@@ -123,7 +123,7 @@ rule next_token = parse
 | "pass" { PASS (emit_segment lexbuf (Some "pass")) }
 | "return" { RETURN (emit_segment lexbuf (Some "return")) }
 | "assert" { ASSERT (emit_segment lexbuf (Some "assert")) }
-| "!in" { NOT_IN (emit_segment lexbuf (Some "!in")) }
+| "not in" { NOT_IN (emit_segment lexbuf (Some "not in")) }
 | "in" { IN (emit_segment lexbuf (Some "in")) }
 | "==" { EQEQ (emit_segment lexbuf (Some "==")) }
 | '=' { EQ (emit_segment lexbuf (Some "=")) }

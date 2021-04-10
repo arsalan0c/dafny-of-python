@@ -197,11 +197,11 @@ let is_func = function
 
 let prog_dfy p =
   let (n_p, gens) = Generics.prog p in
-  let (Program sl) = Convertlist.prog n_p in
+  let p = Convertfor.prog n_p in
+  let (Program sl) = Convertlist.prog p in
   let d_funcs = List.fold ~f:(fun so_far s -> so_far@(func_dfy gens s)) ~init:[] sl in
   let non_funcs = List.filter ~f:(fun x -> not (is_func x)) sl in
-  (* let calls_rewritten = Convertcall.prog (Program non_funcs) in *)
-  let (Program sl) = Convertfor.prog (Program non_funcs) in
+  let (Program sl) = Convertcall.prog (Program non_funcs) in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in

@@ -5,13 +5,18 @@ open Astdfy
 
 let printf = Stdlib.Printf.printf
 
-type pos = Pos of int * int (* line, column *)
+type line = int
 [@@deriving sexp]
-type sourcemap = (pos * Sourcemap.segment) list ref
+type column = int
 [@@deriving sexp]
 
-let sm = ref []
-let add_sm k v s = sm := ((k, v), s)::!sm 
+(* type pos = Pos of int * int line, column *)
+(* [@@deriving sexp] *)
+type sourcemap = ((line * column) * Sourcemap.segment) list ref
+[@@deriving sexp]
+
+let sm: sourcemap = ref []
+let add_sm k v s = sm := let _ = ((k, v), s) in !sm
 let rec replicate_str s n = match n with
   | 0 -> ""
   | n -> let rest = replicate_str s (n - 1) in
