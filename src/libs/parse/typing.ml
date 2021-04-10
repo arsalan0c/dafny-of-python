@@ -22,16 +22,20 @@ open Sexplib
 end *)
 
 (* module Typing : TYPING = struct *)
+
+exception PyTypingError of string
+let[@inline] failwith msg = raise (PyTypingError msg)
+
 type var = string
 type ctx = (var * typ option) list
 type 'a t = ctx -> ('a * ctx) option
 
+let printf = Stdlib.Printf.printf
 let typ_print otp = match otp with | Some tp -> Sexp.to_string (sexp_of_typ tp) | None -> ""
 let print (ctx: ctx) : unit =
   let f (v, otp) : string =
     "(" ^ v ^ ", " ^ typ_print otp ^ ")"
   in
-  let printf = Stdlib.Printf.printf in
   printf "%s\n" ("context: [" ^ (String.concat ~sep:", " (List.map ctx ~f:f)) ^ "]")
 
 let return x = fun ctx -> Some (x, ctx)
@@ -67,6 +71,8 @@ let lookup x = fun (ctx: ctx) ->
   | Some None -> Options.fail
   | Some (Some tp) -> Options.return (tp, ctx)
 
+let add (v: var) (otp: typ option) = fun (ctx: ctx) -> Options.return ((), (v, otp)::ctx)
+
 (* when we want to run m with a variable, m gives the variable its type *)
 let with_var (type a) (x: var) (m: a t) : a t = fun ctx -> 
   let open Options in
@@ -74,6 +80,12 @@ let with_var (type a) (x: var) (m: a t) : a t = fun ctx ->
   | (r, (y, Some _)::ctx') when String.compare x y = 0 -> return (r, ctx') 
   | (_, (y, None)::_) when String.compare x y = 0 -> failwith "" (* type of variable should have been set *)
   | _ -> assert false
+
+let rec iter2 ~f l1 l2 msg =
+  match l1, l2 with
+  | [], [] -> return ()
+  | (e1::rest1), (e2::rest2) -> f e1 e2 >>= (iter2 ~f:f rest1 rest2)
+  | _, _ -> failwith msg
 
 (* use - return type, context *)
 let rec synth_exp e = match e with
@@ -107,19 +119,28 @@ let rec synth_exp e = match e with
     | Implies _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
     | Explies _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
     end
+  | Call (e, el) -> synth_exp e >>= fun tp -> begin 
+    match tp with 
+    | TCallable (_, tpl, ret_tp) -> assert ((List.length tpl) = (List.length el)); iter2 tpl el ~f:(fun tp e -> (synth_exp e >>= fun etp -> typ_eq tp etp >>= fun () -> return "some")) "unequal number of args" >>= fun () -> return ret_tp
+    | _ -> failwith "expected callable type for function call"
+    end
   | _ -> failwith "unsupported synth"
 
-(* construct -  return context *)  
+(* construct - return context *)  
 and check_exp (e: exp) (tp: typ) : unit t = match e with
   | IfElseExp (e1, c, e2) -> check_exp c (TBool def_seg) >>= 
     fun () -> check_exp e1 tp >>= fun () -> check_exp e2 tp
   | Lst [] -> return ()
-  | Lst (e::rest) -> check_exp e tp >>= fun () -> check_exp (Lst rest) tp
-  | e -> synth_exp e >>= typ_eq tp (* TODO: replace with subtyping *)
+  | Lst (e::rest) -> begin 
+    match tp with 
+    | TLst (_, Some tp') -> check_exp e tp' >>= fun () -> check_exp (Lst rest) tp 
+    | _ -> fail
+    end
+  | e -> synth_exp e >>= typ_eq tp
 
 and synth_params pl = match pl with (* return list of types *)
   | [] -> return []
-  | (_, Typ tp)::rest -> synth_params rest >>= fun tp_args -> return (tp::tp_args)
+  | (ident, Typ tp)::rest -> add (seg_val ident) (Some tp) >>= fun () -> synth_params rest >>= fun tp_args -> return (tp::tp_args)
   | _ -> assert false
 
 and synth_stmt s = match s with
@@ -133,9 +154,9 @@ and synth_stmt_lst sl = match sl with
   | s::rest -> check_stmt s >>= fun () -> synth_stmt_lst rest
 
 and check_stmt s = match s with
-  | Assign (Some (Typ tp), _::[], e::[]) -> check_exp e tp
-  (* | Assign (None, _::[], e::[]) -> synth_exp e if exists, check. else use rhs. extend context. *)
-  | Function (_, _, pl, Typ tp, sl) -> synth_params pl >>= fun _ -> synth_stmt_lst sl >>= fun sltp -> typ_eq tp sltp
+  | Assign (Some (Typ tp), ident::[], e::[]) -> check_exp e tp >>= fun () -> add (seg_val ident) (Some tp) 
+  (* | Assign (None, ident::[], e::[]) -> synth_exp e >>= fun s_tp -> (lookup (seg_val ident)) >>= Options.fold (fun x -> return x) (fun () -> return s_tp) >>= fun e_tp -> typ_eq s_tp e_tp   *)
+  | Function (_, ident, pl, Typ ret_tp, sl) -> synth_params pl >>= fun tpl -> synth_stmt_lst sl >>= fun sl_tp -> typ_eq ret_tp sl_tp >>= fun () -> add (seg_val ident) (Some (TCallable (def_seg, tpl, ret_tp)))
   | Assert e -> check_exp e (TBool def_seg)
   | Break -> return ()
   | Continue -> return ()
@@ -143,22 +164,32 @@ and check_stmt s = match s with
   (* | s -> synth_stmt s >>= typ_eq *)
   | _ -> failwith "unsupported check stmt"
 
+
+
+let rec map f sl =
+  match sl with
+  | [] -> return ()
+  | s::rest -> f s >>= fun () -> map f rest
+
+let check_prog (Program sl) = match sl with
+  (* | sl -> let _ = map check_stmt sl (fun ctx -> (Some ((), ctx))) [] in [] *)
+  | sl -> begin match map check_stmt sl [] with 
+    | Some ((), ctx) -> printf "Typechecking successful\n"; print ctx; 
+    | None -> failwith "Typechecking failed" 
+  end
+
+
 (* synth pl, extend context with type of function, typecheck body with params introduced *)
 (* types of all functions should be available in context *)
 (* priority is inference for rewriting, rather than checking *)
 
-(* 
-let map f m ctx =
-  let open Options in
-  m ctx >>= fun (x, ctx) -> 
-    return (f x, ctx) *)
 
-let rec map f sl init =
-  match sl with
-  | [] -> init
-  | s::rest -> init >>= fun () -> map f rest (f s)
-  
-  
-let check_prog (Program sl) = match sl with
-  (* | sl -> let _ = map check_stmt sl (fun ctx -> (Some ((), ctx))) [] in [] *)
-  | sl -> begin match map check_stmt sl (fun ctx -> (Some ((), ctx))) [] with | Some ((), ctx) -> print ctx | None -> failwith "program untyped" end
+(* scopes *)
+(* first pass functions *)
+(* checking vs synth modes *)
+(* tag with types *)
+(* rewrite nodes based on types *)
+(* errors *)
+(* loops and conditionals *)
+(* generics *)
+(* type synonyms *)

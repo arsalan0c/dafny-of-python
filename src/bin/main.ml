@@ -29,9 +29,9 @@ let typcheck s =
 let () = begin
   Pyparse.Parser.pp_exceptions ();
   let inp = Stdio.In_channel.input_all Stdio.stdin in
-  typcheck inp;
+  (* typcheck inp; *)
   let parsed = Pyparse.Parser.parse_string inp in
-  (* let _ = Pyparse.Typing.check_prog parsed in *)
+  let _ = Pyparse.Typing.check_prog parsed in
   let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
   printf "\n%s\n" dafny_source; 
@@ -39,6 +39,7 @@ let () = begin
   let verification_out = system dafny_command in
   Pyparse.Report.report verification_out
 end
+
 (* 
 let main2 =
   printf "\nParsing\n\"%s\"\n\r" inp;
