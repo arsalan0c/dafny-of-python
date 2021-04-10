@@ -191,7 +191,7 @@ let func_dfy generics = function
 let is_func = function
   | Function (_, _, _, _, (Return _)::[]) -> true
   | Function (_, _, _, _, (Exp _)::[]) -> true
-  | Function (_, _, _, _, Pass::[]) -> true
+  (* | Function (_, _, _, _, Pass::[]) -> true *)
   | Function (_, _, _, _, []) -> true
   | _ -> false
 
