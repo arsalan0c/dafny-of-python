@@ -8,6 +8,7 @@ let[@inline] failwith msg = raise (PyAstError msg)
 type literal = BoolLit of bool | IntLit of int | FloatLit of float | StringLit of string | NoneLit
 [@@deriving sexp]
 
+
 type typ =
   | TIdent of segment
   | TInt of segment
@@ -23,30 +24,45 @@ type typ =
   (* | Union of segment * typ list *)
   [@@deriving sexp]
 
-let rec subtype pt1 pt2 = 
+let typ_plus = [TInt def_seg; TFloat def_seg; TStr def_seg; TLst (def_seg, None)]
+let typ_minus = [TInt def_seg; TFloat def_seg]
+let typ_times = [TInt def_seg; TFloat def_seg]
+let typ_divide = [TInt def_seg; TFloat def_seg]
+let typ_mod = [TInt def_seg]
+let typ_rel = [TInt def_seg; TFloat def_seg]
+let typ_in = [TLst (def_seg, None)]
+
+
+let rec subtyp pt1 pt2 = 
   let o_compare ot1 ot2 = match ot1, ot2 with
-  | Some t1, Some t2 -> subtype t1 t2
-  | None, None -> 0
-  | _, _ -> -1
+  | Some t1, Some t2 -> subtyp t1 t2
+  | None, None -> true
+  | _, _ -> false
   in 
   match pt1, pt2 with
-  | TIdent id1, TIdent id2 -> seg_val_compare id1 id2
-  | TInt _, TInt _ -> 0
-  | TFloat _, TFloat _ -> 0
-  | TInt _, TFloat _ -> 0
-  | TBool _, TBool _ -> 0
-  | TStr _, TStr _ -> 0
-  | TNone _, TNone _ -> 0
+  | TIdent _, TIdent _ -> false
+  | TInt _, TInt _ -> true
+  | TFloat _, TFloat _ -> true
+  | TInt _, TFloat _ -> true
+  | TBool _, TBool _ -> true
+  | TStr _, TStr _ -> true
+  | TNone _, TNone _ -> true
+  | TLst _, TLst (_, None) -> true
   | TLst (_, ot1), TLst (_, ot2) -> o_compare ot1 ot2
-  | TDict (_, ot1, ot3), TDict (_, ot2, ot4) -> (o_compare ot1 ot2) + (o_compare ot3 ot4)
+  | TDict (_, ot1, ot3), TDict (_, ot2, ot4) -> (o_compare ot1 ot2) && (o_compare ot3 ot4)
   | TSet (_, ot1), TSet (_, ot2) -> o_compare ot1 ot2
   | TTuple (_, otl1), TTuple (_, otl2) -> begin
     match otl1, otl2 with
-    | Some tl1, Some tl2 -> List.compare subtype tl1 tl2
-    | None, None -> 0
-    | _, _ -> -1
+    | Some tl1, Some tl2 -> 
+      let c = List.compare (fun x y -> if subtyp x y then 0 else -1) tl1 tl2 in
+      if c = 0 then true else false
+    | None, None -> true
+    | _, _ -> false
     end
-  | _, _ -> -1
+  | _, _ -> false
+
+let eqtyp tp1 tp2 = (subtyp tp1 tp2) && (subtyp tp2 tp1)
+let either_subtyp tp1 tp2 = (subtyp tp1 tp2) || (subtyp tp2 tp1)
 
 type identifier = segment
 [@@deriving sexp]

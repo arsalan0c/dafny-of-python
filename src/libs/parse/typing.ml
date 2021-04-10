@@ -43,9 +43,22 @@ let (>>=) m f = fun ctx ->
   let open Options in
   m ctx >>= fun (a, ctx') -> f a ctx'
 
-let fail = fun _ -> None
+let mplus m1 m2 = fun ctx ->
+    let open Options in 
+    mplus (m1 ctx) (m2 ctx)
 
-let typ_eq tp1 tp2 = if (subtype tp1 tp2 = 0) && (subtype tp2 tp1 = 0) then return () else fail
+let fail msg = fun _ -> printf "%s\n" msg; None
+
+let typ_eq tp1 tp2 = if eqtyp tp1 tp2 then return () else fail "type equality failed"
+let typ_sub tp1 tp2 = if subtyp tp1 tp2 then return () else fail "subtyping failed"
+let typ_sub_2 tp1 tp2 = if (subtyp tp1 tp2) || (subtyp tp2 tp1) then return () else fail "neither types are subtypes of one another"
+let typ_sub_lst tp1 tpl = let subs = List.filter tpl ~f:(fun tp2 -> (subtyp tp1 tp2)) in if List.length subs > 0 then return () else fail "list subtyping failed"
+let coerce_typ tp1 tp2 = if subtyp tp1 tp2 then return tp2 else if subtyp tp2 tp1 then return tp1 else fail "type coercion failed"
+
+let rec map f sl =
+  match sl with
+  | [] -> return ()
+  | s::rest -> f s >>= fun () -> map f rest
 
 let rec check_var (x: var) (tp: typ) : unit t = fun ctx ->
   let open Options in
@@ -55,15 +68,7 @@ let rec check_var (x: var) (tp: typ) : unit t = fun ctx ->
   | (y, Some _)::_ when String.compare x y = 0 -> failwith "" (* variables should be single-use *)
   | h::rest -> check_var x tp rest >>= fun ((), rest') -> 
     return ((), h::rest')
-(* 
-let rec synth_var (x: var) (tp: typ) : unit t = fun ctx ->
-    let open Options in
-    match ctx with
-    | [] -> failwith "" (* out-of-scope variable reference *)
-    | (y, None)::rest when String.compare x y = 0 -> return ((), (y, Some tp)::rest)
-    | (y, Some _)::_ when String.compare x y = 0 -> failwith "" (* variables should be single-use *)
-    | h::rest -> check_var x tp rest >>= fun ((), rest') -> 
-      return ((), h::rest') *)
+
 
 let lookup x = fun (ctx: ctx) ->
   match List.Assoc.find ctx ~equal:(fun x y -> String.compare x y = 0) x with
@@ -100,30 +105,32 @@ let rec synth_exp e = match e with
   | UnaryExp (UMinus _, e) -> let tp = TFloat def_seg in check_exp e tp >>= fun () -> return tp
   | BinaryExp (e1, op, e2) -> begin
     match op with
-    | Plus _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
-    | Minus _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
-    | Times _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
-    | Divide _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
-    | Mod _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return tp1 (* TODO: check operand types *)
-    | EqEq _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
-    | NEq _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
-    | Lt _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
-    | LEq _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
-    | Gt _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
-    | GEq _ -> synth_exp e1 >>= (fun tp1 -> match tp1 with | TFloat _ -> check_exp e2 tp1 | TInt _ -> check_exp e2 tp1 | _ -> return ()) >>= fun () -> return (TBool def_seg)
+    | Plus _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_plus >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2
+    | Minus _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_minus >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2
+    | Times _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_times >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2
+    | Divide _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_divide >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2
+    | Mod _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_mod >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2
+    | EqEq _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg)
+    | NEq _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg)
+    | Lt _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_rel >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2 >>= fun _ -> return (TBool def_seg)
+    | LEq _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_rel >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2 >>= fun _ -> return (TBool def_seg)
+    | Gt _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_rel >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2 >>= fun _ -> return (TBool def_seg)
+    | GEq _ -> synth_exp e1 >>= fun tp1 -> typ_sub_lst tp1 typ_rel >>= fun () -> synth_exp e2 >>= fun tp2 -> coerce_typ tp1 tp2 >>= fun _ -> return (TBool def_seg)
     | And _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
     | Or _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
-    | In _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
-    | NotIn _ -> synth_exp e1 >>= fun tp1 -> synth_exp e2 >>= fun tp2 -> typ_eq tp1 tp2 >>= fun () -> return (TBool def_seg) (* TODO: check operand types *)
     | BiImpl _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
     | Implies _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
     | Explies _ -> let tp = TBool def_seg in check_exp e1 tp >>= fun () -> check_exp e2 tp >>= fun () -> return tp
+    | In _ -> synth_exp e2 >>= fun tp2 -> typ_sub_lst tp2 typ_in >>= fun () -> return (TBool def_seg)
+    | NotIn _ -> synth_exp e2 >>= fun tp2 -> typ_sub_lst tp2 typ_in >>= fun () -> return (TBool def_seg)
     end
   | Call (e, el) -> synth_exp e >>= fun tp -> begin 
     match tp with 
     | TCallable (_, tpl, ret_tp) -> assert ((List.length tpl) = (List.length el)); iter2 tpl el ~f:(fun tp e -> (synth_exp e >>= fun etp -> typ_eq tp etp >>= fun () -> return "some")) "unequal number of args" >>= fun () -> return ret_tp
     | _ -> failwith "expected callable type for function call"
     end
+  | Lst [] -> return (TLst (def_seg, None))
+  | Lst (e::rest) -> synth_exp e >>= fun tp -> let ltp = (TLst (def_seg, Some tp)) in check_exp (Lst rest) ltp >>= fun () -> return ltp
   | _ -> failwith "unsupported synth"
 
 (* construct - return context *)  
@@ -134,9 +141,14 @@ and check_exp (e: exp) (tp: typ) : unit t = match e with
   | Lst (e::rest) -> begin 
     match tp with 
     | TLst (_, Some tp') -> check_exp e tp' >>= fun () -> check_exp (Lst rest) tp 
-    | _ -> fail
+    | TLst (_, None) -> return ()
+    | _ -> fail "list is not well-typed"
     end
-  | e -> synth_exp e >>= typ_eq tp
+  | e -> synth_exp e >>= fun tp2 -> typ_sub_2 tp2 tp
+
+(* and check_mult (e: exp) (tpl: typ list) = match List.filter ~f:(fun x -> x) (map (fun x -> check_exp e x) tpl) with
+  | [] -> fail
+  | _ -> return () *)
 
 and synth_params pl = match pl with (* return list of types *)
   | [] -> return []
@@ -154,22 +166,20 @@ and synth_stmt_lst sl = match sl with
   | s::rest -> check_stmt s >>= fun () -> synth_stmt_lst rest
 
 and check_stmt s = match s with
-  | Assign (Some (Typ tp), ident::[], e::[]) -> check_exp e tp >>= fun () -> add (seg_val ident) (Some tp) 
-  (* | Assign (None, ident::[], e::[]) -> synth_exp e >>= fun s_tp -> (lookup (seg_val ident)) >>= Options.fold (fun x -> return x) (fun () -> return s_tp) >>= fun e_tp -> typ_eq s_tp e_tp   *)
-  | Function (_, ident, pl, Typ ret_tp, sl) -> synth_params pl >>= fun tpl -> synth_stmt_lst sl >>= fun sl_tp -> typ_eq ret_tp sl_tp >>= fun () -> add (seg_val ident) (Some (TCallable (def_seg, tpl, ret_tp)))
+  | Assign (Some (Typ tp), ident::[], e::[]) -> check_exp e tp >>= fun () -> add (seg_val ident) (Some tp) (* (re) declaration  *)
+  | Assign (None, ident::[], e::[]) -> synth_exp e >>=  (* update *)
+    fun s_tp -> mplus (lookup (seg_val ident)) ((add (seg_val ident) (Some s_tp) >>= fun () -> return s_tp)) >>= 
+    fun e_tp -> typ_eq s_tp e_tp
+  | Function (_, ident, pl, Typ ret_tp, sl) -> synth_params pl >>= 
+    fun tpl -> synth_stmt_lst sl >>= 
+    fun sl_tp -> typ_eq ret_tp sl_tp >>= 
+    fun () -> add (seg_val ident) (Some (TCallable (def_seg, tpl, ret_tp)))
   | Assert e -> check_exp e (TBool def_seg)
   | Break -> return ()
   | Continue -> return ()
   | Pass -> return ()
   (* | s -> synth_stmt s >>= typ_eq *)
   | _ -> failwith "unsupported check stmt"
-
-
-
-let rec map f sl =
-  match sl with
-  | [] -> return ()
-  | s::rest -> f s >>= fun () -> map f rest
 
 let check_prog (Program sl) = match sl with
   (* | sl -> let _ = map check_stmt sl (fun ctx -> (Some ((), ctx))) [] in [] *)
@@ -178,11 +188,10 @@ let check_prog (Program sl) = match sl with
     | None -> failwith "Typechecking failed" 
   end
 
-
 (* synth pl, extend context with type of function, typecheck body with params introduced *)
 (* types of all functions should be available in context *)
 (* priority is inference for rewriting, rather than checking *)
-
+(* TODO: check operand types are acceptable for op - one successful choice. list, string, ints, floats, tuples. check one operand is subtyp of another (either is fine), return the supertype *)
 
 (* scopes *)
 (* first pass functions *)
@@ -193,3 +202,14 @@ let check_prog (Program sl) = match sl with
 (* loops and conditionals *)
 (* generics *)
 (* type synonyms *)
+
+
+(* 
+let rec synth_var (x: var) (tp: typ) : unit t = fun ctx ->
+    let open Options in
+    match ctx with
+    | [] -> failwith "" (* out-of-scope variable reference *)
+    | (y, None)::rest when String.compare x y = 0 -> return ((), (y, Some tp)::rest)
+    | (y, Some _)::_ when String.compare x y = 0 -> failwith "" (* variables should be single-use *)
+    | h::rest -> check_var x tp rest >>= fun ((), rest') -> 
+      return ((), h::rest') *)

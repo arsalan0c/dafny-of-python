@@ -31,13 +31,13 @@ let () = begin
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   (* typcheck inp; *)
   let parsed = Pyparse.Parser.parse_string inp in
-  let _ = Pyparse.Typing.check_prog parsed in
-  let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
+  Pyparse.Typing.check_prog parsed
+  (* let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
   printf "\n%s\n" dafny_source; 
   Out_channel.write_all dafny_f ~data:dafny_source;
   let verification_out = system dafny_command in
-  Pyparse.Report.report verification_out
+  Pyparse.Report.report verification_out *)
 end
 
 (* 

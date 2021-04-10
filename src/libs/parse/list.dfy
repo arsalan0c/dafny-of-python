@@ -199,3 +199,8 @@ class list<T(==)> {
     // }
 }
 
+method test() {
+    var b := 1 + 3.4;
+    var a := (1, 2) + (4, 6);
+    assert a == (1, 2);
+}
