@@ -157,10 +157,9 @@ let convert_typsyn ident rhs =
   match ident with | Identifier ident -> let ident_v = Sourcemap.segment_value ident in begin
     match rhs with 
     | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
-    | Identifier typ_ident -> begin 
-        let s_typ = Sourcemap.segment_value typ_ident in
-        match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
-        | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp typ_ident))))
+    | Identifier (seg, Some syn) -> begin 
+        match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s syn = 0) with
+        | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp (seg, Some syn)))))
         | None -> None
       end
     | _ -> None
