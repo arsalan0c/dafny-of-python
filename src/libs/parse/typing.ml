@@ -181,17 +181,13 @@ and check_stmt s = match s with
   (* | s -> synth_stmt s >>= typ_eq *)
   | _ -> failwith "unsupported check stmt"
 
-let check_prog (Program sl) = match sl with
-  (* | sl -> let _ = map check_stmt sl (fun ctx -> (Some ((), ctx))) [] in [] *)
-  | sl -> begin match map check_stmt sl [] with 
+let check_prog (Program sl) = match map check_stmt sl [] with 
     | Some ((), ctx) -> printf "Typechecking successful\n"; print ctx; 
     | None -> failwith "Typechecking failed" 
-  end
 
 (* synth pl, extend context with type of function, typecheck body with params introduced *)
 (* types of all functions should be available in context *)
 (* priority is inference for rewriting, rather than checking *)
-(* TODO: check operand types are acceptable for op - one successful choice. list, string, ints, floats, tuples. check one operand is subtyp of another (either is fine), return the supertype *)
 
 (* scopes *)
 (* first pass functions *)
