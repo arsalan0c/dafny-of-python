@@ -25,9 +25,9 @@ let convert_typvar lhs rhs =
   | _ -> None
 
 let generics = function
-  |  Assign (_, il, el) -> begin
+  |  Assign (t, il, el) -> begin
     match List.map2 ~f:convert_typvar il el with
-    | Ok typ_vars -> let vs = List.filter_map ~f:(fun x -> x) typ_vars in (None, vs)
+    | Ok typ_vars -> let vs = List.filter_map ~f:(fun x -> x) typ_vars in if List.length vs > 0 then (None, vs) else (Some (Assign (t, il, el)), vs)
     | Unequal_lengths -> failwith "Number of left-hand identifiers in assignment must be equal to number of right-hand expressions"
     end
   | s -> (Some s, [])
