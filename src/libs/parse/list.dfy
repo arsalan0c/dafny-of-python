@@ -1,11 +1,11 @@
 /* imperative implementation, based on Python's list: https://docs.python.org/3/tutorial/datastructures.html */
 
-// method newList<T>(s: seq<T>) returns (l: list<T>) 
-//     ensures fresh(l)
-//     ensures l.lst == s
-// {
-//     return new list<T>(s);
-// }
+method newList<T>(s: seq<T>) returns (l: list<T>) 
+    ensures fresh(l)
+    ensures l.lst == s
+{
+    return new list<T>(s);
+}
 
 class list<T(==)> {
     var lst: seq<T>
@@ -126,6 +126,7 @@ class list<T(==)> {
         reads this
         requires 0 <= idx < |lst|
         ensures e == lst[idx]
+        ensures this.contains(e)
     {
         lst[idx]
     }
@@ -247,10 +248,15 @@ class list<T(==)> {
 //         }
 //     } else {
 //         var rest := a.rangeLower(1);
+//         assert forall k :: 1 <= k < a.len() ==> rest.contains(a.atIndex(k));
+//         assert forall k :: 1 <= k < a.len() ==> a.atIndex(k) == rest.atIndex(k - 1);
 //         res := filterF(pred, rest);
 //         assert forall k :: 0 <= k < res.len() ==> a.contains(res.atIndex(k));
 //         assert forall k :: 0 <= k < res.len() ==> pred(res.atIndex(k));
-//         assert forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
+//         assert res.len() <= rest.len();
+//         assert forall k :: 0 <= k < rest.len() ==> (pred(rest.atIndex(k)) <==> res.contains(rest.atIndex(k)));
+//         assert forall k :: 0 <= k < rest.len() ==> a.atIndex(k + 1) == rest.atIndex(k);
+//         assert forall k :: 1 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
 //         //assert forall k :: 0 <= k < res.len() ==> res.count(res.atIndex(k)) <= a.count(res.atIndex(k));
 
 //         var e := a.atIndex(0);
@@ -267,8 +273,15 @@ class list<T(==)> {
 //         if pred(e) {
 //             res.insert(0, e);
 //             assert forall k :: 1 <= k < res.len() ==> res.atIndex(k) == resO.atIndex(k - 1);
+//             assert forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
 //             //assert forall k :: 0 <= k < res.len() ==> res.count(res.atIndex(k)) <= a.count(res.atIndex(k));
+//         } else {
+//             assert !pred(e);
+//             assert forall k :: 0 <= k < res.len() ==> pred(res.atIndex(k)) && res.contains(res.atIndex(k));
+//             assert exists h :: !res.contains(h) || pred(h);
+//             assert !res.contains(e) || pred(e);
 //         }
+//         assert forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
 //     }
 
 //     assert forall k :: 0 <= k < res.len() ==> a.contains(res.atIndex(k));
@@ -298,67 +311,67 @@ class list<T(==)> {
 // }
 
 
-method range(start: int, stop: int, step: int) returns (res: seq<int>)
-    requires start == 0
-    requires step == 1
-    requires stop > start
-    ensures |res| == stop - start
-    ensures forall k :: start <= k < stop ==> res[k - start] == k
-{
-    var i := start;
-    var a := [];
-    while i < stop 
-        invariant start <= i <= stop + step - 1
-        invariant |a| == (i - start) / step
-        invariant forall k :: start <= k < i ==> a[k - start] == k
-    {
-        a := a + [i];
-        i := i + step;
-    }
+// method range(start: int, stop: int, step: int) returns (res: seq<int>)
+//     requires start == 0
+//     requires step == 1
+//     requires stop > start
+//     ensures |res| == stop - start
+//     ensures forall k :: start <= k < stop ==> res[k - start] == k
+// {
+//     var i := start;
+//     var a := [];
+//     while i < stop 
+//         invariant start <= i <= stop + step - 1
+//         invariant |a| == (i - start) / step
+//         invariant forall k :: start <= k < i ==> a[k - start] == k
+//     {
+//         a := a + [i];
+//         i := i + step
+//     }
 
-    return a;
-}
+//     return a;
+// }
 
-method maxInts<T>(l: seq<int>) returns (res: int)
-    requires |l| > 0
-    ensures forall k :: 0 <= k < |l| ==> res >= l[k] 
-{
-    var i := 0;
-    var soFar := l[i];
-    while i < |l| 
-        invariant 0 <= i <= |l|
-        invariant forall k :: 0 <= k < i ==> soFar >= l[k] 
-    {
-        if l[i] > soFar {
-            soFar := l[i];
-        }
-        i := i + 1;
-    }
+// method maxInts<T>(l: seq<int>) returns (res: int)
+//     requires |l| > 0
+//     ensures forall k :: 0 <= k < |l| ==> res >= l[k] 
+// {
+//     var i := 0;
+//     var soFar := l[i];
+//     while i < |l| 
+//         invariant 0 <= i <= |l|
+//         invariant forall k :: 0 <= k < i ==> soFar >= l[k] 
+//     {
+//         if l[i] > soFar {
+//             soFar := l[i];
+//         }
+//         i := i + 1;
+//     }
 
-    return soFar;
-}
+//     return soFar;
+// }
 
-method maxReals<T>(l: seq<real>) returns (res: real)
-    requires |l| > 0
-    ensures forall k :: 0 <= k < |l| ==> res >= l[k] 
-{
-    var i := 0;
-    var soFar := l[i];
-    while i < |l| 
-        invariant 0 <= i <= |l|
-        invariant forall k :: 0 <= k < i ==> soFar >= l[k] 
-    {
-        if l[i] > soFar {
-            soFar := l[i];
-        }
-        i := i + 1;
-    }
+// method maxReals<T>(l: seq<real>) returns (res: real)
+//     requires |l| > 0
+//     ensures forall k :: 0 <= k < |l| ==> res >= l[k] 
+// {
+//     var i := 0;
+//     var soFar := l[i];
+//     while i < |l| 
+//         invariant 0 <= i <= |l|
+//         invariant forall k :: 0 <= k < i ==> soFar >= l[k] 
+//     {
+//         if l[i] > soFar {
+//             soFar := l[i];
+//         }
+//         i := i + 1;
+//     }
 
-    return soFar;
-}
+//     return soFar;
+// }
 
 
-method maxListInt<T>(l: list<int>) returns (res: int)
+method maxListInt(l: list<int>) returns (res: int)
     requires l.len() > 0
     ensures forall k :: 0 <= k < l.len() ==> res >= l.atIndex(k)
 {
@@ -377,28 +390,49 @@ method maxListInt<T>(l: list<int>) returns (res: int)
     return soFar;
 }
 
-method maxListReal<T>(l: list<real>) returns (res: real)
-    requires l.len() > 0
-    ensures forall k :: 0 <= k < l.len() ==> res >= l.atIndex(k)
-{
-    var i := 0;
-    var soFar := l.atIndex(i);
-    while i < l.len()
-        invariant 0 <= i <= l.len()
-        invariant forall k :: 0 <= k < i ==> soFar >= l.atIndex(k)
-    {
-        if l.atIndex(i) > soFar {
-            soFar := l.atIndex(i);
-        }
-        i := i + 1;
-    }
+// method maxListReal<T>(l: list<real>) returns (res: real)
+//     requires l.len() > 0
+//     ensures forall k :: 0 <= k < l.len() ==> res >= l.atIndex(k)
+// {
+//     var i := 0;
+//     var soFar := l.atIndex(i);
+//     while i < l.len()
+//         invariant 0 <= i <= l.len()
+//         invariant forall k :: 0 <= k < i ==> soFar >= l.atIndex(k)
+//     {
+//         if l.atIndex(i) > soFar {
+//             soFar := l.atIndex(i);
+//         }
+//         i := i + 1;
+//     }
 
-    return soFar;
-}
-
-
+//     return soFar;
+// }
 
 
 
 
+// method search(x: int, s: list<int>) returns (res1: int)
+//   requires (s.len() > 0)
+//   requires forall k, j :: ((((0 <= k) && (k < j)) && (j < s.len())) ==> (s.atIndex(k) <= s.atIndex(j)))
+//   ensures ((res1 >= 0 && res1 < s.len()) ==> (x <= s.atIndex(res1)))
+// {
+//   var x: int := x;
+//   var s: list<int> := s;
+//   var output: int := 0;
+//   var tempcall_1 := s.len();
+//   var l: int := tempcall_1;
+//   while (output < l)
+//     invariant ((0 <= output) && (output <= l))
+//     invariant forall k :: (((0 <= k) && (k < output)) ==> (x > s.atIndex(k)))
+//   {
+//     var tempcall_2 := s.atIndex(output);
+//     if (x > tempcall_2) {
+//       output := (output + 1);
+//     } else {
+//       break;    
+//     }
+//   }
+//   return output;
+// }
 

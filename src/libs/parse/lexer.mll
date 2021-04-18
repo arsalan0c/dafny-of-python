@@ -106,8 +106,9 @@ rule next_token = parse
 | ':' { COLON }
 | ';' { SEMICOLON }
 | ',' { COMMA }
-| "old" { OLD (emit_segment lexbuf None) }
-| "len" { LEN (emit_segment lexbuf None) } 
+| "old" { OLD (emit_segment lexbuf (Some "old")) }
+| "len" { LEN (emit_segment lexbuf (Some "len")) } 
+| "max" { IDENTIFIER (emit_segment lexbuf (Some "maxListInt")) } 
 | "filter" { IDENTIFIER (emit_segment lexbuf (Some "filterF")) }
 | "map" { IDENTIFIER (emit_segment lexbuf (Some "mapF")) }
 | "->" { ARROW }

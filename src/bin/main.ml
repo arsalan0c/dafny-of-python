@@ -1,5 +1,5 @@
 open Core
-(* open Sexplib *)
+open Sexplib
 
 type result = Success of string | Fail of string
 
@@ -31,6 +31,8 @@ let () = begin
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   typcheck inp;
   let parsed = Pyparse.Parser.parse_string inp in
+  let sexp = Pyparse.Astpy.sexp_of_program parsed in
+  printf "->\n%s\n" (Sexp.to_string sexp);
   let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
   printf "\n%s\n" dafny_source; 

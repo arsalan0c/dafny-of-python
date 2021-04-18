@@ -5,8 +5,8 @@ open Astdfy
 
 let printf = Stdlib.Printf.printf
 
-exception DfyAstError of string
-let[@inline] failwith msg = raise (DfyAstError msg)
+exception ToDfyError of string
+let[@inline] failwith msg = raise (ToDfyError msg)
 
 let typ_idents = Hash_set.create (module String)
 
@@ -110,6 +110,7 @@ let rec exp_dfy = function
   | Forall (s, e) -> DForall (s, exp_dfy e)
   | Exists (s, e) -> DExists (s, exp_dfy e)
   | Len (s, e) -> DLen (s, exp_dfy e)
+  | Max (s, e) -> DCallExpr (DDot (exp_dfy e, s), [])
   | Old (s, e) -> DOld (s, exp_dfy e)
   | Fresh (s, e) -> DFresh (s, exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
@@ -128,9 +129,11 @@ let param_dfy = function
   | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
 
 let rec stmt_dfy = function
-  | Exp (Call (e, el)) -> 
-    let d_el = List.map ~f:exp_dfy el in
-    DCallStmt (exp_dfy e, d_el)
+  | Exp (Call (e, el)) -> begin
+      let d_el = List.map ~f:exp_dfy el in
+      DCallStmt (exp_dfy e, d_el)
+    end
+  | Exp (Dot (e, ident)) -> DCallStmt (DDot (exp_dfy e, ident_dfy ident), [])
   | Assign (t, il, el) -> begin match t with 
     | Typ t -> DAssign (typ_dfy t, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
@@ -144,7 +147,13 @@ let rec stmt_dfy = function
   | While (speclst, e, sl) -> DWhile (List.map ~f:spec_dfy speclst, exp_dfy e, List.map ~f:stmt_dfy sl)
   | For _ -> failwith "for loops are not supported"
   | Function _  -> assert false
-  | Exp _ -> failwith "non-call expressions are not allowed as statements"
+  | Exp e -> begin match e with
+    | Call (e, el) -> begin
+      let d_el = List.map ~f:exp_dfy el in
+      DCallStmt (exp_dfy e, d_el)
+    end
+    | _ -> failwith "non-call expressions are not allowed as statements2"
+  end
 
 
 
@@ -179,19 +188,19 @@ let toplevel_dfy generics = function
 let func_dfy generics = function
   | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
-  | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
+  (* | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, Pass::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
   | Function (speclst, i, pl, te, []) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)] *)
   | _ -> []  
 
 let is_func = function
   | Function (_, _, _, _, (Return _)::[]) -> true
-  | Function (_, _, _, _, (Exp _)::[]) -> true
+  (* | Function (_, _, _, _, (Exp _)::[]) -> true *)
   (* | Function (_, _, _, _, Pass::[]) -> true *)
-  | Function (_, _, _, _, []) -> true
+  (* | Function (_, _, _, _, []) -> true *)
   | _ -> false
 
 let prog_dfy p =

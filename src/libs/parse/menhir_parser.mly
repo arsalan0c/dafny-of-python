@@ -6,7 +6,6 @@ menhir --list-errors
 
 %{
   open Astpy
-  let printf = Stdlib.Printf.printf
 %}
 
 %token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK DOT COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
@@ -19,7 +18,7 @@ menhir --list-errors
 %token <int> INT
 %token <float> FLOAT
 %token PRE POST INVARIANT FORALL EXISTS DECREASES READS MODIFIES DOUBLECOLON 
-%token <Sourcemap.segment> LEN OLD FRESH 
+%token <Sourcemap.segment> LEN MAX OLD FRESH 
 
 %left BIIMPL IMPLIES EXPLIES 
 %left OR 
@@ -213,6 +212,7 @@ atom:
   | s=set_exp { s }
   | d=dict_exp { d }
   | s=LEN; LPAREN; e=star_exps; RPAREN; { Len (s, e) }
+  | s=MAX; LPAREN; e=star_exps; RPAREN; { Max (s, e) }
   | s=OLD; LPAREN; e=star_exps; RPAREN; { Old (s, e) }
   | s=FRESH; LPAREN; e=star_exps; RPAREN; { Fresh (s, e) }
   (* TODO: add comprehensions *)
@@ -273,7 +273,7 @@ spec_rem:
 
 block:
   | NEWLINE; newline_star; ni=indent_plus; sl=stmts_plus; nd=dedent_plus 
-  { let diff = ni - nd in printf "Diff: %d\n" diff; if (diff != 0) then failwith "unexpected indentation" else sl }
+  { let diff = ni - nd in if (diff != 0) then failwith "unexpected indentation" else sl }
   ;
 
 indent_plus:

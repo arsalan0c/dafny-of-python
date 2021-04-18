@@ -33,3 +33,4 @@ function method mapF<T, S>(f: ((T) -> S), a: seq<T>): seq<S>
 {
   if |a| == 0 then [] else [f(a[0])] + mapF(f,a[1..])
 }
+
