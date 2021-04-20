@@ -1,36 +1,53 @@
-// // function filterF<T>(pred: ((T) -> bool), a: seq<T>): seq<T>
-// //   ensures |filterF(pred, a)| <= |a|
-// //   ensures forall k :: 0 <= k < |filterF(pred, a)| ==> filterF(pred, a)[k] in a
-// //   ensures forall k :: 0 <= k < |filterF(pred, a)| ==> pred(filterF(pred, a)[k])
-// // {
-// //   if |a| == 0 then [] else 
-// //     (if pred(a[0]) then [a[0]] else []) + filterF(pred, a[1..])
-// // }
-
-method filterF<T>(pred: ((T) -> bool), a: seq<T>) returns (res: seq<T>)
-    ensures |res| <= |a|
-    ensures forall k :: 0 <= k < |res| ==> res[k] in a // no extraneous elements in res
-    ensures forall k :: 0 <= k < |res| ==> pred(res[k])
-    ensures forall k :: 0 <= k < |a| ==> (pred(a[k]) <==> a[k] in res)
-    ensures forall k :: 0 <= k < |a| ==> pred(a[k]) ==> a[k] in res
-    
+method filterF<T>(pred: ((T) -> bool), a: list<T>) returns (res: list<T>)
+  ensures fresh(res)
+  ensures res.len() <= a.len()
+  ensures forall k :: 0 <= k < res.len() ==> a.contains(res.atIndex(k)) // no extraneous elements in res
+  ensures forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k))) // for any element in a, it must be in res iff the predicate holds
 {
-    if |a| == 0 {
-        return []; 
-    } 
-  
-    var rem := filterF(pred, a[1..]);
-    if pred(a[0])  {
-      rem := rem + [a[0]];
-    } 
+  var lst := new list<T>([]);
+  var i := 0;
+  assert lst.len() == i;
+  var l := a.len();
+  assert forall k :: 0 <= k < lst.len() ==> (pred(a.atIndex(k)) <==> lst.contains(a.atIndex(k)));
+  while (i < l) 
+    invariant 0 <= i <= l
+    invariant 0 <= lst.len() <= i
+    invariant forall k :: lst.contains(k) ==> pred(k)
+    invariant forall k :: 0 <= k < lst.len() ==> a.contains(lst.atIndex(k))
+    invariant forall k :: 0 <= k < i ==> (pred(a.atIndex(k)) <==> lst.contains(a.atIndex(k)))
+  { 
+    var e : T := a.atIndex(i);
+    var lstO := lst.copy();
+    assert forall k :: 0 <= k < lstO.len() ==> lst.atIndex(k) == lstO.atIndex(k);
+    if pred(e) {
+        lst.append(e);
+        assert forall k :: 0 <= k < lst.len() - 1 ==> lst.atIndex(k) == lstO.atIndex(k);
+    } else {
+        assert !lst.contains(e);
+    }
     
-    return rem;
+    i := i + 1;
+  }
+
+  return lst; 
 }
 
-function method mapF<T, S>(f: ((T) -> S), a: seq<T>): seq<S> 
-  ensures |mapF(f, a)| == |a|
-  ensures forall k :: 0 <= k < |a| ==> mapF(f, a)[k] == f(a[k])
-{
-  if |a| == 0 then [] else [f(a[0])] + mapF(f,a[1..])
+method mapF<T, S(==)>(f: ((T) -> S), a: list<T>) returns (res: list<S>) 
+  decreases a.len()
+  ensures fresh(res)
+  ensures res.len() == a.len()
+  ensures forall k :: 0 <= k < a.len() ==> res.atIndex(k) == f(a.atIndex(k))
+{  
+  if a.len() == 0 {
+    res := new list<S>([]);
+  } else if a.len() == 1 {
+    var mapped := f(a.atIndex(0));
+    res := new list<S>([mapped]);
+  } else {
+    var mapped := f(a.atIndex(0));
+    var rest := a.rangeLower(1);
+    res := mapF(f, rest);
+    assert forall k :: 1 <= k < a.len() ==> res.atIndex(k - 1) == f(a.atIndex(k));
+    res.insert(0, mapped);
+  }
 }
-

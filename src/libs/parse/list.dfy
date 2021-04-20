@@ -126,9 +126,15 @@ class list<T(==)> {
         reads this
         requires 0 <= idx < |lst|
         ensures e == lst[idx]
-        ensures this.contains(e)
     {
         lst[idx]
+    }
+
+    method copy() returns (l: list<T>)
+        ensures fresh(l)
+        ensures l.lst == lst
+    {
+        return new list(lst);
     }
 
     method range(low: int, high: int) returns (l: list<T>)
@@ -227,89 +233,7 @@ class list<T(==)> {
     // {
 
     // }
-}
-
-// method filterF<T>(pred: ((T) -> bool), a: list<T>) returns (res: list<T>)
-//     decreases a.len()
-//     ensures fresh(res)
-//     ensures res.len() <= a.len()
-//     ensures forall k :: 0 <= k < res.len() ==> pred(res.atIndex(k)) // predicate holds for every element in res 
-//     ensures forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k))) // for any element in a, it must be in res iff the predicate holds
-//     ensures forall k :: 0 <= k < res.len() ==> a.contains(res.atIndex(k)) // no extraneous elements in res
-//     //ensures forall k :: 0 <= k < res.len() ==> res.count(res.atIndex(k)) <= a.count(res.atIndex(k)) // count of each element in res should be lte than that in a
-// {
-//     if a.len() == 0 { 
-//         res := new list<T>([]); 
-//     } else if a.len() == 1 {
-//         res := new list<T>([]);
-//         var e := a.atIndex(0);
-//         if pred(e)  {
-//             res.insert(0, e);
-//         }
-//     } else {
-//         var rest := a.rangeLower(1);
-//         assert forall k :: 1 <= k < a.len() ==> rest.contains(a.atIndex(k));
-//         assert forall k :: 1 <= k < a.len() ==> a.atIndex(k) == rest.atIndex(k - 1);
-//         res := filterF(pred, rest);
-//         assert forall k :: 0 <= k < res.len() ==> a.contains(res.atIndex(k));
-//         assert forall k :: 0 <= k < res.len() ==> pred(res.atIndex(k));
-//         assert res.len() <= rest.len();
-//         assert forall k :: 0 <= k < rest.len() ==> (pred(rest.atIndex(k)) <==> res.contains(rest.atIndex(k)));
-//         assert forall k :: 0 <= k < rest.len() ==> a.atIndex(k + 1) == rest.atIndex(k);
-//         assert forall k :: 1 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
-//         //assert forall k :: 0 <= k < res.len() ==> res.count(res.atIndex(k)) <= a.count(res.atIndex(k));
-
-//         var e := a.atIndex(0);
-//         assert a.contains(e);
-//         var n := res.len();
-//         var resO; 
-//         if (res.len() == 0) {
-//             resO := new list<T>([]);
-//         } else {
-//             resO := res.rangeLower(0);
-//         }
-
-//         assert forall k :: 0 <= k < resO.len() ==> resO.atIndex(k) == res.atIndex(k);
-//         if pred(e) {
-//             res.insert(0, e);
-//             assert forall k :: 1 <= k < res.len() ==> res.atIndex(k) == resO.atIndex(k - 1);
-//             assert forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
-//             //assert forall k :: 0 <= k < res.len() ==> res.count(res.atIndex(k)) <= a.count(res.atIndex(k));
-//         } else {
-//             assert !pred(e);
-//             assert forall k :: 0 <= k < res.len() ==> pred(res.atIndex(k)) && res.contains(res.atIndex(k));
-//             assert exists h :: !res.contains(h) || pred(h);
-//             assert !res.contains(e) || pred(e);
-//         }
-//         assert forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
-//     }
-
-//     assert forall k :: 0 <= k < res.len() ==> a.contains(res.atIndex(k));
-//     assert forall k :: 0 <= k < res.len() ==> pred(res.atIndex(k));
-//     assert forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k)));
-//     //assert forall k :: 0 <= k < res.len() ==> res.count(res.atIndex(k)) <= a.count(res.atIndex(k));
 // }
-
-// method mapF<T, S(==)>(f: ((T) -> S), a: list<T>) returns (res: list<S>) 
-//   decreases a.len()
-//   ensures fresh(res)
-//   ensures res.len() == a.len()
-//   ensures forall k :: 0 <= k < a.len() ==> res.atIndex(k) == f(a.atIndex(k))
-// {  
-//     if a.len() == 0 {
-//         res := new list<S>([]);
-//     } else if a.len() == 1 {
-//         var mapped := f(a.atIndex(0));
-//         res := new list<S>([mapped]);
-//     } else {
-//         var mapped := f(a.atIndex(0));
-//         var rest := a.rangeLower(1);
-//         res := mapF(f, rest);
-//         assert forall k :: 1 <= k < a.len() ==> res.atIndex(k - 1) == f(a.atIndex(k));
-//         res.insert(0, mapped);
-//     }
-// }
-
 
 // method range(start: int, stop: int, step: int) returns (res: seq<int>)
 //     requires start == 0
@@ -408,9 +332,6 @@ method maxListInt(l: list<int>) returns (res: int)
 
 //     return soFar;
 // }
-
-
-
 
 // method search(x: int, s: list<int>) returns (res1: int)
 //   requires (s.len() > 0)
