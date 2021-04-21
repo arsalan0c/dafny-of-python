@@ -1,10 +1,10 @@
-method filterF<T>(pred: ((T) -> bool), a: list<T>) returns (res: list<T>)
+method filterF<T>(pred: ((T) -> bool), a: List<T>) returns (res: List<T>)
   ensures fresh(res)
   ensures res.len() <= a.len()
   ensures forall k :: 0 <= k < res.len() ==> a.contains(res.atIndex(k)) // no extraneous elements in res
   ensures forall k :: 0 <= k < a.len() ==> (pred(a.atIndex(k)) <==> res.contains(a.atIndex(k))) // for any element in a, it must be in res iff the predicate holds
 {
-  var lst := new list<T>([]);
+  var lst := new List<T>([]);
   var i := 0;
   assert lst.len() == i;
   var l := a.len();
@@ -32,7 +32,7 @@ method filterF<T>(pred: ((T) -> bool), a: list<T>) returns (res: list<T>)
   return lst; 
 }
 
-method mapF<T, S(==)>(f: ((T) -> S), a: list<T>) returns (res: list<S>) 
+method mapF<T, S(==)>(f: ((T) -> S), a: List<T>) returns (res: List<S>) 
   decreases a.len()
   ensures fresh(res)
   ensures res.len() == a.len()

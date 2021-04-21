@@ -1,13 +1,13 @@
 /* imperative implementation, based on Python's list: https://docs.python.org/3/tutorial/datastructures.html */
 
-method newList<T>(s: seq<T>) returns (l: list<T>) 
+method list<T>() returns (l: List<T>) 
     ensures fresh(l)
-    ensures l.lst == s
+    ensures l.lst == []
 {
-    return new list<T>(s);
+    return new List<T>([]);
 }
 
-class list<T(==)> {
+class List<T(==)> {
     var lst: seq<T>
 
     constructor(l: seq<T>)
@@ -130,42 +130,42 @@ class list<T(==)> {
         lst[idx]
     }
 
-    method copy() returns (l: list<T>)
+    method copy() returns (l: List<T>)
         ensures fresh(l)
         ensures l.lst == lst
     {
-        return new list(lst);
+        return new List(lst);
     }
 
-    method range(low: int, high: int) returns (l: list<T>)
+    method range(low: int, high: int) returns (l: List<T>)
         requires 0 <= low <= high <= |lst|
         ensures fresh(l)
         ensures l.lst == lst[low..high]
     {
-        return new list(lst[low..high]);
+        return new List(lst[low..high]);
     }
 
-    method rangeLower(low: int) returns (l: list<T>)
+    method rangeLower(low: int) returns (l: List<T>)
         requires 0 <= low < |lst|
         ensures fresh(l)
         ensures l.lst == lst[low..]
     {
-        return new list(lst[low..]);
+        return new List(lst[low..]);
     }
 
-    method rangeUpper(upper: int) returns (l: list<T>)
+    method rangeUpper(upper: int) returns (l: List<T>)
         requires 0 <= upper <= |lst|
         ensures fresh(l)
         ensures l.lst == lst[..upper]
     {
-        return new list(lst[..upper]);
+        return new List(lst[..upper]);
     }
 
-    method rangeNone() returns (l: list<T>)
+    method rangeNone() returns (l: List<T>)
         ensures fresh(l)
         ensures l.lst == lst
     {
-        return new list(lst);
+        return new List(lst);
     }
 
     function method len(): (l: int) 
@@ -207,17 +207,17 @@ class list<T(==)> {
         e in lst
     }
 
-    method equals(l2: list<T>) returns (res: bool)
+    method equals(l2: List<T>) returns (res: bool)
         ensures res <==> lst == l2.lst
     {
         return lst == l2.lst;
     }
 
-    method concat(l2: list<T>) returns (res: list<T>) 
+    method concat(l2: List<T>) returns (res: List<T>) 
         ensures fresh(res)
         ensures res.lst == lst + l2.lst
     {
-        return new list<T>(lst + l2.lst);
+        return new List<T>(lst + l2.lst);
     }
 
     // predicate sorted(s: seq<T>)
@@ -233,7 +233,7 @@ class list<T(==)> {
     // {
 
     // }
-// }
+}
 
 // method range(start: int, stop: int, step: int) returns (res: seq<int>)
 //     requires start == 0
@@ -295,7 +295,7 @@ class list<T(==)> {
 // }
 
 
-method maxListInt(l: list<int>) returns (res: int)
+method maxListInt(l: List<int>) returns (res: int)
     requires l.len() > 0
     ensures forall k :: 0 <= k < l.len() ==> res >= l.atIndex(k)
 {
