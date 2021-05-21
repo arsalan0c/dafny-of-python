@@ -5,8 +5,8 @@ open Astdfy
 
 let printf = Stdlib.Printf.printf
 
-exception DfyAstError of string
-let[@inline] failwith msg = raise (DfyAstError msg)
+exception ToDfyError of string
+let[@inline] failwith msg = raise (ToDfyError msg)
 
 let typ_idents = Hash_set.create (module String)
 
@@ -42,11 +42,10 @@ let rec typ_dfy = function
     end
   | Tuple (s, olt) -> begin
     match olt with
-    | Some (ft::lt) -> 
+    | Some tpl -> 
     (* TODO: add postcondition to check number of args match number returned *)
-      List.iter ~f:(fun t -> if (not (pytype_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt;
-      DSeq (s, typ_dfy ft) (* translate to sequence type instead of tuple *)
-    | Some [] -> failwith "Please specify the exact tuple type"
+      (* List.iter ~f:(fun t -> if (not (pytype_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt; *)
+      DTuple (s, List.map ~f:typ_dfy tpl) (* translate to sequence type instead of tuple *)
     | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)
     end
   | Callable (s, tl, t) -> DFunTyp (s, List.map ~f:typ_dfy tl, typ_dfy t)
@@ -88,8 +87,8 @@ let binaryop_dfy = function
 let rec exp_dfy = function
   | Identifier s -> DIdentifier s
   | Dot (e, ident) -> DDot (exp_dfy e, ident)
-  | BinaryOp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
-  | UnaryOp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
+  | BinaryOp (e1, op, e2) -> DBinary ((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
+  | UnaryOp (op, e) -> DUnary ((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l
   | Call (e, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(exp_dfy e, d_args)
   | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
@@ -97,7 +96,8 @@ let rec exp_dfy = function
   | Set el -> DSetExpr (List.map ~f:exp_dfy el)
   (* | SetComp el -> DSetCompExpr (List.map ~f:exp_dfy el) *)
   | Dict eel -> DMapExpr (List.map ~f:(fun (k,v) -> (exp_dfy k, exp_dfy v)) eel)
-  | Tuple el -> DSeqExpr (List.map ~f:exp_dfy el)  
+  | Tuple (e::[]) -> exp_dfy e (* Dafny does not have 1-tuples *)
+  | Tuple el -> DTupleExpr (List.map ~f:exp_dfy el)  
   | Subscript (e1, e2) -> DSubscript (exp_dfy e1, exp_dfy e2)
   | Index e -> DIndex (exp_dfy e)
   | Slice (e1, e2) -> begin
@@ -110,6 +110,7 @@ let rec exp_dfy = function
   | Forall (s, e) -> DForall (s, exp_dfy e)
   | Exists (s, e) -> DExists (s, exp_dfy e)
   | Len (s, e) -> DLen (s, exp_dfy e)
+  | Max (s, e) -> DCallExpr (DDot (exp_dfy e, s), [])
   | Old (s, e) -> DOld (s, exp_dfy e)
   | Fresh (s, e) -> DFresh (s, exp_dfy e)
   | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
@@ -128,9 +129,11 @@ let param_dfy = function
   | Param (id, te) -> ((ident_dfy id), (typ_dfy (check_exp_typ te)))
 
 let rec stmt_dfy = function
-  | Exp (Call (e, el)) -> 
-    let d_el = List.map ~f:exp_dfy el in
-    DCallStmt (exp_dfy e, d_el)
+  | Exp (Call (e, el)) -> begin
+      let d_el = List.map ~f:exp_dfy el in
+      DCallStmt (exp_dfy e, d_el)
+    end
+  | Exp (Dot (e, ident)) -> DCallStmt (DDot (exp_dfy e, ident_dfy ident), [])
   | Assign (t, il, el) -> begin match t with 
     | Typ t -> DAssign (typ_dfy t, List.map ~f:exp_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
@@ -144,7 +147,13 @@ let rec stmt_dfy = function
   | While (speclst, e, sl) -> DWhile (List.map ~f:spec_dfy speclst, exp_dfy e, List.map ~f:stmt_dfy sl)
   | For _ -> failwith "for loops are not supported"
   | Function _  -> assert false
-  | Exp _ -> failwith "non-call expressions are not allowed as statements"
+  | Exp e -> begin match e with
+    | Call (e, el) -> begin
+      let d_el = List.map ~f:exp_dfy el in
+      DCallStmt (exp_dfy e, d_el)
+    end
+    | _ -> failwith "non-call expressions are not allowed as statements2"
+  end
 
 
 
@@ -157,10 +166,9 @@ let convert_typsyn ident rhs =
   match ident with | Identifier ident -> let ident_v = Sourcemap.segment_value ident in begin
     match rhs with 
     | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
-    | Identifier typ_ident -> begin 
-        let s_typ = Sourcemap.segment_value typ_ident in
-        match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
-        | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp typ_ident))))
+    | Identifier (seg, Some syn) -> begin 
+        match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s syn = 0) with
+        | Some _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy (IdentTyp (seg, Some syn)))))
         | None -> None
       end
     | _ -> None
@@ -180,28 +188,28 @@ let toplevel_dfy generics = function
 let func_dfy generics = function
   | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
-  | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
+  (* | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
   | Function (speclst, i, pl, te, Pass::[]) -> let t = check_exp_typ te in
     [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
   | Function (speclst, i, pl, te, []) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)]
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, DEmptyExpr)] *)
   | _ -> []  
 
 let is_func = function
   | Function (_, _, _, _, (Return _)::[]) -> true
-  | Function (_, _, _, _, (Exp _)::[]) -> true
-  | Function (_, _, _, _, Pass::[]) -> true
-  | Function (_, _, _, _, []) -> true
+  (* | Function (_, _, _, _, (Exp _)::[]) -> true *)
+  (* | Function (_, _, _, _, Pass::[]) -> true *)
+  (* | Function (_, _, _, _, []) -> true *)
   | _ -> false
 
 let prog_dfy p =
-  let (n_p, gens) = Convertgeneric.prog p in
-  let (Program sl) = Convertlist.prog n_p in
+  let (n_p, gens) = Generics.prog p in
+  let p = Convertfor.prog n_p in
+  let (Program sl) = Convertlist.prog p in
   let d_funcs = List.fold ~f:(fun so_far s -> so_far@(func_dfy gens s)) ~init:[] sl in
   let non_funcs = List.filter ~f:(fun x -> not (is_func x)) sl in
-  (* let calls_rewritten = Convertcall.prog (Program non_funcs) in *)
-  let (Program sl) = Convertfor.prog (Program non_funcs) in
+  let (Program sl) = Convertcall.prog (Program non_funcs) in
   let toplevel_stmts = List.filter ~f:is_toplevel sl in
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in

@@ -106,8 +106,9 @@ rule next_token = parse
 | ':' { COLON }
 | ';' { SEMICOLON }
 | ',' { COMMA }
-| "old" { OLD (emit_segment lexbuf None) }
-| "len" { LEN (emit_segment lexbuf None) } 
+| "old" { OLD (emit_segment lexbuf (Some "old")) }
+| "len" { LEN (emit_segment lexbuf (Some "len")) } 
+| "max" { IDENTIFIER (emit_segment lexbuf (Some "maxListInt")) } 
 | "filter" { IDENTIFIER (emit_segment lexbuf (Some "filterF")) }
 | "map" { IDENTIFIER (emit_segment lexbuf (Some "mapF")) }
 | "->" { ARROW }
@@ -123,7 +124,7 @@ rule next_token = parse
 | "pass" { PASS (emit_segment lexbuf (Some "pass")) }
 | "return" { RETURN (emit_segment lexbuf (Some "return")) }
 | "assert" { ASSERT (emit_segment lexbuf (Some "assert")) }
-| "!in" { NOT_IN (emit_segment lexbuf (Some "!in")) }
+| "not in" { NOT_IN (emit_segment lexbuf (Some "not in")) }
 | "in" { IN (emit_segment lexbuf (Some "in")) }
 | "==" { EQEQ (emit_segment lexbuf (Some "==")) }
 | '=' { EQ (emit_segment lexbuf (Some "=")) }

@@ -5,13 +5,18 @@ open Astdfy
 
 let printf = Stdlib.Printf.printf
 
-type pos = Pos of int * int (* line, column *)
+type line = int
 [@@deriving sexp]
-type sourcemap = (pos * Sourcemap.segment) list ref
+type column = int
 [@@deriving sexp]
 
-let sm = ref []
-let add_sm k v s = sm := ((k, v), s)::!sm 
+(* type pos = Pos of int * int line, column *)
+(* [@@deriving sexp] *)
+type sourcemap = ((line * column) * Sourcemap.segment) list ref
+[@@deriving sexp]
+
+let sm: sourcemap = ref []
+let add_sm k v s = sm := let _ = ((k, v), s) in !sm
 let rec replicate_str s n = match n with
   | 0 -> ""
   | n -> let rest = replicate_str s (n - 1) in
@@ -133,10 +138,10 @@ let print_type id t =
     | DBool s -> s
     | DString s -> s
     | DChar s -> s
-    | DSeq(s, _) -> s
-    | DSet(s, _) -> s
-    | DMap(s, _,  _) -> s
-    | DTuple(s, _) -> s 
+    | DSeq (s, _) -> s
+    | DSet (s, _) -> s
+    | DMap (s, _,  _) -> s
+    | DTuple (s, _) -> s 
     | DFunTyp (s, _, _) -> s
     | _ -> Sourcemap.default_segment
   in add_op id (get_s t) (get_v t)
@@ -249,13 +254,13 @@ let rec print_exp id = function
     in 
     let cb =  (newcolumn "]") in
     String.concat [n; ob; res; cb]
-  | DForall(il, e) -> let n = newcolumn (indent id) in 
+  | DForall (il, e) -> let n = newcolumn (indent id) in 
     let f = (newcolumn "forall ") in 
     let pil = (newcolumn_concat (print_ident 0) ", " il) in 
     let pd = (newcolumn " :: ") in
     let pe = (print_exp 0 e) in
     String.concat [n; f; pil; pd; pe]
-  | DExists(il, e) -> let n = newcolumn (indent id) in
+  | DExists (il, e) -> let n = newcolumn (indent id) in
     let ex = (newcolumn "exists") in 
     let pil = (newcolumn_concat (print_ident 0) ", " il) in
     let pc = (newcolumn " :: ") in 
@@ -292,7 +297,11 @@ let rec print_exp id = function
     let el = newcolumn " else" in
     let pe2 = print_exp 1 e2 in
     String.concat [n; i; pc; t; pe1; el; pe2]
-  | _ -> failwith "unsupported expr node"
+  | DTupleExpr el -> let n = newcolumn (indent id) in
+    let ob = newcolumn "(" in
+    let pel = newcolumn_concat (print_exp 0) ", " el in
+    let cb = newcolumn ")" in
+    String.concat [n; ob; pel; cb]
 
 and print_spec id = function
   | DRequires e -> let n  = newcolumn (indent id) in 
@@ -395,7 +404,7 @@ and print_stmt id = function
     let cb = newcolumn ")" in 
     let ps = newcolumn ";" in
     String.concat [n; pident; ob; pel; cb; ps]
-  | DIf(e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
+  | DIf (e, sl1, sl2, sl3) -> let n = newcolumn (indent id) in
     let i = newcolumn "if " in 
     let pe = print_exp 0 e in
     let ob = newcolumn " {" in 
