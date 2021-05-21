@@ -1,10 +1,10 @@
 /* imperative implementation, based on Python's list: https://docs.python.org/3/tutorial/datastructures.html */
 
-method list<T>() returns (l: List<T>) 
+method list<T>(s: seq<T>) returns (l: List<T>) 
     ensures fresh(l)
-    ensures l.lst == []
+    ensures l.lst == s
 {
-    return new List<T>([]);
+    return new List<T>(s);
 }
 
 class List<T(==)> {
@@ -356,4 +356,3 @@ method maxListInt(l: List<int>) returns (res: int)
 //   }
 //   return output;
 // }
-

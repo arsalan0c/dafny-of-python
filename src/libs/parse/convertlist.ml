@@ -1,5 +1,6 @@
 open Base
 open Astpy
+open Sourcemap
 
 let printf = Stdlib.Printf.printf
 let var_num : int ref = ref 0
@@ -15,11 +16,11 @@ let rec exp_lst = function
   | Literal l -> ([], Literal l)
   | Identifier ident -> ([], Identifier ident)
   | Dot (e, ident) -> let al, n_e = exp_lst e in (al, Dot (n_e, ident))
-  | BinaryOp (e1, op, e2) -> 
+  | BinaryExp (e1, op, e2) -> 
     let al1, n_e1 = exp_lst e1 in
     let al2, n_e2 = exp_lst e2 in
-    (al1@al2, BinaryOp (n_e1, op, n_e2))
-  | UnaryOp (op, e) -> let al, n_e = exp_lst e in (al, UnaryOp(op, n_e))
+    (al1@al2, BinaryExp (n_e1, op, n_e2))
+  | UnaryExp (op, e) -> let al, n_e = exp_lst e in (al, UnaryExp (op, n_e))
   | Call (e, el) ->
     let als_nes = List.map ~f:exp_lst el in
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
@@ -31,9 +32,9 @@ let rec exp_lst = function
     let n_el = List.fold als_nes ~f:(fun so_far (_, n_e) -> so_far@[n_e]) ~init:[] in
     let als = List.fold als_nes ~f:(fun so_far (al, _) -> so_far@al) ~init:[] in
     let name = var_num := !var_num + 1; "templist_" ^ (Int.to_string !var_num) in
-    let n_ident = (Sourcemap.default_pos, Some name) in
-    let new_list_call = Call (Identifier (Sourcemap.default_pos, Some list_constructor), [Lst n_el]) in
-    (als@[Assign (Typ (NonTyp Sourcemap.default_segment), [Identifier n_ident], [new_list_call])], Identifier n_ident)
+    let n_ident = (def_pos, Some name) in
+    let new_list_call = Call (Identifier (def_pos, Some list_constructor), [Lst n_el]) in
+    (als@[Assign (None, [n_ident], [new_list_call])], Identifier n_ident) (* TODO: use type of rhs *)
   | Tuple el -> 
     let als_nes = List.map ~f:exp_lst el in
     List.fold als_nes ~f:(
@@ -59,34 +60,34 @@ let rec exp_lst = function
   | Fresh (s, e) -> let al, n_e = exp_lst e in (al, Fresh (s, n_e))
   | Forall (sl, e) -> let al, n_e = exp_lst e in (al, Forall (sl, n_e))
   | Exists (sl, e) -> let al, n_e = exp_lst e in (al, Exists (sl, n_e))
-  | Subscript (e1, e2) -> 
+  | Subscript (e1, e2) -> (* TODO: make use of type information to call appropriate method *)
     let al1, n_e1 = exp_lst e1 in
     let al2, n_e2 = exp_lst e2 in
     let n_e = begin match n_e2 with
       | Slice (Some l, Some h) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "range")
+          (def_pos, Some "range")
         ), [l; h])
       | Slice (Some l, None) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "rangeLower")
+          (def_pos, Some "rangeLower")
         ), [l])
       | Slice (None, Some h) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "rangeUpper")
+          (def_pos, Some "rangeUpper")
         ), [h])
       | Slice (None, None) -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "rangeNone")
+          (def_pos, Some "rangeNone")
         ), [])
       | Index i -> Call (
         Dot (
           n_e1,
-          (Sourcemap.default_pos, Some "atIndex")
+          (def_pos, Some "atIndex")
         ), [i])
       | _ -> failwith "Second argument of subscript must be a slice or index"
     end in

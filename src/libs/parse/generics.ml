@@ -6,12 +6,12 @@ let vars = Hash_set.create (module String)
 
 let convert_typvar lhs rhs = 
   match lhs with
-  | Identifier (_, Some ident_v) -> begin
+  | (_, Some ident_v) -> begin
     match rhs with 
     | Call ((Identifier (_, Some c_ident_v)), ((Literal (StringLit tv_v))::tv_rest)) -> begin match c_ident_v with 
       | "TypeVar" -> begin match tv_rest with 
         | [] -> if String.compare ident_v tv_v = 0 then (Hash_set.add vars tv_v; Some tv_v) else failwith "Please provide a single argument to TypeVar, a string equivalent to the name of the declared variable."
-        | _ -> failwith "Please provide a single argument to TypeVar, a string equivalent to the name of the declared variable. Constrained type variables are not supported (yet)." 
+        | _ -> failwith "Please provide a single argument to TypeVar, a string equivalent to the name of the declared variable. Constrained type variables are not supported." 
         end
       | _ ->  None
       end

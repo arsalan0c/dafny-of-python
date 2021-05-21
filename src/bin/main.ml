@@ -31,7 +31,8 @@ let () = begin
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   typcheck inp;
   let parsed = Pyparse.Parser.parse_string inp in
-  let _ = Pyparse.Astpy.sexp_of_program parsed in
+  (* Pyparse.Typing.check_prog parsed *)
+  (* let sexp = Pyparse.Astpy.sexp_of_program parsed in *)
   (* printf "->\n%s\n" (Sexp.to_string sexp); *)
   let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
   let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
@@ -40,17 +41,3 @@ let () = begin
   let verification_out = system dafny_command in
   Pyparse.Report.report verification_out
 end
-(* 
-let main2 =
-  printf "\nParsing\n\"%s\"\n\r" inp;
-  let res = Pyparse.Astpy.sexp_of_sexp (Pyparse.Parser.f Pyparse.Indenter.f (Lexing.from_string inp)) in 
-  let se = Sexp.to_string res in
-  printf "->\n%s\n" se *)
-
-(* let main_dfy_sexp =
-  printf "\nParsing\n\"%s\"\n\r" inp;
-  let res = Pyparse.Astdfy.sexp_of_dProgram (Pyparse.Todafnyast.prog_dfy (Pyparse.Parser.f Pyparse.Indenter.f (Lexing.from_string inp))) in 
-  let se = Sexp.to_string res in
-  printf "->\n%s\n" se *)
-
-  (* (String.concat ~sep:", " ["Parser error"; (Pyparse.Sourcemap.print_pos (Lexing.lexeme_end_p lexed)); Lexing.lexeme lexed; "\n"]) *)
