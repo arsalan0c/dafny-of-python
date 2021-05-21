@@ -1,4 +1,5 @@
-# pyny
+# dafny-of-python
+Static verification tool for Python based on [Dafny](https://github.com/dafny-lang/dafny)
 
 ## Usage
 ```
