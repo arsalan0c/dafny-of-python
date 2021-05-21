@@ -27,6 +27,7 @@ let typcheck s =
   | None -> ()
 
 let () = begin
+<<<<<<< HEAD
   Pyparse.Parser.pp_exceptions ();
   let inp = Stdio.In_channel.input_all Stdio.stdin in
   typcheck inp;
@@ -40,4 +41,14 @@ let () = begin
   Out_channel.write_all dafny_f ~data:dafny_source;
   let verification_out = system dafny_command in
   Pyparse.Report.report verification_out
+=======
+  printf "\nParsing\n\"%s\"\n\r" inp;
+  inp
+  |> Lexing.from_string 
+  |> Pyparse.Parser.f Pyparse.Indenter.f
+  |> Pyparse.Ast.prog_str
+  (* |> Verifier.Hoare.prog_z3 *)
+  |> printf "->\n%s\n"
+>>>>>>> a3e90417837db0a6eb6b53e8e72ac3e32e2a499d
 end
+ 
