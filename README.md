@@ -22,3 +22,6 @@ def find(a: list[int], key: int) -> int:
   
   return -1
 ```
+
+## Acknowledgements
+This tool was develop as part of my final year project, with the valuable guidance of [Professor Chin Wei Ngan](https://www.comp.nus.edu.sg/cs/bio/chinwn/).
