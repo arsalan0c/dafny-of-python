@@ -1,24 +1,25 @@
 /* imperative implementation, based on Python's list: https://docs.python.org/3/tutorial/datastructures.html */
 
-method newList<T>(s: seq<T>) returns (l: list<T>) 
+method list<T>(s: seq<T>) returns (l: List<T>) 
     ensures fresh(l)
-    ensures l.lst == s
+    ensures l.lst == []
 {
-    return new list<T>(s);
+    return new List<T>(s);
 }
 
-class list<T(==)> {
+class List<T(==)> {
     var lst: seq<T>
 
     constructor(l: seq<T>)
+        ensures fresh(this)
         ensures lst == l
+        ensures forall k :: 0 <= k < |lst| ==> lst[k] == l[k]
     {
         lst := l;
     }
 
     method append(e: T) 
         modifies this
-
         ensures lst == old(lst) + [e]
     {
         lst := lst + [e];
@@ -28,17 +29,26 @@ class list<T(==)> {
         requires 0 <= idx
         modifies this
         ensures |lst| == |old(lst)| + 1
-        ensures e in lst
+        ensures multiset(lst)[e] == multiset(old(lst))[e] + 1 // count of e is increased by 1
+        ensures forall k :: 0 <= k < |old(lst)| && lst[k] != e ==> count(old(lst)[k]) == (old(this)).count(old(lst)[k]) // count of all other elements is unchanged
         ensures idx < |lst| ==> lst == old(lst)[0..idx] + [e] + old(lst)[idx..]
         ensures idx >= |lst| ==> lst == old(lst) + [e]
-       
+        ensures idx < |lst| ==> lst[idx] == e
+        ensures forall k :: 0 <= k < |old(lst)| ==> old(lst)[k] in lst 
+        ensures forall k :: 0 <= k < |lst| && lst[k] != e ==> lst[k] in old(lst) 
     {
         if idx >= |lst| {
+            var n := count(e);
             lst := lst + [e];
             return;
         }
 
-        lst := lst[0..idx] + [e] + lst[idx..];
+        assert lst == lst[0..idx] + lst[idx..];
+        var i := 0;
+        var res := lst[0..idx];
+        res := res + [e];
+        res := res + lst[idx..];        
+        lst := res;
     }
 
     function method removeIndex(e: T, lst: seq<T>): int
@@ -79,9 +89,8 @@ class list<T(==)> {
     method pop() returns (popped: T)
         requires |lst| > 0
         modifies this
-        ensures |lst| == |old(lst)| - 1
+        ensures lst == old(lst)[0..|old(lst)| - 1]
         ensures popped == old(lst)[|old(lst)| - 1]
-        ensures forall i :: 0 <= i < |lst| ==> lst[i] == old(lst)[i]
     {
         popped := lst[|lst| - 1];
         lst := lst[0..|lst| - 1];
@@ -121,35 +130,42 @@ class list<T(==)> {
         lst[idx]
     }
 
-    method range(low: int, high: int) returns (l: list<T>)
+    method copy() returns (l: List<T>)
+        ensures fresh(l)
+        ensures l.lst == lst
+    {
+        return new List(lst);
+    }
+
+    method range(low: int, high: int) returns (l: List<T>)
         requires 0 <= low <= high <= |lst|
         ensures fresh(l)
         ensures l.lst == lst[low..high]
     {
-        return new list(lst[low..high]);
+        return new List(lst[low..high]);
     }
 
-    method rangeLower(low: int) returns (l: list<T>)
+    method rangeLower(low: int) returns (l: List<T>)
         requires 0 <= low < |lst|
         ensures fresh(l)
         ensures l.lst == lst[low..]
     {
-        return new list(lst[low..]);
+        return new List(lst[low..]);
     }
 
-    method rangeUpper(upper: int) returns (l: list<T>)
+    method rangeUpper(upper: int) returns (l: List<T>)
         requires 0 <= upper <= |lst|
         ensures fresh(l)
         ensures l.lst == lst[..upper]
     {
-        return new list(lst[..upper]);
+        return new List(lst[..upper]);
     }
 
-    method rangeNone() returns (l: list<T>)
+    method rangeNone() returns (l: List<T>)
         ensures fresh(l)
         ensures l.lst == lst
     {
-        return new list(lst);
+        return new List(lst);
     }
 
     function method len(): (l: int) 
@@ -184,6 +200,26 @@ class list<T(==)> {
         lst := newLst;
     }
 
+    function method contains(e: T): (res: bool)
+        reads this
+        ensures e in lst <==> res
+    {
+        e in lst
+    }
+
+    method equals(l2: List<T>) returns (res: bool)
+        ensures res <==> lst == l2.lst
+    {
+        return lst == l2.lst;
+    }
+
+    method concat(l2: List<T>) returns (res: List<T>) 
+        ensures fresh(res)
+        ensures res.lst == lst + l2.lst
+    {
+        return new List<T>(lst + l2.lst);
+    }
+
     // predicate sorted(s: seq<T>)
     // {
     //     forall i,j :: 0 <= i < j < |s| ==> s[i] <= s[j]
@@ -199,8 +235,124 @@ class list<T(==)> {
     // }
 }
 
-method test() {
-    var b := 1 + 3.4;
-    var a := (1, 2) + (4, 6);
-    assert a == (1, 2);
+// method range(start: int, stop: int, step: int) returns (res: seq<int>)
+//     requires start == 0
+//     requires step == 1
+//     requires stop > start
+//     ensures |res| == stop - start
+//     ensures forall k :: start <= k < stop ==> res[k - start] == k
+// {
+//     var i := start;
+//     var a := [];
+//     while i < stop 
+//         invariant start <= i <= stop + step - 1
+//         invariant |a| == (i - start) / step
+//         invariant forall k :: start <= k < i ==> a[k - start] == k
+//     {
+//         a := a + [i];
+//         i := i + step
+//     }
+
+//     return a;
+// }
+
+// method maxInts<T>(l: seq<int>) returns (res: int)
+//     requires |l| > 0
+//     ensures forall k :: 0 <= k < |l| ==> res >= l[k] 
+// {
+//     var i := 0;
+//     var soFar := l[i];
+//     while i < |l| 
+//         invariant 0 <= i <= |l|
+//         invariant forall k :: 0 <= k < i ==> soFar >= l[k] 
+//     {
+//         if l[i] > soFar {
+//             soFar := l[i];
+//         }
+//         i := i + 1;
+//     }
+
+//     return soFar;
+// }
+
+// method maxReals<T>(l: seq<real>) returns (res: real)
+//     requires |l| > 0
+//     ensures forall k :: 0 <= k < |l| ==> res >= l[k] 
+// {
+//     var i := 0;
+//     var soFar := l[i];
+//     while i < |l| 
+//         invariant 0 <= i <= |l|
+//         invariant forall k :: 0 <= k < i ==> soFar >= l[k] 
+//     {
+//         if l[i] > soFar {
+//             soFar := l[i];
+//         }
+//         i := i + 1;
+//     }
+
+//     return soFar;
+// }
+
+
+method maxListInt(l: List<int>) returns (res: int)
+    requires l.len() > 0
+    ensures forall k :: 0 <= k < l.len() ==> res >= l.atIndex(k)
+{
+    var i := 0;
+    var soFar := l.atIndex(i);
+    while i < l.len()
+        invariant 0 <= i <= l.len()
+        invariant forall k :: 0 <= k < i ==> soFar >= l.atIndex(k)
+    {
+        if l.atIndex(i) > soFar {
+            soFar := l.atIndex(i);
+        }
+        i := i + 1;
+    }
+
+    return soFar;
 }
+
+// method maxListReal<T>(l: list<real>) returns (res: real)
+//     requires l.len() > 0
+//     ensures forall k :: 0 <= k < l.len() ==> res >= l.atIndex(k)
+// {
+//     var i := 0;
+//     var soFar := l.atIndex(i);
+//     while i < l.len()
+//         invariant 0 <= i <= l.len()
+//         invariant forall k :: 0 <= k < i ==> soFar >= l.atIndex(k)
+//     {
+//         if l.atIndex(i) > soFar {
+//             soFar := l.atIndex(i);
+//         }
+//         i := i + 1;
+//     }
+
+//     return soFar;
+// }
+
+// method search(x: int, s: list<int>) returns (res1: int)
+//   requires (s.len() > 0)
+//   requires forall k, j :: ((((0 <= k) && (k < j)) && (j < s.len())) ==> (s.atIndex(k) <= s.atIndex(j)))
+//   ensures ((res1 >= 0 && res1 < s.len()) ==> (x <= s.atIndex(res1)))
+// {
+//   var x: int := x;
+//   var s: list<int> := s;
+//   var output: int := 0;
+//   var tempcall_1 := s.len();
+//   var l: int := tempcall_1;
+//   while (output < l)
+//     invariant ((0 <= output) && (output <= l))
+//     invariant forall k :: (((0 <= k) && (k < output)) ==> (x > s.atIndex(k)))
+//   {
+//     var tempcall_2 := s.atIndex(output);
+//     if (x > tempcall_2) {
+//       output := (output + 1);
+//     } else {
+//       break;    
+//     }
+//   }
+//   return output;
+// }

@@ -43,7 +43,6 @@ let verification_summary out =
   end with
   | Re2.Exceptions.Regex_match_failed _ -> () (* ) *)
 
-
 let report out = begin match verification_errors out with
   | Some s -> prerr (s ^ "\n")
   | None -> ()

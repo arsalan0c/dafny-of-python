@@ -4,7 +4,7 @@ open Sourcemap
 
 let printf = Stdlib.Printf.printf
 let var_num : int ref = ref 0
-let list_constructor = "newList"
+let list_constructor = "list"
 
 (* 
   1. converts lists

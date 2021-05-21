@@ -111,6 +111,7 @@ type exp =
   | Forall of identifier list * exp
   | Exists of identifier list * exp
   | Len of segment * exp
+  | Max of segment * exp
   | Old of segment * exp
   | Fresh of segment * exp
   | Lambda of identifier list * exp
