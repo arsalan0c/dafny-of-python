@@ -2,7 +2,7 @@
 
 method list<T>(s: seq<T>) returns (l: List<T>) 
     ensures fresh(l)
-    ensures l.lst == []
+    ensures l.lst == s
 {
     return new List<T>(s);
 }
