@@ -39,10 +39,10 @@ method mapF<T, S(==)>(f: ((T) -> S), a: List<T>) returns (res: List<S>)
   ensures forall k :: 0 <= k < a.len() ==> res.atIndex(k) == f(a.atIndex(k))
 {  
   if a.len() == 0 {
-    res := new list<S>([]);
+    res := new List<S>([]);
   } else if a.len() == 1 {
     var mapped := f(a.atIndex(0));
-    res := new list<S>([mapped]);
+    res := new List<S>([mapped]);
   } else {
     var mapped := f(a.atIndex(0));
     var rest := a.rangeLower(1);

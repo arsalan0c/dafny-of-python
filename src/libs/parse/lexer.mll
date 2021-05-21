@@ -73,7 +73,7 @@ rule next_token = parse
 | bool_typ as t { BOOL_TYP (emit_segment lexbuf (Some t)) }
 | string_typ as t { STRING_TYP (emit_segment lexbuf (Some t)) }
 | none_typ as t { NONE_TYP (emit_segment lexbuf (Some t)) }
-| list_typ as t { LIST_TYP (emit_segment lexbuf (Some t)) }
+| list_typ { LIST_TYP (emit_segment lexbuf (Some "List")) }
 | dict_typ as t { DICT_TYP (emit_segment lexbuf (Some t)) }
 | set_typ as t { SET_TYP (emit_segment lexbuf (Some t)) }
 | tuple_typ as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
