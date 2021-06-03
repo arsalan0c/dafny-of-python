@@ -1,23 +1,6 @@
 # dafny-of-python
-A tool to statically verify a program written in a subset of Python. 
-
-
 ![tool overview](tool_overview.png)
-## Architecture
-*dafny-of-python* translates a Python program as well as a specification annotated in comments to the [Dafny](https://github.com/dafny-lang/dafny) verification language.
-
-## Requirements
--mypy
--niceparser
--sexp jane street
-
-## Overview
-
-## Language
-- mypy
-- python subset + types
-- specifications: res
-
+*dafny-of-python* enables formal verification Python programs by translating a program written in a subset of Python along with its specification to the [Dafny](https://github.com/dafny-lang/dafny) verification language. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program.
 
 ## Usage
 ```
@@ -46,5 +29,4 @@ def find(a: list[int], key: int) -> int:
 ## Acknowledgements
 This tool was developed as part of my final year project, with the valuable guidance of [Professor Chin Wei Ngan](https://www.comp.nus.edu.sg/cs/bio/chinwn/).
 
-
-[nice-parser](https://github.com/smolkaj/nice-parser) is used to provide beautiful parser error messages.
+[Nice Parser](https://github.com/smolkaj/nice-parser) is used to provide beautiful parser error messages.
