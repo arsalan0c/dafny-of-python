@@ -156,7 +156,7 @@ let rec stmt_dfy = function
       let d_el = List.map ~f:exp_dfy el in
       DCallStmt (exp_dfy e, d_el)
     end
-    | _ -> failwith "non-call expressions are not allowed as statements2"
+    | _ -> failwith "non-call expressions are not allowed as statements"
   end
 
 let is_toplevel = function
@@ -179,7 +179,7 @@ let convert_typsyn ident rhs =
 
 let toplevel_dfy generics = function
   | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in
-    [DMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, [typ_dfy t], List.map ~f:stmt_dfy sl)]
+    [DMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, [typ_dfy t], Some (List.map ~f:stmt_dfy sl))]
   | Assign (_, il, el) -> begin
     match List.map2 ~f:convert_typsyn il el with
     | Ok typ_syns -> List.filter_map ~f:(fun x -> x) typ_syns
@@ -189,14 +189,17 @@ let toplevel_dfy generics = function
 
 let func_dfy generics = function
   | Function (speclst, i, pl, te, (Return e)::[]) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, Some (exp_dfy e))]
   | Function (speclst, i, pl, te, (Exp e)::[]) -> let t = check_exp_typ te in
-    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, exp_dfy e)]
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, Some (exp_dfy e))]
+  | Function (speclst, i, pl, te, Pass::[]) -> let t = check_exp_typ te in
+    [DFuncMeth (List.map ~f:spec_dfy speclst, i, generics, List.map ~f:param_dfy pl, typ_dfy t, None)]
   | _ -> []  
 
 let is_func = function
   | Function (_, _, _, _, (Return _)::[]) -> true
   | Function (_, _, _, _, (Exp _)::[]) -> true
+  | Function (_, _, _, _, Pass::[]) -> true
   | _ -> false
 
 let prog_dfy p =
@@ -211,5 +214,5 @@ let prog_dfy p =
   let d_toplevel_stmts = List.fold ~f:(fun so_far s -> so_far@(toplevel_dfy gens s)) ~init:[] toplevel_stmts in
   let non_toplevel_stmts = List.filter ~f:(fun x -> not (is_toplevel x)) sl in
   let d_non_toplevel_stmts = List.map ~f:stmt_dfy non_toplevel_stmts in
-  let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), [], [], [], d_non_toplevel_stmts) in
+  let main = DMeth ([], (Lexing.dummy_pos, Some "Main"), [], [], [], Some d_non_toplevel_stmts) in
   DProg ("", d_funcs@d_toplevel_stmts@[main])

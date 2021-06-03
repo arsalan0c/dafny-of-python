@@ -1,12 +1,32 @@
 # dafny-of-python
-Static verification tool for Python based on [Dafny](https://github.com/dafny-lang/dafny)
+A tool to statically verify a program written in a subset of Python. 
+
+
+![tool overview](tool_overview.png)
+## Architecture
+*dafny-of-python* translates a Python program as well as a specification annotated in comments to the [Dafny](https://github.com/dafny-lang/dafny) verification language.
+
+## Requirements
+-mypy
+-niceparser
+-sexp jane street
+
+## Overview
+
+## Language
+- mypy
+- python subset + types
+- specifications: res
+
 
 ## Usage
 ```
-sudo dune exec src/bin/main.exe
+sudo dune exec src/bin/main.exe < [file].py
 ```
 
-## Example
+## Examples
+
+### Finding the index of an element in a list
 ```Python
 # post 0 <= res ==> res < len(a) and a[res] == key
 # post res == -1 ==> forall k :: 0 <= k and k < len(a) ==> a[k] != key
@@ -24,4 +44,4 @@ def find(a: list[int], key: int) -> int:
 ```
 
 ## Acknowledgements
-This tool was develop as part of my final year project, with the valuable guidance of [Professor Chin Wei Ngan](https://www.comp.nus.edu.sg/cs/bio/chinwn/).
+This tool was developed as part of my final year project, with the valuable guidance of [Professor Chin Wei Ngan](https://www.comp.nus.edu.sg/cs/bio/chinwn/).

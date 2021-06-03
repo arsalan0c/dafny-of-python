@@ -1,5 +1,4 @@
 open Base
-(* open Sexplib.Std *)
 
 open Astdfy
 open Sourcemap
@@ -46,11 +45,7 @@ let rec newcolumn_concat f sep = function
     let rest = newcolumn_concat f sep tl in
     String.concat [fhd; n; rest]
 
-let ret_param_counter : int ref = ref 0
-let ret_param_reset = fun () -> ret_param_counter := 0
-let ret_param_name = fun () ->
-  ret_param_counter := !ret_param_counter + 1;
-  "res" (* ^ Int.to_string (!ret_param_counter)*)
+let ret_param_name = fun () -> "res" 
 
 let curr_func : string ref = ref ""
 
@@ -343,7 +338,6 @@ let rec print_rets id = function
           String.concat [name; ps; pt]
       ) ", " tl in 
     let cb = (newcolumn ")") in
-    ret_param_reset ();
     String.concat[n; r; ptl; cb]
 
 and print_stmt id = function
@@ -453,7 +447,7 @@ let print_declaration id = function
   | (i, t) -> print_stmt id (DAssign (Some t, [i], [DIdentifier i]))
 
 let print_toplevel id = function
-  | DMeth (speclst, ident, gl, pl, tl, sl) -> (curr_func := seg_val ident); 
+  | DMeth (speclst, ident, gl, pl, tl, osl) -> (curr_func := seg_val ident); 
     let n = newcolumn (indent id) in 
     let m = newcolumn "method" in
     let pident = print_ident 1 ident in
@@ -471,21 +465,23 @@ let print_toplevel id = function
       String.concat [rt; pp]
     end in
     let nl = newline () in
-    let psl = newline_concat (print_spec (id+2)) speclst in
+    let pspeclst = newline_concat (print_spec (id+2)) speclst in
     let nl2 = newline () in
-    let n2 = newcolumn (indent id) in 
-    let ob2 = newcolumn "{" in
-    let nl3 = newline () in
-    let ppl = newline_concat (print_declaration (id+2)) pl in 
-    let nl4 = newline () in
-    let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
-    let n3 = newcolumn (indent id) in
-    let cb2 = newcolumn "}" in 
-    let nl5 = newline () in 
-    String.concat [
-      n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; ppl; nl4; pst; n3; cb2; nl5
+    let n2 = newcolumn (indent id) in
+    let psl = match osl with None -> "" | Some sl ->
+      let ob2 = newcolumn "{" in
+      let nl3 = newline () in
+      let ppl = newline_concat (print_declaration (id+2)) pl in 
+      let nl4 = newline () in
+      let pst = newcolumn_concat (fun x -> newline_f (print_stmt (id+2)) x) "" sl in
+      let n3 = newcolumn (indent id) in
+      let cb2 = newcolumn "}" in
+      let nl5 = newline () in 
+      String.concat [ob2; nl3; ppl; nl4; pst; n3; cb2; nl5]
+    in String.concat [
+      n; m; pident; pgl; ob; pp; cb; pr; nl; pspeclst; nl2; n2; psl
     ]
-  | DFuncMeth (speclst, ident, gl, pl, t, e) -> (curr_func := seg_val ident);
+  | DFuncMeth (speclst, ident, gl, pl, t, oe) -> (curr_func := seg_val ident);
     let n = newcolumn (indent id) in 
     let m = newcolumn "function method" in
     let pident = print_ident 1 ident in
@@ -506,16 +502,19 @@ let print_toplevel id = function
     let nl = newline () in
     let psl = newline_concat (print_spec (id+2)) speclst in
     let nl2 = newline () in
-    let n2 = newcolumn (indent id) in 
-    let ob2 = newcolumn "{" in
-    let nl3 = newline () in
-    let n3 = newcolumn (indent (id+2)) in
-    let pe = print_exp 0 e in
-    let nl4 = newline () in
-    let n4 = newcolumn (indent id) in
-    let cb2 = newcolumn "}" in 
-    let nl5 = newline () in 
-    String.concat [n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; n2; ob2; nl3; n3; pe; nl4; n4; cb2; nl5] 
+    let pe = match oe with None -> "" | Some e ->
+      let n2 = newcolumn (indent id) in
+      let ob2 = newcolumn "{" in
+      let nl3 = newline () in
+      let n3 = newcolumn (indent (id+2)) in
+      let pe = print_exp 0 e in
+      let nl4 = newline () in
+      let n4 = newcolumn (indent id) in
+      let cb2 = newcolumn "}" in 
+      let nl5 = newline () in 
+      String.concat [n2; ob2; nl3; n3; pe; nl4; n4; cb2; nl5]
+    in 
+    String.concat [n; m; pident; pgl; ob; pp; cb; pr; nl; psl; nl2; pe]
 
   | DTypSynonym (ident, otyp) -> let n = newcolumn (indent id) in
     let t = newcolumn "type" in
