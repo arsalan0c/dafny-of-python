@@ -45,3 +45,6 @@ def find(a: list[int], key: int) -> int:
 
 ## Acknowledgements
 This tool was developed as part of my final year project, with the valuable guidance of [Professor Chin Wei Ngan](https://www.comp.nus.edu.sg/cs/bio/chinwn/).
+
+
+[nice-parser](https://github.com/smolkaj/nice-parser) is used to provide beautiful parser error messages.
