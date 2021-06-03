@@ -1,7 +1,6 @@
 let reraise exn =
   Printexc.(raise_with_backtrace exn (get_raw_backtrace ()))
 
-
 module type RAW_PARSER = sig
   type token
   type result
@@ -22,7 +21,6 @@ module type NICE_PARSER = sig
   val parse_chan : ?pos:Lexing.position -> in_channel -> result
   val parse_file : string -> result
 end
-
 
 module Make (P : RAW_PARSER) : NICE_PARSER with 
   type token = P.token and
