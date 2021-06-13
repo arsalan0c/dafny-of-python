@@ -1,5 +1,5 @@
 open Base
-open Sourcemap
+open Pyparse.Sourcemap
 
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
@@ -18,7 +18,7 @@ let replace_num p =
     | Some s -> Int.of_string s
     | None -> 0
     end in
-  let seg = Emitdfy.nearest_seg (!Emitdfy.sm) line column in
+  let seg = Transform.Emitdfy.nearest_seg (!Transform.Emitdfy.sm) line column in
   let seg_str = print_seg seg in seg_str
 
 let verification_errors out =

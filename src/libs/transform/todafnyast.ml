@@ -1,9 +1,9 @@
 open Base
 
-open Astpy
+open Pyparse.Astpy
 open Astdfy
 (* open Typing *)
-open Sourcemap
+open Pyparse.Sourcemap
 
 let printf = Stdlib.Printf.printf
 

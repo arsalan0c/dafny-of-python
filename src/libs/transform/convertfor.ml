@@ -1,6 +1,6 @@
 open Base
-open Astpy
-open Sourcemap
+open Pyparse.Astpy
+open Pyparse.Sourcemap
 let printf = Stdlib.Printf.printf
 
 let counter_num : int ref = ref 0

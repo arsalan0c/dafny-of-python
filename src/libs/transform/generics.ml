@@ -1,5 +1,5 @@
 open Base
-open Astpy
+open Pyparse.Astpy
 
 let printf = Stdlib.Printf.printf
 let vars = Hash_set.create (module String)

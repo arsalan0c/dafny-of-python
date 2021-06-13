@@ -1,7 +1,7 @@
 open Base
 
 open Astdfy
-open Sourcemap
+open Pyparse.Sourcemap
 
 let printf = Stdlib.Printf.printf
 
@@ -10,7 +10,7 @@ type line = int
 type column = int
 [@@deriving sexp]
 
-type sourcemap = ((line * column) * Sourcemap.segment) list ref
+type sourcemap = ((line * column) * segment) list ref
 [@@deriving sexp]
 
 let sm: sourcemap = ref []

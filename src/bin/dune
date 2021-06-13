@@ -1,4 +1,4 @@
 (executable
   (name main)
-  (libraries verifier pyparse core)
+  (libraries core pyparse transform run)
 )

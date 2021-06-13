@@ -1,6 +1,6 @@
 open Base
-open Astpy
-open Sourcemap
+open Pyparse.Astpy
+open Pyparse.Sourcemap
 
 let temp_source = Hashtbl.create (module String)
 let printf = Stdlib.Printf.printf
