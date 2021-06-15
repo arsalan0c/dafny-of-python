@@ -7,7 +7,7 @@
   (libraries
     stdio
     compiler-libs.common
-    core
+    base
     sexplib
     re2
   )

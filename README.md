@@ -1,12 +1,27 @@
 # dafny-of-python
 ![tool overview](tool_overview.png)
-*dafny-of-python* enables formal verification Python programs by translating a program written in a subset of Python along with its specification to the [Dafny](https://github.com/dafny-lang/dafny) verification language. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program.
+*dafny-of-python* enables formal verification of Python programs by translating a program written in a subset of Python along with its specification to the [Dafny](https://github.com/dafny-lang/dafny) verification language. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program.
+## Overview
+Specifications are written in comments, ensuring the Python programs can remain executable without modification.
+Error messages are 
+
+- written program.dfy
+## Requirements
+-mypy
+-dafny
+-niceparser
+-sexp jane street
+-obelisk
+## Language
+- mypy
+- python subset + types
+- specifications: res
+- The specification language is designed to match Dafny's as closely as possible and can be viewed here:
 
 ## Usage
 ```
 sudo dune exec src/bin/main.exe < [file].py
 ```
-
 ## Examples
 
 ### Finding the index of an element in a list

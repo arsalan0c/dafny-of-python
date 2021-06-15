@@ -1,5 +1,4 @@
 open Core
-(* open Sexplib *)
 
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
@@ -30,8 +29,8 @@ let () = begin
   typcheck inp;
   let parsed = Pyparse.Parser.parse_string inp in
   (* Pyparse.Typing.check_prog parsed *)
-  (* let sexp = Pyparse.Astpy.sexp_of_program parsed in *)
-  (* printf "->\n%s\n" (Sexp.to_string sexp); *)
+  (* let sexp = Pyparse.Astpy.sexp_of_program parsed in
+  printf "->\n%s\n" (Sexp.to_string sexp); *)
   let dafny_ast = Transform.Todafnyast.prog_dfy parsed in
   let dafny_source = Transform.Emitdfy.print_prog dafny_ast in
   printf "\n%s\n" dafny_source; 
