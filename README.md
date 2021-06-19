@@ -26,7 +26,7 @@ Along with the outcome of verification:
 verifier finished with 1 verified, 0 error(s)
 ```
 
-As the specifications are written in comments, Python programs can remain executable without modification. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program. While the aim is to prevent knowledge of Dafny from being essential, it would certainly help. You can see additional examples [below](#examples).
+As the specifications are written in comments, Python programs can remain executable without modification. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program. While the aim is to prevent knowledge of Dafny from being essential, it would certainly help. You can see additional examples [below](#examples) and find more information in the [wiki](https://github.com/arsalanc-v2/dafny-of-python/wiki).
 
 ## Requirements
 - mypy
@@ -60,7 +60,7 @@ def find(a: list[int], key: int) -> int:
   return -1
 ```
 
-### Contributing
+## Contributing
 If you find a bug or have any comments, feel free to open an [issue](https://github.com/arsalanc-v2/dafny-of-python/issues/new/choose) or pull request.
 
 ## Credits
