@@ -60,7 +60,9 @@ def find(a: list[int], key: int) -> int:
 ```
 
 ## Contributing
-If you find a bug or have any comments, feel free to open an [issue](https://github.com/arsalanc-v2/dafny-of-python/issues/new/choose) or pull request. You can also find more information in the [wiki](https://github.com/arsalanc-v2/dafny-of-python/wiki).
+If you find a bug or have any comments, feel free to open an [issue](https://github.com/arsalanc-v2/dafny-of-python/issues/new/choose) or pull request. 
+
+You can also find more information in the [wiki](https://github.com/arsalanc-v2/dafny-of-python/wiki).
 
 ## Credits
 *dafny-of-python* was developed as part of my final year project at the National University of Singapore, with the valuable guidance of [Professor Chin Wei Ngan](https://www.comp.nus.edu.sg/cs/bio/chinwn/).
