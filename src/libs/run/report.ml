@@ -4,6 +4,7 @@ open Pyparse.Sourcemap
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
 
+
 let replace_num p =
   let nums = (Re2.find_all_exn (Re2.create_exn "[0-9]*") p) in
   let line_column = List.filter ~f:(fun s -> 
@@ -35,13 +36,18 @@ let verification_errors out =
   end with
   | Re2.Exceptions.Regex_match_failed _ -> None
 
+let prelude_verified = 42
 let verification_summary out =
   try begin
-    let line_rgx = Re2.create_exn ("verifier finished with [0-9]* verified, [0-9]* error" ^ "s") in (* TODO: substract prelude from verified count *)
-    let line = Re2.find_first_exn line_rgx out in
-    printf "%s\n" line
+    let line_rgx = Re2.create_exn ("verifier finished with [0-9]+ verified, [0-9]+ error") in (* TODO: substract prelude from verified count *)
+    let line = (Re2.find_first_exn line_rgx out) ^ "(s)" in
+    let num_rgx = Re2.create_exn "[0-9]+" in 
+    let num_verified = Re2.find_first_exn num_rgx line in
+    let num_verified_source = Int.to_string ((Int.of_string num_verified) - prelude_verified) in
+    let verified_line = String.substr_replace_first line ~pattern:num_verified ~with_:num_verified_source in
+    printf "%s\n" verified_line
   end with
-  | Re2.Exceptions.Regex_match_failed _ -> () (* ) *)
+  | Re2.Exceptions.Regex_match_failed _ -> prerr "Unable to obtain verification summary"
 
 let report out = begin match verification_errors out with
   | Some s -> prerr (s ^ "\n")

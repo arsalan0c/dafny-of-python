@@ -4,6 +4,7 @@
     base
     pyparse
     transform
+    re2
   )
   (flags (:standard -w -14))
 )

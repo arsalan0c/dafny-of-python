@@ -9,7 +9,6 @@
     compiler-libs.common
     base
     sexplib
-    re2
   )
   (preprocess (pps ppx_jane -allow-unannotated-ignores))
   (inline_tests)
