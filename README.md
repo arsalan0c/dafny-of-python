@@ -12,7 +12,7 @@ def cube(x: int) -> int:
 ```
 
 The following Dafny program is generated:
-```
+```Dafny
 function method cube(x: int): (res: int)
   requires true
   ensures (res == ((x * x) * x))
