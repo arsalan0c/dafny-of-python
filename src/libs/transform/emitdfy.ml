@@ -112,13 +112,14 @@ let print_op id = function
 
 let print_type id t = 
   let rec get_v t = match t with
-    | DIdentTyp (s, Some t) -> (seg_val s) ^ "<" ^ (get_v t) ^ ">"
-    | DIdentTyp (s, None) -> seg_val s
+    | DIdentTyp (s, []) -> seg_val s
+    | DIdentTyp (s, gl) -> (seg_val s) ^ "<" ^ (String.concat ~sep:", " (List.map ~f:get_v gl)) ^ ">"
     | DInt _ -> "int"
     | DReal _ -> "real"
     | DBool _ -> "bool"
     | DString _ -> "string"
     | DChar _ -> "char"
+    | DObj _ -> "object"
     | DSeq (_, t) -> "seq<" ^ (get_v t) ^ ">"
     | DSet (_, t) -> "set<" ^ (get_v t) ^ ">"
     | DMap (_, t1, t2) -> "map<" ^ (get_v t1) ^ ", " ^ (get_v t2) ^ ">"
@@ -134,6 +135,7 @@ let print_type id t =
     | DBool s -> s
     | DString s -> s
     | DChar s -> s
+    | DObj s -> s
     | DSeq (s, _) -> s
     | DSet (s, _) -> s
     | DMap (s, _,  _) -> s
@@ -177,14 +179,13 @@ let rec print_exp id = function
     let cb = newcolumn ")" in
     String.concat [n; ob; pop; pe; cb]
   | DIntLit i -> let n = newcolumn (indent id) in 
-    let si = Int.to_string i in
-    String.concat [n; si]
+    String.concat [n; i]
   | DRealLit r -> let n = newcolumn (indent id) in 
-    let sr = Float.to_string r in
-    String.concat [n; sr]
-  | DBoolLit b -> let n = newcolumn (indent id) in 
-    let sb = Bool.to_string b in
-    String.concat [n; sb]
+    String.concat [n; r]
+  | DTrue -> let n = newcolumn (indent id) in 
+    String.concat [n; "true"]
+  | DFalse -> let n = newcolumn (indent id) in 
+    String.concat [n; "false"]
   | DStringLit s -> let n = newcolumn (indent id) in 
     let es = "\"" ^ s ^ "\"" in
     String.concat [n; es]

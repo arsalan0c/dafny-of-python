@@ -1,9 +1,11 @@
 open Base
 open Pyparse.Sourcemap
 
+exception ReportError of string
+let[@inline] failwith msg = raise (ReportError msg)
+
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
-
 
 let replace_num p =
   let nums = (Re2.find_all_exn (Re2.create_exn "[0-9]*") p) in
@@ -47,7 +49,7 @@ let verification_summary out =
     let verified_line = String.substr_replace_first line ~pattern:num_verified ~with_:num_verified_source in
     printf "%s\n" verified_line
   end with
-  | Re2.Exceptions.Regex_match_failed _ -> prerr "Unable to obtain verification summary"
+  | Re2.Exceptions.Regex_match_failed e -> failwith ("\nUnable to obtain verification summary due to regex match fail: " ^ e ^ "\n")
 
 let report out = begin match verification_errors out with
   | Some s -> prerr (s ^ "\n")

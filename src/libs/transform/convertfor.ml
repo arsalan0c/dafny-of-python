@@ -17,13 +17,13 @@ let rec stmt_for s =
   | For (specl, il, e, sl) ->
     let counter_name = counter_num := !counter_num + 1; "tempfor_" ^ (Int.to_string !counter_num) in
     let counter_ident = (new_seg 0 0 (Some counter_name)) in 
-    let assign_counter = Assign (None, [counter_ident], [Literal (IntLit 0)]) in
+    let assign_counter = Assign (None, [counter_ident], [Literal (IntLit "0")]) in
     let declare_target_vars = Assign (None, il, []) in
     let counter_limit = Len (def_seg, e) in
     let counter_limit_name = counter_num := !counter_num + 1; "tempfor_" ^ (Int.to_string !counter_num) in
     let counter_limit_ident =(new_seg 0 0 (Some counter_limit_name)) in 
     let assign_counter_limit = Assign (None, [counter_limit_ident], [counter_limit]) in
-    let counter_inv1 = BinaryExp (Literal (IntLit 0), LEq def_seg, Identifier counter_ident) in
+    let counter_inv1 = BinaryExp (Literal (IntLit "0"), LEq def_seg, Identifier counter_ident) in
     let counter_inv2 = BinaryExp (Identifier counter_ident, LEq def_seg, Identifier counter_limit_ident) in
     let counter_inv = Invariant (BinaryExp (counter_inv1, And def_seg, counter_inv2)) in
     let loop_cond = BinaryExp (Identifier counter_ident, Lt def_seg, Identifier counter_limit_ident) in
@@ -31,7 +31,7 @@ let rec stmt_for s =
     let domain_value = Subscript (e, domain_counter) in
     let assign_targets = Assign (None, il, [domain_value]) in
     let rest = List.fold sl ~f:(fun so_far s -> so_far@(stmt_for s)) ~init:[] in
-    let incr_counter = BinaryExp (Identifier counter_ident, Plus def_seg, Literal (IntLit 1)) in
+    let incr_counter = BinaryExp (Identifier counter_ident, Plus def_seg, Literal (IntLit "1")) in
     let update_counter = Assign (None, [counter_ident], [incr_counter]) in
     let n_sl = assign_targets::rest@[update_counter] in
     [assign_counter; assign_counter_limit; declare_target_vars; While ((counter_inv::specl), loop_cond, n_sl)]

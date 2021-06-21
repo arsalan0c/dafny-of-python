@@ -168,7 +168,7 @@ class List<T(==)> {
         return new List(lst);
     }
 
-    function method len(): (l: int) 
+    function method len(): (l: nat) 
         reads this
         ensures l == |lst|
     {
@@ -219,21 +219,27 @@ class List<T(==)> {
     {
         return new List<T>(lst + l2.lst);
     }
-
-    // predicate sorted(s: seq<T>)
-    // {
-    //     forall i,j :: 0 <= i < j < |s| ==> s[i] <= s[j]
-    // }
-
-    // method sort()
-    //     modifies this
-    //     ensures sorted(lst)
-    //     ensures |lst| == |old(lst)|
-    //     ensures forall i :: 0 <= i < |lst| ==> count(lst[i]) == old(this).count(lst[i])
-    // {
-
-    // }
 }
+
+// method test(s: seq<int>) returns (res: bool) 
+//     ensures res <==> forall j, k :: (0 <= j) && (j < k) && (k < |s|) ==> s[j] <= s[k]
+// {
+//     if |s| <= 1 {
+//         return true;
+//     }
+//     var i := 1;
+//     while i < |s| 
+//         invariant 1 <= i <= |s|
+//         invariant forall j, k :: (0 <= j) && (j < k) && (k < i) ==> s[j] <= s[k]
+//     {
+//         if s[i] < s[i - 1] {
+//             return false;
+//         }
+//         i := i + 1;
+//     }
+
+//     return true;
+// }
 
 // method range(start: int, stop: int, step: int) returns (res: seq<int>)
 //     requires start == 0
@@ -312,6 +318,10 @@ method maxListInt(l: List<int>) returns (res: int)
     }
 
     return soFar;
+}
+
+method test(a: object) {
+    
 }
 
 // method maxListReal<T>(l: list<real>) returns (res: real)

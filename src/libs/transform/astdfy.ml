@@ -30,11 +30,12 @@ type dOp =
 
 type dTyp = 
   | DVoid
-  | DIdentTyp of segment * dTyp option (* generic parameter *)
+  | DIdentTyp of segment * dTyp list (* generic parameters *)
   | DInt of segment
   | DReal of segment 
   | DBool of segment  
-  | DString of segment  
+  | DString of segment 
+  | DObj of segment 
   | DChar of segment 
   | DSeq of segment * dTyp
   | DSet of segment * dTyp
@@ -53,9 +54,10 @@ type dExpr =
   | DEmptyExpr
   | DNull
   | DThis
-  | DIntLit of int
-  | DRealLit of float
-  | DBoolLit of bool
+  | DIntLit of string
+  | DRealLit of string
+  | DTrue
+  | DFalse
   | DStringLit of string
   | DBinary of dExpr * dOp * dExpr
   | DUnary of dOp * dExpr

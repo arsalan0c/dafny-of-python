@@ -18,15 +18,16 @@ let check_exp_typ = function
   | _ -> failwith "Invalid type"
 
 let rec typ_dfy = function 
-  | TIdent s -> DIdentTyp (s, None)
+  | TIdent s -> DIdentTyp (s, [])
   | TInt s -> DInt s
   | TFloat s -> DReal s 
   | TBool s -> DBool s
   | TStr s -> DString s
   | TNone _ -> DVoid
+  | TObj s -> DObj s
   | TLst (s, ot) -> begin
     match ot with
-    | Some t -> let r = typ_dfy t in DIdentTyp (s, Some r)
+    | Some t -> let r = typ_dfy t in DIdentTyp (s, [r])
     | None -> failwith "Please specify the exact sequence type"
     end
   | TSet (s, ot) -> begin
@@ -43,19 +44,20 @@ let rec typ_dfy = function
     end
   | TTuple (s, olt) -> begin
     match olt with
-    | Some tpl -> 
-    (* TODO: add postcondition to check number of args match number returned *)
-      (* List.iter ~f:(fun t -> if (not (pytype_compare t ft = 0)) then failwith "All elements in the tuple must have the same type") lt; *)
-      DTuple (s, List.map ~f:typ_dfy tpl) (* translate to sequence type instead of tuple *)
-    | None -> failwith "Please specify the exact tuple type" (* TODO: allow 0 tuples *)
+    | Some tpl -> DTuple (s, List.map ~f:typ_dfy tpl) 
+    | None -> DTuple (s, [])
     end
   | TCallable (s, tl, t) -> DFunTyp (s, List.map ~f:typ_dfy tl, typ_dfy t)
+  | TType (_, ot) -> match ot with
+    | Some t -> typ_dfy t
+    | None -> failwith "Please specify the exact type"
 
 let ident_dfy = function
   | s -> s
 
 let literal_dfy = function
-  | BoolLit b -> DBoolLit b
+  | TrueLit -> DTrue
+  | FalseLit -> DFalse
   | IntLit i -> DIntLit i
   | FloatLit f -> DRealLit f
   | StringLit s -> DStringLit s
@@ -90,10 +92,10 @@ let rec exp_dfy e =
   match e with
   | Identifier s -> DIdentifier s
   | Dot (e, ident) -> DDot (exp_dfy e, ident)
-  | BinaryExp (e1, op, e2) -> DBinary((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
-  | UnaryExp (op, e) -> DUnary((unaryop_dfy op), (exp_dfy e))
+  | BinaryExp (e1, op, e2) -> DBinary ((exp_dfy e1), (binaryop_dfy op), (exp_dfy e2))
+  | UnaryExp (op, e) -> DUnary ((unaryop_dfy op), (exp_dfy e))
   | Literal l -> literal_dfy l
-  | Call (e, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr(exp_dfy e, d_args)
+  | Call (e, el) -> let d_args = List.map ~f:exp_dfy el in DCallExpr (exp_dfy e, d_args)
   | Lst el -> DSeqExpr (List.map ~f:exp_dfy el)
   | Array el -> DArrayExpr (List.map ~f:exp_dfy el)
   | Set el -> DSetExpr (List.map ~f:exp_dfy el)
@@ -116,7 +118,10 @@ let rec exp_dfy e =
   | Max (s, e) -> DCallExpr (DDot (exp_dfy e, s), [])
   | Old (s, e) -> DOld (s, exp_dfy e)
   | Fresh (s, e) -> DFresh (s, exp_dfy e)
-  | Typ _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
+  | Typ t -> begin match t with 
+    | TNone _ -> DNull 
+    | _ -> failwith "Type in expression context only allowed as right-hand-side of assignment"
+  end
   | Lambda (fl, e) -> let dfl = List.map ~f:(fun x -> (x, DVoid)) fl in DLambda (dfl, [], exp_dfy e)
   | IfElseExp (e1, c, e2) -> DIfElseExpr (exp_dfy c, exp_dfy e1, exp_dfy e2)
 
@@ -139,6 +144,7 @@ let rec stmt_dfy = function
   | Exp (Dot (e, ident)) -> DCallStmt (DDot (exp_dfy e, ident_dfy ident), [])
   | Assign (t, il, el) -> begin match t with 
     | Some (Typ t) -> DAssign (Some (typ_dfy t), List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
+    | Some (Identifier ident) -> DAssign (Some (DIdentTyp ((ident_dfy ident), [])), List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
     | None -> DAssign (None, List.map ~f:ident_dfy il, (List.map ~f:exp_dfy el))
     | _ -> failwith "Invalid type of assignment"
     end
@@ -159,15 +165,13 @@ let rec stmt_dfy = function
     | _ -> failwith "non-call expressions are not allowed as statements"
   end
 
-let is_toplevel = function
-  | Function _ -> true
-  | Assign (_, _, ((Typ _)::_)) -> true
-  | _ -> false
 
 let convert_typsyn ident rhs =
   let ident_v = seg_val ident in begin
     match rhs with 
-    | Typ t -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
+    | Typ t -> begin match t with | TNone _ -> None
+      | _ -> Hash_set.add typ_idents ident_v; Some (DTypSynonym (ident_dfy ident, Some (typ_dfy t)))
+    end
     | Identifier typ_ident -> begin 
         let s_typ = seg_val typ_ident in
         match Base.Hash_set.find typ_idents ~f:(fun s -> String.compare s s_typ = 0) with
@@ -176,6 +180,12 @@ let convert_typsyn ident rhs =
       end
     | _ -> None
     end
+
+let is_toplevel = function
+  | Function _ -> true
+  | Assign (_, _, ((Typ (TNone _))::_)) -> false
+  | Assign (_, _, ((Typ _)::_)) -> true
+  | _ -> false
 
 let toplevel_dfy generics = function
   | Function (speclst, i, pl, te, sl) -> let t = check_exp_typ te in

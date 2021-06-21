@@ -5,10 +5,6 @@ open Sourcemap
 exception PyAstError of string
 let[@inline] failwith msg = raise (PyAstError msg)
 
-type literal = BoolLit of bool | IntLit of int | FloatLit of float | StringLit of string | NoneLit
-[@@deriving sexp]
-
-
 type typ =
   | TIdent of segment
   | TInt of segment
@@ -16,11 +12,13 @@ type typ =
   | TBool of segment 
   | TStr of segment  
   | TNone of segment
+  | TObj of segment
   | TLst of segment * typ option
   | TDict of segment * typ option * typ option
   | TSet of segment * typ option
   | TTuple of segment * (typ list) option
   | TCallable of segment * (typ list) * typ (* args, return *)
+  | TType of segment * typ option
   (* | Union of segment * typ list *)
   [@@deriving sexp]
 
@@ -31,7 +29,6 @@ let typ_divide = [TInt def_seg; TFloat def_seg]
 let typ_mod = [TInt def_seg]
 let typ_rel = [TInt def_seg; TFloat def_seg]
 let typ_in = [TLst (def_seg, None)]
-
 
 let rec subtyp pt1 pt2 = 
   let o_compare ot1 ot2 = match ot1, ot2 with
@@ -68,6 +65,9 @@ type identifier = segment
 [@@deriving sexp]
 
 type unaryop = Not of segment | UMinus of segment
+[@@deriving sexp]
+
+type literal = TrueLit | FalseLit | IntLit of string | FloatLit of string | StringLit of string | NoneLit
 [@@deriving sexp]
 
 type binaryop = 
