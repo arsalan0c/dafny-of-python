@@ -26,7 +26,7 @@ Line: 2  Column: 4  Value: cube,  Error,  A postcondition might not hold on this
 Line: 1  Column: 11  Value: ==,  Related location,  This is the postcondition that might not hold.
 ```
 
-As the specifications are written in comments, Python programs can remain executable without modification. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program. While the aim is to prevent knowledge of Dafny from being essential, it would certainly help in understanding what *dafny-of-python* is (un)able to do. You can see [additional examples below](#examples) and find more information in the [wiki](https://github.com/arsalanc-v2/dafny-of-python/wiki).
+As the specifications are written in comments, Python programs can remain executable without modification. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program. While the aim is to prevent knowledge of Dafny from being essential, it would certainly help in understanding what can be verified. You can see [additional examples below](#examples) and find more information in the [wiki](https://github.com/arsalanc-v2/dafny-of-python/wiki).
 
 ## Usage
 ```
