@@ -72,7 +72,7 @@ def find(xs: list[int], key: int) -> int:
   index = 0
   # invariant 0 <= index and index <= len(xs)
   # invariant forall k :: 0 <= k and k < index ==> xs[k] != key
-  while index < len(a):
+  while index < len(xs):
     if xs[index] == key:
       return index
     
