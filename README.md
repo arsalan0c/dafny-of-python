@@ -96,7 +96,6 @@ def binarysearch(xs: list[int], key: int) -> int:
   low: int = 0
   high: int = length - 1
   # decreases high - low
-  # invariant length == len(xs)
   # invariant 0 <= low and high < length and low <= high + 1
   # invariant forall i :: 0 <= i and i < length and not (low <= i and i <= high) ==> xs[i] != key
   while low <= high:
