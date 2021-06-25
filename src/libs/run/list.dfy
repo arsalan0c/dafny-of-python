@@ -221,26 +221,6 @@ class List<T(==)> {
     }
 }
 
-// method test(s: seq<int>) returns (res: bool) 
-//     ensures res <==> forall j, k :: (0 <= j) && (j < k) && (k < |s|) ==> s[j] <= s[k]
-// {
-//     if |s| <= 1 {
-//         return true;
-//     }
-//     var i := 1;
-//     while i < |s| 
-//         invariant 1 <= i <= |s|
-//         invariant forall j, k :: (0 <= j) && (j < k) && (k < i) ==> s[j] <= s[k]
-//     {
-//         if s[i] < s[i - 1] {
-//             return false;
-//         }
-//         i := i + 1;
-//     }
-
-//     return true;
-// }
-
 // method range(start: int, stop: int, step: int) returns (res: seq<int>)
 //     requires start == 0
 //     requires step == 1
@@ -320,10 +300,6 @@ method maxListInt(l: List<int>) returns (res: int)
     return soFar;
 }
 
-method test(a: object) {
-    
-}
-
 // method maxListReal<T>(l: list<real>) returns (res: real)
 //     requires l.len() > 0
 //     ensures forall k :: 0 <= k < l.len() ==> res >= l.atIndex(k)
@@ -341,28 +317,4 @@ method test(a: object) {
 //     }
 
 //     return soFar;
-// }
-
-// method search(x: int, s: list<int>) returns (res1: int)
-//   requires (s.len() > 0)
-//   requires forall k, j :: ((((0 <= k) && (k < j)) && (j < s.len())) ==> (s.atIndex(k) <= s.atIndex(j)))
-//   ensures ((res1 >= 0 && res1 < s.len()) ==> (x <= s.atIndex(res1)))
-// {
-//   var x: int := x;
-//   var s: list<int> := s;
-//   var output: int := 0;
-//   var tempcall_1 := s.len();
-//   var l: int := tempcall_1;
-//   while (output < l)
-//     invariant ((0 <= output) && (output <= l))
-//     invariant forall k :: (((0 <= k) && (k < output)) ==> (x > s.atIndex(k)))
-//   {
-//     var tempcall_2 := s.atIndex(output);
-//     if (x > tempcall_2) {
-//       output := (output + 1);
-//     } else {
-//       break;    
-//     }
-//   }
-//   return output;
 // }

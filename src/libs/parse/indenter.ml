@@ -17,7 +17,8 @@ let convert_space_to_indent width f =
 		else [NEWLINE]
 	| EOF ->
 		let k = !indent in
-	  (indent := 0; g make_dedent k 0 @ [EOF])
+		(indent := 0; g make_dedent k 0 @ [EOF])
+	| TYPF ident -> [IDENTIFIER ident; LPAREN] 
 	| e -> [e]
 
 let flatten f =

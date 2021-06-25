@@ -5,39 +5,28 @@
 
 Given the following function annotated with types and a specification:
 ```Python
-# post res == x        
+# post res == x * x * x        
 def cube(x: int) -> int:
-  y = x * x * x
-  return y
+  return x
 ```
 
 The following Dafny function is generated:
 ```Dafny
-method cube(x: int) returns (res: int)
-  ensures (res == x)
+function method cube(x: int): (res: int)
+  ensures (res == ((x * x) * x))
 {
-  var x: int := x;
-  var y := ((x * x) * x);
-  return y;
+  x
 }
 ```
 
 Along with the outcome of verification, where the line and column information corresponds to the original Python program:
 ```
 verifier finished with 0 verified, 1 error(s)
-Line: 4  Column: 9  Value: y,  Error,  A postcondition might not hold on this return path.
+Line: 2  Column: 4  Value: cube,  Error,  A postcondition might not hold on this return path.
 Line: 1  Column: 11  Value: ==,  Related location,  This is the postcondition that might not hold.
 ```
 
 As the specifications are written in comments, Python programs can remain executable without modification. Assuming the translation is correct, successful verification of the translated Dafny program implies that the same properties hold for the original Python program. While the aim is to prevent knowledge of Dafny from being essential, it would certainly help in understanding what *dafny-of-python* is (un)able to do. You can see [additional examples below](#examples) and find more information in the [wiki](https://github.com/arsalanc-v2/dafny-of-python/wiki).
-
-## Requirements
-- mypy
-- dafny
-- sexp jane street
-- obelisk
-- re2
-- menhir, ocamllex
 
 ## Usage
 ```
@@ -93,6 +82,41 @@ def find(xs: list[int], key: int) -> int:
 ```
 ### Binary Search
 ```Python
+# post res <==> forall j, k :: 0 <= j and j < k and k < len(xs) ==> xs[j] <= xs[k]
+def is_sorted(xs: list[int]) -> bool:
+  # implementation ommitted so that the function will be treated as a predicate
+  # otherwise, it cannot be used in a specification
+  pass
+
+# pre is_sorted(xs)
+# post res >= 0 ==> res < len(xs) and xs[res] == key
+# post res < 0 ==> forall k :: 0 <= k and k < len(xs) ==> xs[k] != key
+def binarysearch(xs: list[int], key: int) -> int:
+  length: int = len(xs)
+  low: int = 0
+  high: int = length - 1
+  # decreases high - low
+  # invariant length == len(xs)
+  # invariant 0 <= low and high < length and low <= high + 1
+  # invariant forall i :: 0 <= i and i < length and not (low <= i and i <= high) ==> xs[i] != key
+  while low <= high:
+    mid: int = int(low + (high - low) / 2)
+    if key < xs[mid]:
+      high = mid - 1
+    elif key > xs[mid]:
+      low = mid + 1
+    else:
+      return mid
+  
+  return -1
+
+xs = [1, 2, 3, 4, 5]
+index = binarysearch(xs, 4)
+# ideally, this assertion shouldn't be required for the next assertion to be verified
+assert xs[3] == 4
+assert index == 3
+not_index = binarysearch(xs, 6)
+assert not_index < 0
 ```
 
 

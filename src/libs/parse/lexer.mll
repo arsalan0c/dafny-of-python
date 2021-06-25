@@ -67,6 +67,11 @@ let modifies = '#' [' ' '\t']* "modifies"
 
 rule next_token = parse
 | eof { EOF }
+| typ_f as tf 
+  { let s = (
+      String.sub tf 0 ((String.length tf) - 1)
+    ) ^ "F" in TYPF (emit_segment lexbuf (Some s)) 
+  }
 | int_typ as t { INT_TYP (emit_segment lexbuf (Some t)) }
 | float_typ as t { FLOAT_TYP (emit_segment lexbuf (Some t)) }
 | bool_typ as t { BOOL_TYP (emit_segment lexbuf (Some t)) }

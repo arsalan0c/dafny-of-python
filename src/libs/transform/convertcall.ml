@@ -23,7 +23,7 @@ let replace e call =
     | None -> Hashtbl.add temp_source ~key:name ~data:name
   end in
   let a_ident = (pos, Some name) in 
-  (Assign (None, [a_ident], [call]), Identifier a_ident) (* TODO: use type of call *)
+  (Assign (None, [Identifier a_ident], [call]), Identifier a_ident) (* TODO: use type of call *)
 
 let rec exp_calls = function
   | Literal l -> ([], Literal l)
@@ -94,7 +94,7 @@ let assign_to_inv = function
   | (Assign (_, il, el)) -> 
     let res = begin
       List.map2 il el ~f:(fun e1 e2 ->
-      Invariant (BinaryExp (Identifier e1, EqEq def_seg, e2)))
+      Invariant (BinaryExp (e1, EqEq def_seg, e2)))
     end in
     begin match res with
     | Ok invl -> invl

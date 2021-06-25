@@ -56,6 +56,12 @@ method floor(n: real) returns (res: int) {
   return n.Floor;
 }
 
+method intF(n: int) returns (res: int) 
+  ensures res == n
+{
+  return n;
+}
+
 // method Main()
 
 // {
