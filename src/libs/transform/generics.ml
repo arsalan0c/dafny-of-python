@@ -1,12 +1,12 @@
 open Base
-open Astpy
+open Pyparse.Astpy
 
 let printf = Stdlib.Printf.printf
 let vars = Hash_set.create (module String)
 
 let convert_typvar lhs rhs = 
   match lhs with
-  | (_, Some ident_v) -> begin
+  | Identifier (_, Some ident_v) -> begin
     match rhs with 
     | Call ((Identifier (_, Some c_ident_v)), ((Literal (StringLit tv_v))::tv_rest)) -> begin match c_ident_v with 
       | "TypeVar" -> begin match tv_rest with 

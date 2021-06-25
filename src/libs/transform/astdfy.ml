@@ -1,7 +1,7 @@
 open Base
-open Sexplib.Std
+(* open Sexplib.Std *)
 
-open Sourcemap
+open Pyparse.Sourcemap
 
 type dId = segment
 [@@deriving sexp]
@@ -30,11 +30,12 @@ type dOp =
 
 type dTyp = 
   | DVoid
-  | DIdentTyp of segment * dTyp option (* generic parameter *)
+  | DIdentTyp of segment * dTyp list (* generic parameters *)
   | DInt of segment
   | DReal of segment 
   | DBool of segment  
-  | DString of segment  
+  | DString of segment 
+  | DObj of segment 
   | DChar of segment 
   | DSeq of segment * dTyp
   | DSet of segment * dTyp
@@ -53,9 +54,10 @@ type dExpr =
   | DEmptyExpr
   | DNull
   | DThis
-  | DIntLit of int
-  | DRealLit of float
-  | DBoolLit of bool
+  | DIntLit of string
+  | DRealLit of string
+  | DTrue
+  | DFalse
   | DStringLit of string
   | DBinary of dExpr * dOp * dExpr
   | DUnary of dOp * dExpr
@@ -102,8 +104,8 @@ type dGeneric = string
 [@@deriving sexp]
 
 type dTopLevel = 
-  | DMeth of dSpec list * dId * dGeneric list * dParam list * dTyp list * dStmt list
-  | DFuncMeth of dSpec list * dId * dGeneric list * dParam list * dTyp * dExpr
+  | DMeth of dSpec list * dId * dGeneric list * dParam list * dTyp list * dStmt list option
+  | DFuncMeth of dSpec list * dId * dGeneric list * dParam list * dTyp * dExpr option
   | DTypSynonym of dId * dTyp option
   [@@deriving sexp]
 

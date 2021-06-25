@@ -11,10 +11,6 @@
     match String.length str with
     | 0 | 1 | 2 -> ""
     | len -> String.sub str 1 (len - 2)
-  
-  let pring = function
-    | Some s -> s
-    | None -> ""
 
   let emit_segment lb v = 
     let s = Lexing.lexeme_start_p lb in
@@ -36,8 +32,9 @@ let whitespace = [' ' '\t']+
 let int_typ = "int"
 let float_typ = "float"
 let bool_typ = "bool"
-let string_typ = "str"
-let none_typ = "None"
+let str_typ = "str"
+(* let none_typ = "None" *)
+let obj_typ = "object"
 
 (* complex types *)
 let list_typ = "list"
@@ -45,7 +42,11 @@ let dict_typ = "dict"
 let set_typ = "set"
 let tuple_typ = "tuple"
 let callable_typ = "Callable"
+let type_typ = "Type"
 let union_typ = "Union"
+
+let typ = int_typ | float_typ | bool_typ | str_typ | obj_typ | list_typ | dict_typ | set_typ
+let typ_f = typ '('
 
 let identifier = ['a'-'z' 'A'-'Z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
 let digit = ['0'-'9']
@@ -53,7 +54,7 @@ let integer = '-'? digit digit*
 let frac = '.' digit*
 let exp = ['e' 'E'] ['-' '+']? digit+
 let float = frac exp | digit+ exp | digit+ frac exp | digit* frac
-let stringliteral = ('"'[^'"''\\']*('\\'_[^'"''\\']*)*'"')
+let strliteral = ('"'[^'"''\\']*('\\'_[^'"''\\']*)*'"')
 let comment = '#'
 let boolean = "True" | "False"
 
@@ -63,21 +64,25 @@ let invariant = '#' [' ' '\t']* "invariant"
 let decreases = '#' [' ' '\t']* "decreases"
 let reads = '#' [' ' '\t']* "reads"
 let modifies = '#' [' ' '\t']* "modifies"
-let forall = '#' [' ' '\t']* "forall"
-let exists = '#' [' ' '\t']* "exists"
 
 rule next_token = parse
 | eof { EOF }
+| typ_f as tf 
+  { let s = (
+      String.sub tf 0 ((String.length tf) - 1)
+    ) ^ "F" in TYPF (emit_segment lexbuf (Some s)) 
+  }
 | int_typ as t { INT_TYP (emit_segment lexbuf (Some t)) }
 | float_typ as t { FLOAT_TYP (emit_segment lexbuf (Some t)) }
 | bool_typ as t { BOOL_TYP (emit_segment lexbuf (Some t)) }
-| string_typ as t { STRING_TYP (emit_segment lexbuf (Some t)) }
-| none_typ as t { NONE_TYP (emit_segment lexbuf (Some t)) }
+| str_typ as t { STRING_TYP (emit_segment lexbuf (Some t)) }
+| obj_typ as t { OBJ_TYP (emit_segment lexbuf (Some t)) }
 | list_typ { LIST_TYP (emit_segment lexbuf (Some "List")) }
 | dict_typ as t { DICT_TYP (emit_segment lexbuf (Some t)) }
 | set_typ as t { SET_TYP (emit_segment lexbuf (Some t)) }
 | tuple_typ as t { TUPLE_TYP (emit_segment lexbuf (Some t)) }
 | callable_typ as t { CALLABLE_TYP (emit_segment lexbuf (Some t)) }
+| type_typ as t { TYPE_TYP (emit_segment lexbuf (Some t)) }
 | union_typ as t { UNION_TYP (emit_segment lexbuf (Some t)) }
 | indent as s { (next_line lexbuf (String.length s - 1); SPACE (String.length s - 1)) }
 | "import" { comment lexbuf }
@@ -88,8 +93,6 @@ rule next_token = parse
 | decreases { DECREASES }
 | reads { READS }
 | modifies { MODIFIES }
-| forall { FORALL }
-| exists { EXISTS }
 | "forall" { FORALL }
 | "exists" { EXISTS }
 | "<==>" { BIIMPL (emit_segment lexbuf (Some "<==>" )) }
@@ -147,11 +150,11 @@ rule next_token = parse
 | "not" { NOT (emit_segment lexbuf (Some "not")) }
 | "True" { TRUE }
 | "False" { FALSE }
-| "None" { NONE  }
-| integer as i { INT (int_of_string i) }
-| float as f { FLOAT (float_of_string f) }
+| "None" { NONE (emit_segment lexbuf (Some "None")) }
+| float as f { FLOAT f }
+| integer as i { INT i }
 | identifier as i { IDENTIFIER (emit_segment lexbuf (Some i)) }
-| stringliteral as s { STRING (strip_quotes s) }
+| strliteral as s { STRING (strip_quotes s) }
 | whitespace { next_token lexbuf }
 | comment { comment lexbuf }
 | _ as c { illegal c }

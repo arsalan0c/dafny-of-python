@@ -1,6 +1,6 @@
 open Base
-open Astpy
-open Sourcemap
+open Pyparse.Astpy
+open Pyparse.Sourcemap
 
 let printf = Stdlib.Printf.printf
 let var_num : int ref = ref 0
@@ -34,7 +34,7 @@ let rec exp_lst = function
     let name = var_num := !var_num + 1; "templist_" ^ (Int.to_string !var_num) in
     let n_ident = (def_pos, Some name) in
     let new_list_call = Call (Identifier (def_pos, Some list_constructor), [Lst n_el]) in
-    (als@[Assign (None, [n_ident], [new_list_call])], Identifier n_ident) (* TODO: use type of rhs *)
+    (als@[Assign (None, [Identifier n_ident], [new_list_call])], Identifier n_ident) (* TODO: use type of rhs *)
   | Tuple el -> 
     let als_nes = List.map ~f:exp_lst el in
     List.fold als_nes ~f:(

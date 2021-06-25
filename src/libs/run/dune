@@ -1,0 +1,11 @@
+(library
+  (name run)
+  (libraries
+    base
+    pyparse
+    transform
+    re2
+  )
+  (flags (:standard -w -14))
+)
+

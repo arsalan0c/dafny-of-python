@@ -168,7 +168,7 @@ class List<T(==)> {
         return new List(lst);
     }
 
-    function method len(): (l: int) 
+    function method len(): (l: nat) 
         reads this
         ensures l == |lst|
     {
@@ -219,20 +219,6 @@ class List<T(==)> {
     {
         return new List<T>(lst + l2.lst);
     }
-
-    // predicate sorted(s: seq<T>)
-    // {
-    //     forall i,j :: 0 <= i < j < |s| ==> s[i] <= s[j]
-    // }
-
-    // method sort()
-    //     modifies this
-    //     ensures sorted(lst)
-    //     ensures |lst| == |old(lst)|
-    //     ensures forall i :: 0 <= i < |lst| ==> count(lst[i]) == old(this).count(lst[i])
-    // {
-
-    // }
 }
 
 // method range(start: int, stop: int, step: int) returns (res: seq<int>)
@@ -331,28 +317,4 @@ method maxListInt(l: List<int>) returns (res: int)
 //     }
 
 //     return soFar;
-// }
-
-// method search(x: int, s: list<int>) returns (res1: int)
-//   requires (s.len() > 0)
-//   requires forall k, j :: ((((0 <= k) && (k < j)) && (j < s.len())) ==> (s.atIndex(k) <= s.atIndex(j)))
-//   ensures ((res1 >= 0 && res1 < s.len()) ==> (x <= s.atIndex(res1)))
-// {
-//   var x: int := x;
-//   var s: list<int> := s;
-//   var output: int := 0;
-//   var tempcall_1 := s.len();
-//   var l: int := tempcall_1;
-//   while (output < l)
-//     invariant ((0 <= output) && (output <= l))
-//     invariant forall k :: (((0 <= k) && (k < output)) ==> (x > s.atIndex(k)))
-//   {
-//     var tempcall_2 := s.atIndex(output);
-//     if (x > tempcall_2) {
-//       output := (output + 1);
-//     } else {
-//       break;    
-//     }
-//   }
-//   return output;
 // }

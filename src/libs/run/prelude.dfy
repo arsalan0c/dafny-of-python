@@ -51,3 +51,13 @@ method mapF<T, S(==)>(f: ((T) -> S), a: List<T>) returns (res: List<S>)
     res.insert(0, mapped);
   }
 }
+
+method floor(n: real) returns (res: int) {
+  return n.Floor;
+}
+
+method intF(n: int) returns (res: int) 
+  ensures res == n
+{
+  return n;
+}

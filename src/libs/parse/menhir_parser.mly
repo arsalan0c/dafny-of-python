@@ -8,15 +8,14 @@ menhir --list-errors
   open Astpy
 %}
 
-%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK DOT COLON SEMICOLON COMMA TRUE FALSE NONE ARROW
+%token EOF INDENT DEDENT NEWLINE LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK DOT COLON SEMICOLON COMMA TRUE FALSE ARROW
+%token <Sourcemap.segment> NONE
 %token <int> SPACE
 %token <Sourcemap.segment> DEF IF ELIF ELSE WHILE FOR BREAK RETURN NOT_IN IN ASSERT LAMBDA PASS
 %token <Sourcemap.segment> AND OR NOT 
-%token <Sourcemap.segment> IDENTIFIER INT_TYP FLOAT_TYP BOOL_TYP STRING_TYP NONE_TYP LIST_TYP DICT_TYP SET_TYP TUPLE_TYP CALLABLE_TYP UNION_TYP
-%token <string> STRING
+%token <Sourcemap.segment> TYPF IDENTIFIER INT_TYP FLOAT_TYP BOOL_TYP STRING_TYP LIST_TYP DICT_TYP SET_TYP TUPLE_TYP CALLABLE_TYP UNION_TYP TYPE_TYP OBJ_TYP
+%token <string> STRING INT FLOAT
 %token <Sourcemap.segment> IMPLIES EXPLIES BIIMPL PLUS EQEQ EQ NEQ LTE LT GTE GT PLUSEQ MINUS MINUSEQ TIMES TIMESEQ DIVIDE DIVIDEEQ MOD
-%token <int> INT
-%token <float> FLOAT
 %token PRE POST INVARIANT FORALL EXISTS DECREASES READS MODIFIES DOUBLECOLON 
 %token <Sourcemap.segment> LEN MAX OLD FRESH 
 
@@ -71,7 +70,7 @@ small_stmt:
   ;
 
 compound_stmt:
-  | specl=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=exp; COLON; sl=block { Function (specl, id, fl, t, sl) }
+  | specl=list(spec); DEF; id=IDENTIFIER; LPAREN; fl=param_star; RPAREN; ARROW; t=typ_id; COLON; sl=block { Function (specl, id, fl, Typ t, sl) }
   | IF; e=exp; COLON; s1=block; el=elif_star; ELSE; COLON; s2=block { IfElse (e, s1, el, s2) }
   | IF; e=exp; COLON; s=block; el=elif_star; { IfElse (e, s, el, []) }
   | specl=list(spec); FOR; il=star_targets; IN; e=star_exps; COLON; b=block { For (specl, il, e, b) }
@@ -79,12 +78,12 @@ compound_stmt:
   ;
 
 assignment:
-  | id=IDENTIFIER; COLON; t=exp; EQ; e2=star_exps { Assign (Some t, [id], [e2]) }
-  | id=IDENTIFIER; EQ; e2=star_exps { Assign (None, [id], [e2]) } (* used for type aliasing and variable updates *)
-  | s1=IDENTIFIER; s2=PLUSEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Plus s2, e2)]) }
-  | s1=IDENTIFIER; s2=MINUSEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Minus s2, e2)]) }
-  | s1=IDENTIFIER; s2=TIMESEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Times s2, e2)]) }
-  | s1=IDENTIFIER; s2=DIVIDEEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (Identifier s1, Divide s2, e2)]) }
+  | id=exp; COLON; t=exp; EQ; e2=star_exps { Assign (Some t, [id], [e2]) }
+  | id=exp; EQ; e2=star_exps { Assign (None, [id], [e2]) } (* used for type aliasing and variable updates *)
+  | s1=exp; s2=PLUSEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (s1, Plus s2, e2)]) }
+  | s1=exp; s2=MINUSEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (s1, Minus s2, e2)]) }
+  | s1=exp; s2=TIMESEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (s1, Times s2, e2)]) }
+  | s1=exp; s2=DIVIDEEQ; e2=star_exps { Assign (None, [s1], [BinaryExp (s1, Divide s2, e2)]) }
   ;
 
 elif_star:
@@ -198,10 +197,10 @@ arguments:
 
 atom:
   | s=IDENTIFIER { Identifier s }
-  | TRUE { Literal (BoolLit true) }
-  | FALSE { Literal (BoolLit false) }
+  | TRUE { Literal TrueLit }
+  | FALSE { Literal FalseLit }
   | i=INT { Literal (IntLit i) }
-  | i=FLOAT { Literal (FloatLit i) }
+  | f=FLOAT { Literal (FloatLit f) }
   | s=strings { Literal (StringLit s) }
   | NONE { Literal (NoneLit) }
   | FORALL; il=id_star; DOUBLECOLON; e=exp { Forall (il, e) }
@@ -306,7 +305,8 @@ base_typ:
   | t=INT_TYP { TInt t }
   | t=FLOAT_TYP { TFloat t }
   | t=BOOL_TYP { TBool t }
-  | t=NONE_TYP { TNone t }
+  | t=NONE { TNone t }
+  | t=OBJ_TYP { TObj t }
   ;
 
 data_typ:
@@ -319,6 +319,8 @@ data_typ:
   | tt=TUPLE_TYP LBRACK tl=typ_plus; RBRACK { TTuple (tt, Some tl) }
   | t=TUPLE_TYP { TTuple (t, None) }
   | ct=CALLABLE_TYP LBRACK LBRACK tl=typ_plus RBRACK COMMA t=typ_id RBRACK { TCallable (ct, tl, t)  }
+  | tt=TYPE_TYP LBRACK t=typ_id; RBRACK { TType (tt, Some t) }
+  | t=TYPE_TYP { TType (t, None) }
   /* | u=UNION_TYP LBRACK tl=typ_plus; RBRACK { Union (u, tl) } */
   ;
 

@@ -7,9 +7,8 @@
   (libraries
     stdio
     compiler-libs.common
-    core
+    base
     sexplib
-    re2
   )
   (preprocess (pps ppx_jane -allow-unannotated-ignores))
   (inline_tests)

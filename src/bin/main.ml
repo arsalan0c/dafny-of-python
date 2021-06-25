@@ -1,13 +1,10 @@
 open Core
-(* open Sexplib *)
-
-type result = Success of string | Fail of string
 
 let printf = Stdlib.Printf.printf
 let prerr = Stdlib.prerr_string
 
-let list_dfy = "./src/libs/parse/list.dfy"
-let prelude_f = "./src/libs/parse/prelude.dfy" 
+let list_dfy = "./src/libs/run/list.dfy"
+let prelude_f = "./src/libs/run/prelude.dfy" 
 let dafny_f = "program.dfy"
 let dafny_command = String.concat ~sep:" " ["dafny"; dafny_f; prelude_f; list_dfy]
 let python_f = "program.py"
@@ -32,13 +29,13 @@ let () = begin
   typcheck inp;
   let parsed = Pyparse.Parser.parse_string inp in
   (* Pyparse.Typing.check_prog parsed *)
-  (* let sexp = Pyparse.Astpy.sexp_of_program parsed in *)
-  (* printf "->\n%s\n" (Sexp.to_string sexp); *)
-  let dafny_ast = Pyparse.Todafnyast.prog_dfy parsed in
-  let dafny_source = Pyparse.Emitdfy.print_prog dafny_ast in
+  (* let sexp = Pyparse.Astpy.sexp_of_program parsed in
+  printf "->\n%s\n" (Sexp.to_string sexp); *)
+  let dafny_ast = Transform.Todafnyast.prog_dfy parsed in
+  let dafny_source = Transform.Emitdfy.print_prog dafny_ast in
   printf "\n%s\n" dafny_source; 
   Out_channel.write_all dafny_f ~data:dafny_source;
   let verification_out = system dafny_command in
-  Pyparse.Report.report verification_out
+  Run.Report.report verification_out
 end
  
