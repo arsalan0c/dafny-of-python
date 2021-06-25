@@ -61,9 +61,3 @@ method intF(n: int) returns (res: int)
 {
   return n;
 }
-
-// method Main()
-
-// {
-//   var a := (2.0 / 1.0);
-// }
