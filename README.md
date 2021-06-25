@@ -121,7 +121,7 @@ assert not_index < 0
 
 
 ## Status
-*dafny-of-python* is currently pre-alpha software and likely to have unexpected behaviours as well as require programs to be written in an unidiomatic manner for successful verification.
+*dafny-of-python* is currently pre-alpha software and likely to have unexpected behaviours. It may also require programs to be written in an unidiomatic manner for successful verification.
 
 ## Contributing
 If you find a bug or have any comments, feel free to open an [issue](https://github.com/arsalanc-v2/dafny-of-python/issues/new/choose) or pull request. 
