@@ -1,7 +1,7 @@
 # dafny-of-python
 
 ![tool overview](tool_overview.png)
-*dafny-of-python* enables verification of Python programs. It does so by translating a program written in a [subset of typed Python](https://github.com/arsalanc-v2/dafny-of-python/wiki/Language) along with its specification, to the [Dafny](https://github.com/dafny-lang/dafny) verification language. 
+*dafny-of-python* enables modular formal verification of Python programs. It does so by translating a program written in a [subset of typed Python](https://github.com/arsalanc-v2/dafny-of-python/wiki/Language) along with its specification, to the [Dafny](https://github.com/dafny-lang/dafny) verification language. 
 
 Given the following function annotated with types and a specification:
 ```Python
@@ -120,7 +120,7 @@ assert not_index < 0
 
 
 ## Status
-*dafny-of-python* is currently pre-alpha software and likely to have unexpected behaviours. It may also require programs to be written in an unidiomatic manner for successful verification.
+*dafny-of-python* is experimental software and likely to have unexpected behaviours. It may also require programs to be written in an unidiomatic manner for successful verification.
 
 ## Contributing
 If you find a bug or have any comments, feel free to open an [issue](https://github.com/arsalanc-v2/dafny-of-python/issues/new/choose) or pull request. 
@@ -135,6 +135,7 @@ You can find more information in the [wiki](https://github.com/arsalanc-v2/dafny
 ## Related Work
 - [Nagini](https://github.com/marcoeilers/nagini), a static verification tool for Python using [Viper](http://viper.ethz.ch/)
 - [CrossHair](https://github.com/pschanely/CrossHair), a static verification tool for Python using symbolic execution
+- [Cameleer](https://github.com/ocaml-gospel/cameleer), a static verification tool for OCaml using [Why3](http://why3.lri.fr)
 - [H2D](http://www.doc.ic.ac.uk/~dcw/h2d.cgi), a compiler from Haskell to Dafny
 - [coq-of-ocaml](https://github.com/clarus/coq-of-ocaml), a compiler from OCaml to Coq
 - [goose](https://github.com/tchajed/goose), a compiler from Go to Coq
