@@ -18,6 +18,7 @@ jobs:
     - uses: ocaml/setup-ocaml@v1.1.11
       with:
         ocaml-version: ${{ matrix.ocaml-version }}
+    - run: opam install dune
     - name: Dependencies
       run: opam install -t . --deps-only
     - name: Build
