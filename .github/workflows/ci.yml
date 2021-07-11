@@ -19,6 +19,6 @@ jobs:
       with:
         ocaml-version: ${{ matrix.ocaml-version }}
     - name: Dependencies
-      run: opam pin dafny-of-python && opam install dune && opam install -t . --deps-only
+      run: opam pin dafny-of-python && opam install dune && opam install ./ --deps-only
     - name: Build
       run: opam exec -- dune build
