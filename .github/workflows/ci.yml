@@ -19,6 +19,6 @@ jobs:
       with:
         ocaml-version: ${{ matrix.ocaml-version }}
     - name: Dependencies
-      run: opam pin ./ && opam install dune && opam install ./ --deps-only && dune external-lib-deps --missing @@default
+      run: opam install dune && opam install ./ --deps-only && dune external-lib-deps --missing @@default
     - name: Build
       run: dune build
